@@ -468,3 +468,110 @@ export async function escreverNoCampo(texto, { raiz = document, esperar = doisQu
   if (ficou === valor) return { ok: true, campo, ficou };
   return { ok: false, motivo: ficou === '' ? 'apagou' : 'ficou-diferente', campo, ficou };
 }
+
+/**
+ * **O ATO DE ENVIAR, observado NELE — e nunca no campo esvaziar.**
+ *
+ * Relato dele (29/10/2026): *"o texto foi pro box de conversa, eu olhei e vi que estava errado,
+ * apaguei, e a automacao pulou ou concluiu; o gatilho continua errado, eu nao dei enter ou
+ * clickei pra enviar"*.
+ *
+ * **Ele pagou exatamente o risco que estava escrito na tela.** O modo *"Eu mando"* (v3.224) dava
+ * a mensagem por enviada quando o campo ESVAZIAVA, porque a plataforma limpa a caixa ao enviar —
+ * e **apagar esvazia igual**. O invariante estava certo numa direcao e vazio na outra: campo
+ * vazio prova que o texto saiu dali, nunca que ele foi para alguem.
+ *
+ * **O conserto nao adivinha nada da plataforma: observa os DOIS atos que ele nomeou.**
+ *
+ *  - **Enter no campo de mensagem** — e que o Enter ENVIA aqui esta medido (27/10/2026: o campo
+ *    esvaziou e o POST saiu), entao nao e hipotese;
+ *  - **clique num BOTAO ao lado do campo** — o avião de papel da print.
+ *
+ * **`isTrusted` e obrigatorio**, e e a licao de 07/09: a propria extensao despacha eventos de
+ * teclado na pagina, e sem a guarda ela atenderia o proprio despacho e daria por enviado o que
+ * ela mesma escreveu.
+ *
+ * **O clique precisa estar PERTO do campo**, senao "Resolver" e "Transferir" contariam como
+ * envio. A conta sobe no maximo `NIVEIS_DO_BOTAO` ancestrais a partir do campo e pergunta se
+ * algum deles contem o botao — declarada como heuristica porque o botao de enviar **nao tem
+ * gancho** (a tela nova nao tem `data-cy`). **Errar para o lado de nao reconhecer custa uma
+ * espera que vira `pulado`; errar para o outro concluiria atendimento sem mensagem**, que e o
+ * defeito que isto existe para fechar.
+ *
+ * **Clique dentro do painel nao conta:** o host e irmao do `#root`, e o `ev.target` de dentro de
+ * um shadow root chega ao `document` como o proprio host — entao basta olhar o id.
+ */
+const HOST_DO_PAINEL = 'whatsfill-host';
+const NIVEIS_DO_BOTAO = 6;
+
+let ato = { em: 0, como: '' };
+let vigiando = false;
+
+function dentroDoPainel(no) {
+  try {
+    return !!(no && no.closest && no.closest('#' + HOST_DO_PAINEL));
+  } catch (_) {
+    return false;
+  }
+}
+
+function pertoDoCampo(botao, raiz) {
+  const campo = campoDeMensagem({ raiz });
+  if (!campo || !botao) return false;
+  let p = campo;
+  for (let i = 0; i < NIVEIS_DO_BOTAO && p; i += 1) {
+    if (p.contains && p !== botao && p.contains(botao)) return true;
+    p = p.parentElement;
+  }
+  return false;
+}
+
+/**
+ * Liga os dois ouvintes, uma vez só. Idempotente de propósito: quem espera chama a cada contato,
+ * e um ouvinte por passada viraria uma pilha deles numa rodada de centenas.
+ */
+export function vigiarEnvio({ raiz = document, onde = document } = {}) {
+  if (vigiando) return true;
+  if (!onde || !onde.addEventListener) return false;
+
+  try {
+    onde.addEventListener(
+      'keydown',
+      (ev) => {
+        if (!ev || ev.isTrusted !== true) return;
+        if (ev.key !== 'Enter' || ev.shiftKey) return;
+        if (!ehCampoDeMensagem(ev.target)) return;
+        ato = { em: Date.now(), como: 'Enter no campo' };
+      },
+      true
+    );
+    onde.addEventListener(
+      'click',
+      (ev) => {
+        if (!ev || ev.isTrusted !== true) return;
+        const alvo = ev.target;
+        if (!alvo || !alvo.closest || dentroDoPainel(alvo)) return;
+        const botao = alvo.closest('button, [role="button"]');
+        if (!botao || !pertoDoCampo(botao, raiz)) return;
+        ato = { em: Date.now(), como: 'clique no botão de enviar' };
+      },
+      true
+    );
+  } catch (_) {
+    return false;
+  }
+
+  vigiando = true;
+  return true;
+}
+
+/** Quando foi o último ato de envio DELE, e qual — `{em: 0}` enquanto não houve nenhum. */
+export function ultimoAtoDeEnvio() {
+  return { ...ato };
+}
+
+/** Só para o teste: devolve o módulo ao estado de antes de qualquer vigia. */
+export function esquecerEnvio() {
+  ato = { em: 0, como: '' };
+  vigiando = false;
+}

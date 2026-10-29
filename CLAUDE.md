@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.231.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.232.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -720,6 +720,55 @@ mudaram as maos, nao a cabeca.
   deixaria a resposta pronta parando a rodada pela mesma razao.
   **A guarda que ela protege nao afrouxou:** `os-dois` continua obrigatorio para assumir,
   resolver, reabrir e enviar. O que mudou e o que a RODADA faz com a recusa.
+
+- **APAGAR ESVAZIA O CAMPO IGUALZINHO A ENVIAR — e o modo "Eu mando" dava os dois por enviados**
+  (29/10/2026, relato dele: *"o texto foi pro box de conversa, eu olhei e vi que estava errado,
+  apaguei, e a automacao pulou ou concluiu; o gatilho continua errado, eu nao dei enter ou clickei
+  pra enviar"*).
+  **O risco estava ESCRITO na tela e ele o pagou — e isso e a prova de que avisar nao bastava.**
+  A v3.224 escolheu o campo esvaziar como sinal porque *"nao ha mais barato"*, e o invariante
+  valia **numa direcao so**: a plataforma limpa a caixa ao enviar, entao enviar esvazia; **campo
+  vazio nunca provou que o texto foi para alguem.**
+  **O gatilho novo observa os DOIS ATOS QUE ELE NOMEOU**, e nao uma consequencia deles:
+  **Enter no campo de mensagem** (que o Enter ENVIA aqui esta medido em 27/10 — campo esvaziou e
+  o POST saiu) e **clique num botao ao lado do campo**. `dom-mob.vigiarEnvio` poe os dois
+  ouvintes, em CAPTURA, uma vez so — ouvinte por contato empilharia centenas numa rodada.
+  **`isTrusted` e obrigatorio, e e a licao de 07/09:** a propria extensao despacha teclado na
+  pagina, e sem a guarda ela atenderia o proprio despacho e daria por enviado o que ela escreveu.
+  **O campo vazio CONTINUA sendo exigido, junto:** o ato diz que ele mandou, o campo vazio diz que
+  a plataforma aceitou. Apagar produz so a segunda metade, e ai o desfecho e **`pulado` com o
+  motivo escrito**, nunca concluir.
+  **O clique precisa estar PERTO do campo** (ate 6 ancestrais), senao "Resolver" e "Transferir"
+  contariam como envio — **o botao de enviar nao tem gancho**, porque a tela nova nao tem
+  `data-cy`. **Isto e heuristica declarada, e o lado do erro foi escolhido:** nao reconhecer custa
+  uma espera que vira `pulado`; reconhecer demais concluiria atendimento sem mensagem.
+  **Na plataforma velha `page.vigiarEnvio` devolve `false`, e a ausencia e informacao:** o painel
+  cai no invariante antigo inteiro. Fingir um ato ali faria a rodada concluir no instante em que o
+  texto entra no campo.
+  **E no MODO JANELA quem ve o teclado dele e a ABA**, nunca o painel — as duas funcoes passam
+  pela ponte do `rpc-host`.
+
+- **O ROTULO DA ETIQUETA VINHA DO CATALOGO, E AQUI O CATALOGO E UMA AMOSTRA DE 0,9%**
+  (29/10/2026, relato dele: *"tinha a opcao de concluir contatos com a etiqueta de assessor, parou
+  de funcionar"*, com o print de um contato marcado **ASSESSOR** recebendo rascunho da IA).
+  `contact.tagsId` guarda **ids**, e tres lugares do painel resolviam o rotulo fazendo
+  `allTags().filter(t => doCrm.has(t.id)).map(t => t.label)`. **Na plataforma velha isso era
+  exato** — o catalogo era `GET /core/v1/tag`, a tabela inteira.
+  **No mobiliza.me nao existe tabela de etiquetas:** elas sao texto dentro de um array, entao
+  `api-mob.getTags` so pode devolver *"o conjunto do que ja apareceu numa fatia"* — **1.000
+  contatos de 107.988**. Etiqueta de uso interno como ASSESSOR praticamente nunca cai nessa fatia:
+  o rotulo nao resolve, a lista nao casa, e a regra morre **em silencio** — nada estoura, nada
+  aparece no Andamento, e o contato segue para a IA como se nao tivesse etiqueta nenhuma.
+  **Levou junto as QUATRO listas** (assessor, a que dispensa da fila, as que pulam o disparo e a
+  de endereco) **e o sinal `veioDeAnuncioAlgumaVez`**.
+  **O conserto e olhar o que o contato JA TRAZ:** aqui a etiqueta vem do banco com a grafia dentro
+  (`contact.tags` = `{id, name}`), entao o catalogo e um desvio que so pode perder informacao.
+  **O catalogo continua vindo primeiro**, de proposito — na plataforma velha ele e a fonte exata,
+  e assim aquele caminho fica byte a byte como era; o contato so responde pelos ids que o catalogo
+  nao alcancou. Uma funcao so (`rotulosDoContato`), e ha teste contando que **nenhum** leitor
+  resolve rotulo pelo catalogo sozinho.
+  **A licao geral: AMOSTRA serve para reconhecer grafia, nunca para negar existencia** — e
+  `api-mob.getTags` ja escrevia isso no proprio `completa`. **Era este o campo que ninguem lia.**
 
 - **GANCHO QUE ESTOURA TEM DE RESPONDER — e o teste pegou isso antes de ir ao ar.** Na primeira
   versao o `try` cobria so a acao, e `quantasLinhas()` ficava fora dele, dentro da propria chamada

@@ -1467,8 +1467,41 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
     'a espera e condicionada a rodada estar andando');
   const i = painel.indexOf('async function esperarVoceEnviar');
   check(i > 0, '`esperarVoceEnviar` existe');
-  const corpo = painel.slice(i, i + 1800);
+  const corpo = painel.slice(i, painel.indexOf('async function esperarTelaLivre'));
   check(corpo.includes('state.auto.parar'), 'e o botao Parar da rodada corta a espera');
+
+  /**
+   * **APAGAR O TEXTO NAO E ENVIAR** (29/10/2026, relato dele: *"o texto foi pro box de conversa,
+   * eu olhei e vi que estava errado, apaguei, e a automacao pulou ou concluiu; o gatilho continua
+   * errado, eu nao dei enter ou clickei pra enviar"*).
+   *
+   * O campo esvaziar valia numa direcao so: a plataforma limpa a caixa ao enviar, e apagar
+   * esvazia igual. **Agora sao DUAS coisas** — o ATO dele e o campo vazio.
+   */
+  check(corpo.includes('await page.vigiarEnvio()'), 'a espera liga a vigia do ato de envio');
+  check(corpo.includes('ato.em > atoAntes.em'),
+    'e so da por enviado quando houve um ato DELE depois de o texto entrar no campo');
+  check(/apagado: true/.test(corpo), 'campo vazio SEM ato tem desfecho proprio: nao concluiu');
+
+  /**
+   * **A plataforma velha nao observa ato nenhum, e a ausencia e informacao:** `vigiarEnvio`
+   * devolve `false` la, e o painel cai no invariante antigo. Fingir um ato faria a rodada
+   * concluir no instante em que o texto entra no campo.
+   */
+  /**
+   * **Esta e a assercao que cai se alguem devolver o gatilho antigo.** O campo vazio sozinho so
+   * basta onde NAO ha vigia (mobiliza.app, onde o invariante continua inteiro); havendo vigia,
+   * ele tem de passar pelo ato — senao apagar volta a concluir atendimento.
+   */
+  check(corpo.includes('if (!observando) return { ok: true };'),
+    'campo vazio SOZINHO so conclui onde nao ha vigia — com vigia, passa pelo ato');
+
+  const fachadaEnvio = readFileSync(new URL('../src/lib/page.js', import.meta.url), 'utf8');
+  check(/export const vigiarEnvio = NA_PLATAFORMA_NOVA/.test(fachadaEnvio), '`page.js` desvia a vigia por plataforma');
+  check(/\? mobPage\.vigiarEnvio\s*\n\s*: IS_IN_PAGE\s*\n\s*\? local\(\(\) => false\)/.test(fachadaEnvio),
+    'e na plataforma velha ela diz que NAO observa, em vez de fingir que sim');
+  check(/vigiarEnvio: \(\) => page\.vigiarEnvio\(\)/.test(ponte) && /ultimoAtoDeEnvio: \(\)/.test(ponte),
+    'a ponte do modo janela atende as duas — quem ve o teclado dele e a ABA');
 
   /**
    * **O DISPARO mantem a trava**, e isso e deliberado: la a peca sai pela API, que nao olha a
@@ -1722,6 +1755,54 @@ grupo('GRAVAR NO CONTATO — e a releitura, nao o 200, que diz se gravou');
   /** Na plataforma velha nada mudou: o contrato aprendido continua sendo quem grava la. */
   const velho = tags.slice(tags.indexOf("const contract = await store.get('writeContract')"));
   check(velho.includes('buildRequest(entry'), 'o corpo da plataforma antiga ficou intocado embaixo do desvio');
+}
+
+grupo('O ROTULO DA ETIQUETA SAI DO CONTATO — o catalogo aqui e uma AMOSTRA');
+{
+  /**
+   * **Relato dele (29/10/2026): *"tinha a opcao de concluir contatos com a etiqueta de assessor,
+   * parou de funcionar"*** — com o print de um contato marcado **ASSESSOR** recebendo rascunho da
+   * IA em vez de ser concluido em silencio.
+   *
+   * **`contact.tagsId` guarda IDS, e o rotulo vinha SO do catalogo.** Na plataforma velha o
+   * catalogo era a tabela de etiquetas inteira e isso era exato. **Aqui nao ha tabela de
+   * etiquetas:** elas sao texto dentro de um array, entao o catalogo so pode ser *"o conjunto do
+   * que ja apareceu numa fatia"* — **1.000 contatos de 107.988**. Etiqueta de uso interno
+   * praticamente nunca cai nessa fatia, e a regra morria **em silencio**.
+   *
+   * **Levou junto as quatro listas** (assessor, a que dispensa da fila, as que pulam o disparo, a
+   * de endereco) **e o sinal de "veio de anuncio alguma vez"** — tres leitores com a mesma forma.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  check(/async function rotulosDoContato\(\)/.test(painel), 'a resolucao mora numa funcao so');
+
+  /** **Nenhum leitor pode voltar a resolver o rotulo pelo catalogo sozinho.** */
+  const pelaAmostra = (painel.match(/allTags\(\)\.catch\(\(\) => \[\]\)\)\s*\n?\s*\.?filter\(\(t\) => doCrm\.has/g) || []).length
+    + (painel.match(/\.filter\(\(t\) => doCrm\.has\(t\.id\)\)/g) || []).length;
+  check(pelaAmostra === 0, `nenhum leitor resolve o rotulo so pelo catalogo (achei ${pelaAmostra})`);
+
+  const i = painel.indexOf('async function rotulosDoContato()');
+  const corpo = painel.slice(i, i + 1200);
+  check(corpo.includes('tagsLib.allTags()'), 'o catalogo continua vindo PRIMEIRO');
+  check(corpo.includes('state.contact?.tags'), 'e o contato responde pelo que o catalogo nao alcancou');
+  check(corpo.includes('por.size < doCrm.size'),
+    'so olha o contato quando faltou alguem — na plataforma velha o caminho fica como era');
+  check(/t\?\.name \?\? t\?\.message \?\? t\?\.label/.test(corpo),
+    'e le o rotulo em qualquer das tres formas, porque as duas plataformas nomeiam diferente');
+
+  /**
+   * **A amostra se declara amostra, e era este o campo que ninguem lia.** `api-mob.getTags` ja
+   * escreve `completa`: a fatia serve para RECONHECER grafia, nunca para negar existencia.
+   */
+  const apiMob = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8');
+  check(/lista\.completa = \(linhas \|\| \[\]\)\.length < limite/.test(apiMob),
+    'o catalogo da plataforma nova diz que e uma fatia');
+
+  /** E a etiqueta do contato ja chega com a grafia dentro — e dai que o conserto tira o rotulo. */
+  const pageMob = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
+  check(/tags: etiquetas,/.test(pageMob) && /tagsId: etiquetas\.map\(\(t\) => t\.id\)/.test(pageMob),
+    'o contato traz `tags` com `{id, name}` ao lado de `tagsId`');
 }
 
 grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');

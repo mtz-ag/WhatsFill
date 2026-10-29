@@ -30,6 +30,9 @@ const methods = {
   pageState: () => page.getState(),
   setComposerText: (text) => page.setComposerText(text),
   textoDoComposer: () => page.textoDoComposer(),
+  // O modo "Eu mando" no MODO JANELA: quem vê o teclado e o mouse dele é a ABA, nunca o painel.
+  vigiarEnvio: () => page.vigiarEnvio(),
+  ultimoAtoDeEnvio: () => page.ultimoAtoDeEnvio(),
   sendText: (text) => page.sendText(text),
   clickIniciar: () => page.clickIniciar(),
   clickReiniciar: () => page.clickReiniciar(),

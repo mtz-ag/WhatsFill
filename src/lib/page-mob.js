@@ -92,7 +92,7 @@
 
 import * as mob from './mob.js';
 import { mandarTexto, assumirConversa, resolverConversa, reabrirConversa } from './api-mob.js';
-import { escreverNoCampo, campoDeMensagem, camposEditaveis, lerCampo } from './dom-mob.js';
+import { escreverNoCampo, campoDeMensagem, camposEditaveis, lerCampo, vigiarEnvio as vigiarNaTela, ultimoAtoDeEnvio as atoNaTela } from './dom-mob.js';
 
 // ---------------------------------------------------------------------------
 // Etiquetas: a identidade e o rotulo NORMALIZADO
@@ -854,6 +854,26 @@ export function getComposer(opcoes = {}) {
 export function textoDoComposer(opcoes = {}) {
   const campo = campoDeMensagem(opcoes);
   return campo ? lerCampo(campo) : '';
+}
+
+/**
+ * **"Ele mandou?" — a pergunta que o campo esvaziar NAO responde** (29/10/2026).
+ *
+ * O texto acima dizia que o campo ter esvaziado e o invariante de *"ele mandou"*, e **isso estava
+ * errado numa direcao**: a plataforma limpa a caixa ao enviar, entao enviar esvazia — mas apagar
+ * tambem. Ele apagou um rascunho errado e a rodada concluiu o atendimento.
+ *
+ * Hoje quem responde e `dom-mob.vigiarEnvio`, que observa os dois atos DELE (o Enter no campo e o
+ * clique no botao), com `isTrusted` para a extensao nunca atender o proprio despacho. O campo
+ * esvaziar continua sendo exigido — **os dois juntos**: o ato diz que ele mandou, o campo vazio
+ * diz que a plataforma aceitou.
+ */
+export function vigiarEnvio(opcoes = {}) {
+  return vigiarNaTela(opcoes);
+}
+
+export function ultimoAtoDeEnvio() {
+  return atoNaTela();
 }
 /**
  * **As tres teclas que mexem no atendimento ABERTO NA TELA DELE.**

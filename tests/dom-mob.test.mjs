@@ -35,6 +35,9 @@ import {
   temCampoDeMensagem,
   lerCampo,
   escreverNoCampo,
+  vigiarEnvio,
+  ultimoAtoDeEnvio,
+  esquecerEnvio,
 } from '../src/lib/dom-mob.js';
 
 /**
@@ -407,6 +410,76 @@ grupo('contenteditable: insertText, e a releitura vale igual');
   check(lerCampo(caixa) === 'bom dia', 'e o que ficou la e o textContent');
 
   globalThis.document = docAntes;
+}
+
+grupo('O ATO DE ENVIAR: apagar o texto NAO e enviar');
+{
+  /**
+   * **Relato dele (29/10/2026):** *"o texto foi pro box de conversa, eu olhei e vi que estava
+   * errado, apaguei, e a automacao pulou ou concluiu; o gatilho continua errado, eu nao dei enter
+   * ou clickei pra enviar"*.
+   *
+   * O modo *"Eu mando"* dava a mensagem por enviada quando o campo ESVAZIAVA — invariante certo
+   * numa direcao e vazio na outra: a plataforma limpa a caixa ao enviar, e **apagar esvazia
+   * igual**. O que isto trava e o gatilho novo: os DOIS atos que ele nomeou, e nada alem deles.
+   */
+  const ouvintes = new Map();
+  const onde = { addEventListener: (tipo, fn) => ouvintes.set(tipo, fn) };
+
+  const campo = campoFalso({ placeholder: 'Mensagem' });
+  const botao = { tag: 'button' };
+  const fora = { tag: 'button' };
+  const linhaDoCampo = { contains: (n) => n === campo || n === botao };
+  campo.parentElement = linhaDoCampo;
+  linhaDoCampo.contains = (n) => n === campo || n === botao;
+
+  const raiz = telaDeCampos([campo]);
+  const alvoQueFecha = (el, dono) => ({ ...el, closest: (sel) => (sel.includes('button') ? dono : null) });
+
+  esquecerEnvio();
+  check(vigiarEnvio({ raiz, onde }) === true, 'liga os dois ouvintes');
+  check(vigiarEnvio({ raiz, onde }) === true && ouvintes.size === 2,
+    'e e idempotente — uma rodada de centenas nao empilha ouvinte por contato');
+  check(ultimoAtoDeEnvio().em === 0, 'e comeca sem ato nenhum');
+
+  const teclar = (ev) => ouvintes.get('keydown')(ev);
+  const clicar = (ev) => ouvintes.get('click')(ev);
+
+  /** **APAGAR nao produz ato nenhum** — e esta e a assercao que fecha a print dele. */
+  teclar({ isTrusted: true, key: 'Backspace', target: campo });
+  teclar({ isTrusted: true, key: 'a', ctrlKey: true, target: campo });
+  teclar({ isTrusted: true, key: 'Delete', target: campo });
+  check(ultimoAtoDeEnvio().em === 0, 'apagar o texto NAO conta como enviar');
+
+  /** **Shift+Enter e quebra de linha**, nao envio. */
+  teclar({ isTrusted: true, key: 'Enter', shiftKey: true, target: campo });
+  check(ultimoAtoDeEnvio().em === 0, 'Shift+Enter e quebra de linha, nao envio');
+
+  /** **`isTrusted` e a licao de 07/09: a propria extensao despacha teclado na pagina.** */
+  teclar({ isTrusted: false, key: 'Enter', target: campo });
+  check(ultimoAtoDeEnvio().em === 0, 'e o Enter que a EXTENSAO despacha nao conta');
+
+  /** Enter numa anotacao nao e envio: o alvo tem de ser o campo de MENSAGEM. */
+  teclar({ isTrusted: true, key: 'Enter', target: campoFalso({ placeholder: 'Nota interna da conversa' }) });
+  check(ultimoAtoDeEnvio().em === 0, 'nem o Enter numa anotacao');
+
+  teclar({ isTrusted: true, key: 'Enter', target: campo });
+  check(ultimoAtoDeEnvio().em > 0 && /Enter/.test(ultimoAtoDeEnvio().como), 'o Enter DELE no campo conta');
+
+  /** **O clique tem de ser num botao PERTO do campo** — senao "Resolver" contaria como envio. */
+  esquecerEnvio();
+  vigiarEnvio({ raiz, onde });
+  clicar({ isTrusted: true, target: alvoQueFecha({}, fora) });
+  check(ultimoAtoDeEnvio().em === 0, 'botao longe do campo (Resolver, Transferir) NAO e envio');
+
+  clicar({ isTrusted: true, target: alvoQueFecha({}, botao) });
+  check(ultimoAtoDeEnvio().em > 0 && /clique/.test(ultimoAtoDeEnvio().como), 'e o botao ao lado do campo conta');
+
+  /** Clique dentro do painel nunca conta: o `ev.target` de um shadow root chega como o host. */
+  esquecerEnvio();
+  vigiarEnvio({ raiz, onde });
+  clicar({ isTrusted: true, target: { closest: (sel) => (sel.includes('whatsfill-host') ? {} : botao) } });
+  check(ultimoAtoDeEnvio().em === 0, 'clique dentro do painel nao conta como envio');
 }
 
 fim();

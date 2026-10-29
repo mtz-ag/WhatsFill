@@ -136,6 +136,25 @@ export const textoDoComposer = NA_PLATAFORMA_NOVA
   ? local(() => String(dom.getComposer()?.value || ''))
   : () => call('textoDoComposer');
 
+/**
+ * **O ATO DE ENVIAR, observado nele** — o gatilho do modo *"Eu mando"* desde 29/10/2026.
+ *
+ * **Só o mobiliza.me responde isto**, e a ausência é informação: na plataforma velha as duas
+ * devolvem o que diz *"não sei observar"*, e o painel cai no invariante antigo (o campo esvaziar).
+ * Fingir um ato ali faria a rodada concluir no instante em que o texto entra no campo.
+ */
+export const vigiarEnvio = NA_PLATAFORMA_NOVA
+  ? mobPage.vigiarEnvio
+  : IS_IN_PAGE
+  ? local(() => false)
+  : () => call('vigiarEnvio');
+
+export const ultimoAtoDeEnvio = NA_PLATAFORMA_NOVA
+  ? mobPage.ultimoAtoDeEnvio
+  : IS_IN_PAGE
+  ? local(() => ({ em: 0, como: '' }))
+  : () => call('ultimoAtoDeEnvio');
+
 export const sendText = NA_PLATAFORMA_NOVA
   ? mobPage.sendText
   : IS_IN_PAGE

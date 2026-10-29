@@ -3297,12 +3297,57 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * era PULADO em toda passada e `etiquetarEndereco` — onde a IA confere — nunca rodava. Comparação por
    * rótulo e não por id: o CRM tem rótulo repetido.
    */
+  /**
+   * **OS RÓTULOS DAS ETIQUETAS QUE ESTE CONTATO TEM NO CRM** — e por que isto é uma função.
+   *
+   * Relato dele (29/10/2026): *"tinha a opção de concluir contatos com a etiqueta de assessor,
+   * parou de funcionar"*, com o print de um contato marcado **ASSESSOR** recebendo rascunho da IA.
+   *
+   * **`contact.tagsId` guarda IDS, e o rótulo vinha SÓ do catálogo** — três lugares faziam
+   * `allTags().filter(t => doCrm.has(t.id)).map(t => t.label)`. Na plataforma velha o catálogo era
+   * a tabela de etiquetas inteira (`GET /core/v1/tag`) e isso era exato.
+   *
+   * **No mobiliza.me não existe tabela de etiquetas**: elas são texto dentro de um array, então o
+   * catálogo só pode ser *"o conjunto do que já apareceu numa fatia da base"* — **1.000 contatos
+   * de 107.988, 0,9%**. Etiqueta de uso interno como ASSESSOR praticamente nunca cai nessa fatia,
+   * e aí o rótulo não resolve, a lista não casa e a regra morre **em silêncio**: nada estoura,
+   * nada aparece no Andamento, e o contato segue para a IA como se não tivesse etiqueta nenhuma.
+   * **Levou junto as QUATRO listas** — assessor, a que dispensa da fila, as que pulam o disparo e
+   * a de endereço — além do sinal de "veio de anúncio alguma vez".
+   *
+   * **O conserto é olhar o que o contato JÁ TRAZ.** Aqui a etiqueta vem do banco com a grafia
+   * dentro (`contact.tags` = `{id, name}`), então o catálogo é um desvio que só pode perder
+   * informação. **O catálogo continua vindo primeiro**, de propósito: na plataforma velha ele é a
+   * fonte exata, e assim aquele caminho fica byte a byte como era — o contato só responde pelos
+   * ids que o catálogo não alcançou.
+   *
+   * **Amostra serve para RECONHECER grafia, nunca para negar existência** — é o que `api-mob
+   * .getTags` já escreve no próprio `completa`, e este era o lugar que lia a amostra como se fosse
+   * a base.
+   */
+  async function rotulosDoContato() {
+    const doCrm = new Set(state.contact?.tagsId || []);
+    if (!doCrm.size) return [];
+
+    const por = new Map();
+    for (const t of await tagsLib.allTags().catch(() => [])) {
+      if (doCrm.has(t.id) && t.label) por.set(t.id, t.label);
+    }
+    // Só vale a pena olhar o contato quando faltou alguém — e é esse o caso na plataforma nova.
+    if (por.size < doCrm.size) {
+      for (const t of state.contact?.tags || []) {
+        const rotulo = String(t?.name ?? t?.message ?? t?.label ?? '').trim();
+        if (t?.id != null && rotulo && doCrm.has(t.id) && !por.has(t.id)) por.set(t.id, rotulo);
+      }
+    }
+    return [...por.values()];
+  }
+
   async function etiquetaDeEndereco() {
     const tag = await rotuloDaEtiquetaDeEndereco();
     if (!tag) return null;
     const alvo = cities.semAcentoNemCaixa(tag.label);
-    const doCrm = new Set(state.contact?.tagsId || []);
-    const rotulos = (await tagsLib.allTags().catch(() => [])).filter((t) => doCrm.has(t.id)).map((t) => t.label);
+    const rotulos = await rotulosDoContato();
     return rotulos.find((r) => cities.semAcentoNemCaixa(r) === alvo) || null;
   }
 
@@ -4041,10 +4086,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * mostrava 3 etiquetas enquanto o cabeçalho da plataforma mostrava 5, e `ENGAJADO/BIZA` era
      * justamente uma das que faltavam. A regra nunca via a etiqueta que deveria dispensar.
      */
-    const doCrm = new Set(state.contact?.tagsId || []);
-    const rotulos = (await tagsLib.allTags().catch(() => []))
-      .filter((t) => doCrm.has(t.id))
-      .map((t) => t.label);
+    const rotulos = await rotulosDoContato();
 
     for (const rotulo of rotulos) {
       const alvo = cities.semAcentoNemCaixa(rotulo);
@@ -4073,13 +4115,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   async function veioDeAnuncioAlgumaVez() {
     if (state.session?.utm?.source || state.session?.utm?.referralUrl) return true;
-    const doCrm = new Set(state.contact?.tagsId || []);
-    if (!doCrm.size) return false;
-    const [todas, deOrigem] = await Promise.all([
-      tagsLib.allTags().catch(() => []),
+    const [rotulos, deOrigem] = await Promise.all([
+      rotulosDoContato(),
       tagsLib.etiquetasDeOrigem().catch(() => new Set()),
     ]);
-    return todas.some((t) => doCrm.has(t.id) && deOrigem.has(cities.normalize(t.label)));
+    return rotulos.some((r) => deOrigem.has(cities.normalize(r)));
   }
 
   /** A etiqueta que dispensa da fila (hoje: manda a mensagem do momento uma vez e conclui). */
@@ -6699,8 +6739,43 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const alvo = String(texto || '').trim();
     if (!alvo) return { ok: true, motivo: 'sem texto para esperar' };
 
+    /**
+     * **APAGAR ESVAZIA IGUAL — e por isso o campo vazio deixou de bastar** (29/10/2026, relato
+     * dele: *"o texto foi pro box de conversa, eu olhei e vi que estava errado, apaguei, e a
+     * automação pulou ou concluiu; o gatilho continua errado, eu não dei enter ou clickei pra
+     * enviar"*).
+     *
+     * **O risco estava escrito na tela e ele o pagou**, o que é a prova de que avisar não era
+     * suficiente. O invariante antigo valia numa direção só: a plataforma limpa a caixa ao
+     * enviar, então enviar esvazia — mas **campo vazio nunca provou que o texto foi para
+     * alguém**.
+     *
+     * **Agora são DUAS coisas, e nenhuma delas sozinha conclui:** o ATO dele (Enter no campo ou
+     * clique no botão de enviar, com `isTrusted` — ver `dom-mob.vigiarEnvio`) **e** o campo ter
+     * esvaziado. O ato diz que ele mandou; o campo vazio diz que a plataforma aceitou.
+     *
+     * **Apagar produz só a segunda metade**, e aí o desfecho é dizer isso e NÃO concluir — que é
+     * o contrário do que ele viu.
+     *
+     * **A plataforma velha não observa ato nenhum**, e lá `vigiarEnvio` devolve `false`: o
+     * invariante antigo continua valendo inteiro, porque mudá-lo ali travaria um caminho que
+     * funciona há dois meses.
+     */
+    let observando = false;
+    let atoAntes = { em: 0 };
+    try {
+      observando = (await page.vigiarEnvio()) === true;
+      if (observando) atoAntes = (await page.ultimoAtoDeEnvio()) || { em: 0 };
+    } catch (_) {
+      observando = false;
+    }
+
     const fim = Date.now() + timeoutMs;
-    setStatus('Escrevi no campo. Revise e dê Enter — eu concluo e abro o próximo.');
+    setStatus(
+      observando
+        ? 'Escrevi no campo. Revise e envie (Enter ou o botão) — eu concluo e abro o próximo.'
+        : 'Escrevi no campo. Revise e dê Enter — eu concluo e abro o próximo.'
+    );
 
     while (Date.now() < fim) {
       if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada', parar: true };
@@ -6714,7 +6789,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       // Esvaziou, ou já é outro texto: nos dois casos o que escrevemos não está mais lá.
-      if (!agora.trim() || !agora.includes(alvo.slice(0, 20))) return { ok: true };
+      if (!agora.trim() || !agora.includes(alvo.slice(0, 20))) {
+        if (!observando) return { ok: true };
+
+        const ato = (await page.ultimoAtoDeEnvio().catch(() => null)) || { em: 0, como: '' };
+        if (ato.em > atoAntes.em) return { ok: true, como: ato.como };
+        return {
+          ok: false,
+          apagado: true,
+          motivo:
+            'o texto saiu do campo e você não deu Enter nem clicou em enviar — entendi que você ' +
+            'apagou, então NÃO concluí este atendimento',
+        };
+      }
 
       await new Promise((r) => setTimeout(r, 700));
     }

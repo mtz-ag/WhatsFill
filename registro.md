@@ -1,15 +1,57 @@
-## 2026-10-29 - v3.231.0 - ESTADO DE AGORA - o Enter passou a valer tambem para a IA
+## 2026-10-29 - v3.232.0 - ESTADO DE AGORA - o gatilho virou o seu ato, e a etiqueta voltou
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.231.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.232.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.231.0** na linha pequena do topo do painel
+3. Confira **3.232.0** na linha pequena do topo do painel
 4. **Classifique UM contato e me diga o que a barra escreveu** — e a unica coisa que falta medir
+
+### APAGAR NAO E ENVIAR — o gatilho agora e o SEU ato
+
+Voce escreveu: *"o texto foi pro box de conversa, eu olhei e vi que estava errado, apaguei, e a
+automacao pulou ou concluiu; o gatilho continua errado, eu nao dei enter ou clickei pra enviar"*.
+
+**Voce pagou um risco que estava escrito na tela — e isso e a prova de que avisar nao bastava.**
+O modo "Eu mando" dava a mensagem por enviada quando o campo **esvaziava**, porque a plataforma
+limpa a caixa ao enviar. So que isso vale numa direcao so: **enviar esvazia, e apagar esvazia
+igual.**
+
+Agora o painel observa **os dois atos que voce nomeou**: o **Enter no campo** e o **clique no
+botao de enviar**. E exige **as duas coisas juntas** — o seu ato *e* o campo ficar vazio. O ato
+diz que voce mandou; o campo vazio diz que a plataforma aceitou.
+
+**Apagando o texto, ele diz isso e NAO conclui:** *"o texto saiu do campo e voce nao deu Enter nem
+clicou em enviar — entendi que voce apagou, entao NAO conclui este atendimento"*, e segue para o
+proximo contato.
+
+**Um limite declarado:** o botao de enviar da tela nova nao tem gancho nenhum (nao ha `data-cy`
+nesta plataforma), entao o clique e reconhecido por estar **perto do campo**. Se um dia ele deixar
+de ser reconhecido, o custo e a rodada esperar os dez minutos e **pular** — nunca concluir errado.
+Pelo Enter nao ha essa duvida.
+
+### "A ETIQUETA DE ASSESSOR PAROU DE FUNCIONAR" — e levou mais tres listas junto
+
+Voce estava certo, e a causa nao era a regra: era **o rotulo da etiqueta nao resolver**.
+
+O painel guarda as etiquetas do contato como **ids**, e ia buscar o nome delas num catalogo. Na
+plataforma velha esse catalogo era a tabela de etiquetas inteira. **Aqui nao existe tabela de
+etiquetas** — elas sao texto solto dentro do contato —, entao o catalogo so pode ser *"o que ja
+apareceu numa fatia da base"*: **1.000 contatos de 107.988**. ASSESSOR e de uso interno e
+praticamente nunca cai nessa fatia.
+
+Resultado: o painel nao achava o nome, a lista nao casava, e **a regra morria em silencio** — sem
+erro, sem linha no Andamento, com o contato indo para a IA como se nao tivesse etiqueta nenhuma.
+
+**O mesmo buraco matava outras tres listas**: a que dispensa da fila, as que pulam o disparo e a
+de endereco (o caso de material). E o sinal de *"ja veio por anuncio alguma vez"*.
+
+O conserto e olhar o que o contato **ja traz**: aqui a etiqueta vem do banco com o nome dentro, e
+o catalogo era um desvio que so podia perder informacao.
 
 ### "O GATILHO ESTA ERRADO" — voce estava certo, e o buraco era de ALCANCE
 
@@ -77,6 +119,8 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.229 | "Gravado: nada" | **nenhuma** escrita no contato tinha caminho |
 | 3.230 | pediu cidade de quem ja tem | o formulario olhava a ETIQUETA, nunca o CAMPO |
 | 3.231 | o rascunho da IA parado no campo | o modo "Eu mando" valia so para a resposta pronta |
+| 3.232 | apaguei o texto e ele concluiu | o gatilho era o campo esvaziar, e apagar esvazia igual |
+| 3.232 | a etiqueta de assessor parou | o rotulo saia de um catalogo que aqui e uma amostra de 0,9% |
 
 **As tres licoes que eu escrevi para nao repetir:**
 
