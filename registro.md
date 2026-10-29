@@ -1,17 +1,54 @@
-## 2026-10-29 - v3.234.0 - ESTADO DE AGORA - um envio que nao saiu nao encerra a fila
+## 2026-10-29 - v3.235.0 - ESTADO DE AGORA - o gatilho e o SEU ato, e nada mais
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.234.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.235.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.234.0** na linha pequena do topo do painel (`encaixado na aba`). A tela ainda esta na **3.233.0**
-4. Rode de novo. Se uma resposta nao sair, a barra diz o motivo e **abre o proximo**
-5. O contato em que parou estava **Aguardando atendente**, com o botao Assumir na tela. A rodada nao concluiu esse
-6. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua sem confirmacao
+3. Confira **3.235.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Rode de novo. **Agora voce pode apagar, corrigir e reescrever o rascunho o quanto quiser** — so
+   o Enter ou o clique em enviar encerram a espera
+5. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
+   sem confirmacao
+
+### "SEMPRE QUE APERTO BACKSPACE A RODADA PARA" — o campo era o gatilho, e cada tecla sua o mudava
+
+Voce escreveu: *"o gatilho continua errado, sempre que aperto a tecla de backspace a rodada para;
+o gatilho e eu clicar em enviar ou apertar enter"*.
+
+**Voce estava certo, e o numero e feio.** A espera testava se *"o texto continua no campo"* com
+`includes` dos **vinte primeiros caracteres**. Medido com o texto de uma resposta pronta, de SETE
+edicoes comuns **CINCO** derrubavam o teste:
+
+```
+true   intacto                        true   backspace no FIM
+false  backspace no MEIO dos 20       false  backspace no COMECO
+false  apagou uma palavra do comeco   false  trocou "Bom dia" por "Boa tarde"
+false  selecionou tudo e apagou
+```
+
+E com o texto ja visto no campo, isso caia direto no ramo do *"voce apagou"*: **corrigir o
+rascunho encerrava a espera**. Corrigir e exatamente o que este modo existe para voce fazer.
+
+**Agora a espera olha SO O ATO** — o Enter no campo de mensagem ou o clique no botao ao lado,
+os dois exigindo teclado/mouse de verdade. O texto pode ser apagado inteiro e digitado de novo:
+**nada disso decide nada.** Quem encerra sem ato e o **Parar**, o **Esc** ou o teto de dez
+minutos, e a barra agora diz isso: *"Se nao for enviar, aperte Parar."*
+
+**O campo vazio nao saiu — virou CONFIRMACAO, depois do ato.** O ato diz que voce mandou; o campo
+esvaziar diz que a plataforma aceitou (com 8s de folga, porque ela nao limpa a caixa no mesmo
+instante). Dando Enter com o campo ainda cheio, **nao concluo** e digo por que — e o caso do
+canal fora do ar, em que o Enter sai e a mensagem nao.
+
+**A licao que ficou escrita:** campo de texto que VOCE edita nao serve como gatilho de nada — cada
+tecla sua muda aquele valor, entao qualquer regra que compare o conteudo decide no meio da sua
+digitacao. O que serve e o ATO, que acontece uma vez.
+
+**A prova:** pondo de volta um caminho que olha o campo antes do ato, **cai 1 assercao**.
+
 
 ### SOBROU UMA PASTA SO — e a frase do CLAUDE.md sobre o OneDrive morreu
 
@@ -212,6 +249,7 @@ coisa que eu mesmo tinha acabado de quebrar**:
 | 3.233 | mandei e a rodada encerrou | `.catch` no objeto do ato de envio estourava e virava erro |
 | 3.234 | encerrou de novo, "nao saiu" | `false` do envio virava `erro`, e erro para a fila inteira |
 | 3.234 | deletei a mensagem e deu erro | o quadrado vermelho nascia em cima da conversa — e estava desligado |
+| 3.235 | backspace parava a rodada | o CAMPO era o gatilho, e cada tecla dele mudava o campo |
 | 3.232 | a etiqueta de assessor parou | o rotulo saia de um catalogo que aqui e uma amostra de 0,9% |
 
 **As tres licoes que eu escrevi para nao repetir:**

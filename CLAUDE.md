@@ -744,6 +744,31 @@ mudaram as maos, nao a cabeca.
   **O campo vazio CONTINUA sendo exigido, junto:** o ato diz que ele mandou, o campo vazio diz que
   a plataforma aceitou. Apagar produz so a segunda metade, e ai o desfecho e **`pulado` com o
   motivo escrito**, nunca concluir.
+  **E O CAMPO DEIXOU DE SER GATILHO NO MESMO DIA, porque ele era gatilho de BACKSPACE** (relato
+  dele: *"o gatilho continua errado, sempre que aperto a tecla de backspace a rodada para; o
+  gatilho e eu clicar em enviar ou apertar enter"*). O teste de *"o texto continua no campo"* era
+  `agora.includes(alvo.slice(0, 20))`, e **medido com o texto de uma resposta pronta, de SETE
+  edicoes comuns CINCO o derrubavam**:
+  ```
+  true   intacto                        true   backspace no FIM
+  false  backspace no MEIO dos 20       false  backspace no COMECO
+  false  apagou uma palavra do comeco   false  trocou "Bom dia" por "Boa tarde"
+  false  selecionou tudo e apagou
+  ```
+  Com o texto ja visto no campo, `presente` falso caia direto no ramo do *"voce apagou"* — ou
+  seja, **corrigir o rascunho encerrava a espera**, e corrigir e o que este modo existe para
+  deixar ele fazer (*"eu reviso e quando eu der enter ela conclui"*, 28/10).
+  **Hoje, onde da para ver o ato, a espera olha SO O ATO.** O texto pode ser reescrito inteiro,
+  apagado e digitado de novo: nada disso decide nada. Quem encerra sem ato e o **Parar**, o
+  **Esc** ou o teto de dez minutos — e a linha de status passou a dizer isso.
+  **O campo vazio nao saiu: virou CONFIRMACAO, DEPOIS do ato** (`textoAindaNoCampo`, com 8s de
+  folga porque a plataforma nao limpa a caixa no mesmo quadro). Enter com o campo ainda cheio
+  **nao conclui** — e o caso do canal fora do ar, em que o Enter sai e a mensagem nao.
+  **A licao: campo de texto que ELE edita nao serve como gatilho de nada.** Cada tecla dele muda
+  aquele valor, entao qualquer regra que compare o conteudo decide no meio da digitacao. O que
+  serve e o ATO, que acontece uma vez.
+  **A prova e o defeito reintroduzido:** por de volta um `return { ok: true }` que olha o campo
+  antes do ato e **cai 1 assercao** (`com vigia, nada conclui antes do ato`).
   **O clique precisa estar PERTO do campo** (ate 6 ancestrais), senao "Resolver" e "Transferir"
   contariam como envio — **o botao de enviar nao tem gancho**, porque a tela nova nao tem
   `data-cy`. **Isto e heuristica declarada, e o lado do erro foi escolhido:** nao reconhecer custa

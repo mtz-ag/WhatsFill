@@ -1471,30 +1471,52 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
   check(corpo.includes('state.auto.parar'), 'e o botao Parar da rodada corta a espera');
 
   /**
-   * **APAGAR O TEXTO NAO E ENVIAR** (29/10/2026, relato dele: *"o texto foi pro box de conversa,
-   * eu olhei e vi que estava errado, apaguei, e a automacao pulou ou concluiu; o gatilho continua
-   * errado, eu nao dei enter ou clickei pra enviar"*).
+  /**
+   * **O GATILHO E O ATO DELE, E NADA MAIS** (29/10/2026, relato dele: *"o gatilho continua
+   * errado, sempre que aperto a tecla de backspace a rodada para; o gatilho e eu clicar em
+   * enviar ou apertar enter"*).
    *
-   * O campo esvaziar valia numa direcao so: a plataforma limpa a caixa ao enviar, e apagar
-   * esvazia igual. **Agora sao DUAS coisas** — o ATO dele e o campo vazio.
+   * **Medido com o texto de uma resposta pronta:** o teste de "o texto continua no campo" era
+   * `includes(alvo.slice(0, 20))`, e de SETE edicoes comuns CINCO o derrubavam — backspace no
+   * comeco, backspace no meio dos vinte, apagar uma palavra, trocar a saudacao, selecionar tudo.
+   * Com o texto ja visto no campo, isso caia direto no ramo do "voce apagou": **corrigir o
+   * rascunho encerrava a espera**, e corrigir e o que este modo existe para deixar ele fazer.
+   *
+   * Hoje, onde da para ver o ato, a espera olha **so o ato**. O campo e lido depois, para
+   * CONFIRMAR que a plataforma aceitou.
    */
   check(corpo.includes('await page.vigiarEnvio()'), 'a espera liga a vigia do ato de envio');
   check(corpo.includes('ato.em > atoAntes.em'),
-    'e so da por enviado quando houve um ato DELE depois de o texto entrar no campo');
-  check(/apagado: true/.test(corpo), 'campo vazio SEM ato tem desfecho proprio: nao concluiu');
+    'e so da por enviado quando houve um ato DELE');
+
+  /**
+   * **Esta e a assercao que cai se alguem devolver o campo como gatilho.** Dentro do ramo que
+   * observa o ato, NENHUM `ok: true` pode vir antes da comparacao do ato — senao o campo
+   * esvaziar (ou mudar de texto, que e o que o backspace faz) volta a concluir sozinho.
+   */
+  const ramoDoAto = corpo.slice(corpo.indexOf('if (observando) {'));
+  const ondeOAto = ramoDoAto.indexOf('ato.em > atoAntes.em');
+  const primeiroOk = ramoDoAto.indexOf('ok: true');
+  check(ondeOAto > 0 && primeiroOk > ondeOAto,
+    'com vigia, nada conclui antes do ato — nem campo vazio, nem texto trocado');
+
+  /**
+   * **O campo vazio nao saiu: virou CONFIRMACAO, depois do ato.** O ato diz que ele mandou; o
+   * campo esvaziar diz que a plataforma aceitou. Continuando cheio depois do Enter (canal fora
+   * do ar), o desfecho e NAO concluir.
+   */
+  check(/textoAindaNoCampo/.test(corpo), 'a leitura do campo tem nome proprio, de confirmacao');
+  check(/mas o texto continuou no campo/.test(corpo),
+    'e o Enter com o campo ainda cheio NAO conclui');
 
   /**
    * **A plataforma velha nao observa ato nenhum, e a ausencia e informacao:** `vigiarEnvio`
-   * devolve `false` la, e o painel cai no invariante antigo. Fingir um ato faria a rodada
-   * concluir no instante em que o texto entra no campo.
+   * devolve `false` la, e o painel cai no invariante antigo (o campo esvaziar), que funciona ha
+   * dois meses. Fingir um ato faria a rodada concluir no instante em que o texto entra no campo.
    */
-  /**
-   * **Esta e a assercao que cai se alguem devolver o gatilho antigo.** O campo vazio sozinho so
-   * basta onde NAO ha vigia (mobiliza.app, onde o invariante continua inteiro); havendo vigia,
-   * ele tem de passar pelo ato — senao apagar volta a concluir atendimento.
-   */
-  check(corpo.includes('if (!observando) return { ok: true };'),
-    'campo vazio SOZINHO so conclui onde nao ha vigia — com vigia, passa pelo ato');
+  const ramoVelho = corpo.slice(corpo.indexOf('Plataforma velha'));
+  check(/!agora\.trim\(\) \|\| !agora\.includes\(trecho\)/.test(ramoVelho),
+    'sem vigia, o campo esvaziar continua sendo tudo o que existe');
 
   /**
    * **A LEITURA DO ATO NAO PODE CHAMAR `.catch` NO RETORNO** (29/10/2026, relato dele: *"eu

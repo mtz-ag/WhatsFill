@@ -6800,26 +6800,38 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!alvo) return { ok: true, motivo: 'sem texto para esperar' };
 
     /**
-     * **APAGAR ESVAZIA IGUAL — e por isso o campo vazio deixou de bastar** (29/10/2026, relato
-     * dele: *"o texto foi pro box de conversa, eu olhei e vi que estava errado, apaguei, e a
-     * automação pulou ou concluiu; o gatilho continua errado, eu não dei enter ou clickei pra
-     * enviar"*).
+     * **O GATILHO É O ATO DELE, E NADA MAIS** (29/10/2026, relato dele: *"o gatilho continua
+     * errado, sempre que aperto a tecla de backspace a rodada para; o gatilho é eu clicar em
+     * enviar ou apertar enter"*).
      *
-     * **O risco estava escrito na tela e ele o pagou**, o que é a prova de que avisar não era
-     * suficiente. O invariante antigo valia numa direção só: a plataforma limpa a caixa ao
-     * enviar, então enviar esvazia — mas **campo vazio nunca provou que o texto foi para
-     * alguém**.
+     * **Medido antes de mexer, com o texto real de uma resposta pronta.** O teste de "o texto
+     * continua no campo" era `agora.includes(alvo.slice(0, 20))` — os vinte primeiros
+     * caracteres —, e de sete edições comuns **cinco** o derrubavam:
+     * ```
+     * true   intacto                        true   backspace no FIM
+     * false  backspace no MEIO dos 20       false  backspace no COMEÇO
+     * false  apagou uma palavra do começo   false  trocou "Bom dia" por "Boa tarde"
+     * false  selecionou tudo e apagou
+     * ```
+     * Com o texto já visto no campo, `presente` falso caía direto no ramo do "você apagou" — ou
+     * seja, **corrigir o rascunho encerrava a espera**. E corrigir é o que este modo existe para
+     * deixar ele fazer: a v3.224 nasceu de *"quero que escreva na caixa, eu reviso e quando eu
+     * der enter ela conclui"*.
      *
-     * **Agora são DUAS coisas, e nenhuma delas sozinha conclui:** o ATO dele (Enter no campo ou
-     * clique no botão de enviar, com `isTrusted` — ver `dom-mob.vigiarEnvio`) **e** o campo ter
-     * esvaziado. O ato diz que ele mandou; o campo vazio diz que a plataforma aceitou.
+     * **Então o campo deixou de ser gatilho.** Onde dá para ver o ato (`dom-mob.vigiarEnvio`:
+     * Enter no campo de mensagem ou clique no botão ao lado, os dois com `isTrusted`), a espera
+     * olha **só o ato**. O texto pode ser reescrito inteiro, apagado e digitado de novo: nada
+     * disso decide nada. Quem encerra sem ato é o botão **Parar**, o **Esc** ou o teto de dez
+     * minutos — e os três dizem isso na linha do Andamento.
      *
-     * **Apagar produz só a segunda metade**, e aí o desfecho é dizer isso e NÃO concluir — que é
-     * o contrário do que ele viu.
+     * **O campo vazio não saiu: virou CONFIRMAÇÃO, depois do ato.** O ato diz que ele mandou; o
+     * campo esvaziar diz que a plataforma aceitou. Continuando cheio depois do Enter, o desfecho
+     * é NÃO concluir e dizer por quê — é o caso do canal fora do ar, em que o Enter sai e a
+     * mensagem não.
      *
      * **A plataforma velha não observa ato nenhum**, e lá `vigiarEnvio` devolve `false`: o
-     * invariante antigo continua valendo inteiro, porque mudá-lo ali travaria um caminho que
-     * funciona há dois meses.
+     * invariante antigo (o campo esvaziar) continua valendo inteiro, porque mexer nele travaria
+     * um caminho que funciona há dois meses.
      */
     let observando = false;
     let atoAntes = { em: 0 };
@@ -6830,61 +6842,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       observando = false;
     }
 
+    /** O que escrevemos ainda está no campo? Usado só para CONFIRMAR, nunca para decidir. */
+    const trecho = alvo.slice(0, 20);
+    async function textoAindaNoCampo() {
+      const agora = String((await page.textoDoComposer()) || '');
+      return !!agora.trim() && agora.includes(trecho);
+    }
+
     const fim = Date.now() + timeoutMs;
     const inicio = Date.now();
     let viuOTexto = false;
     setStatus(
       observando
-        ? 'Escrevi no campo. Revise e envie (Enter ou o botão) — eu concluo e abro o próximo.'
+        ? 'Escrevi no campo. Revise e envie (Enter ou o botão) — eu concluo e abro o próximo. Se não for enviar, aperte Parar.'
         : 'Escrevi no campo. Revise e dê Enter — eu concluo e abro o próximo.'
     );
 
     while (Date.now() < fim) {
       if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada', parar: true };
 
-      let agora = '';
-      try {
-        agora = String((await page.textoDoComposer()) || '');
-      } catch (err) {
-        // Não dá para ler o campo: não afirmo que saiu nem que não saiu. Quem chama pula.
-        return { ok: false, motivo: `não consegui ler o campo de mensagem (${err.message})` };
-      }
-
-      // Esvaziou, ou já é outro texto: nos dois casos o que escrevemos não está mais lá.
-      const presente = !!agora.trim() && agora.includes(alvo.slice(0, 20));
-      if (presente) viuOTexto = true;
-      if (!presente) {
-        if (!observando) return { ok: true };
-
+      if (observando) {
         /**
-         * **Campo vazio ANTES de o texto aparecer nao e "ele apagou"** (29/10/2026).
-         * `textoDoComposer` devolve `''` tambem quando nao ha campo. Tratar isso como
-         * apagado no primeiro tique devolvia `false`, e quem chamava fazia disso `erro` —
-         * a rodada encerrava sem ele ter apagado nada. So conta como apagado depois de
-         * o texto ter sido visto no campo.
-         */
-        if (!viuOTexto) {
-          if (Date.now() - inicio < 3000) {
-            await new Promise((r) => setTimeout(r, 700));
-            continue;
-          }
-          return {
-            ok: false,
-            motivo: 'o texto não apareceu no campo de mensagem — não concluí este atendimento',
-          };
-        }
-
-        /**
-         * **`.catch` no RETORNO estoura, e a rodada morre com a mensagem ja na tela**
+         * **`.catch` no RETORNO estoura, e a rodada morre com a mensagem já na tela**
          * (29/10/2026, relato dele: *"eu mandei a mensagem e encerrou era para continuar pro
-         * proximo contato"*). A barra dizia `page.ultimoAtoDeEnvio(...).catch is not a function`.
-         *
-         * Na aba encaixada `ultimoAtoDeEnvio` devolve o objeto na hora (`{em, como}`). Chamar
-         * `.catch` nele nao e "se a leitura falhar": e TypeError, que sobe como `erro` e
-         * **para a rodada inteira** — o texto dele ja no WhatsApp, o atendimento ainda aberto,
-         * zero enviados. No modo janela a mesma funcao devolve PROMESSA. `await` cobre os dois:
-         * objeto cru volta igual; promessa recusada cai no `catch` e vira "sem ato", que nao
-         * conclui e nao encerra a rodada por excecao.
+         * próximo contato"*). A barra dizia `page.ultimoAtoDeEnvio(...).catch is not a
+         * function`: na aba encaixada a função devolve o objeto na hora, e `.catch` nele é
+         * TypeError, que sobe como `erro` e **para a rodada inteira**. No modo janela a mesma
+         * função devolve promessa. `await` dentro de `try` cobre os dois.
          */
         let ato = { em: 0, como: '' };
         try {
@@ -6892,15 +6876,59 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         } catch (_) {
           ato = { em: 0, como: '' };
         }
-        if (ato.em > atoAntes.em) return { ok: true, como: ato.como };
-        return {
-          ok: false,
-          apagado: true,
-          motivo:
-            'o texto saiu do campo e você não deu Enter nem clicou em enviar — entendi que você ' +
-            'apagou, então NÃO concluí este atendimento',
-        };
+
+        if (ato.em > atoAntes.em) {
+          // Ele mandou. Agora o campo esvaziar é a CONFIRMAÇÃO de que a plataforma aceitou — e
+          // ela não é instantânea, então vale esperar um pouco antes de duvidar.
+          const limite = Date.now() + 8000;
+          while (Date.now() < limite) {
+            try {
+              if (!(await textoAindaNoCampo())) return { ok: true, como: ato.como };
+            } catch (_) {
+              // Não dá para ler o campo: o ato dele é a prova mais forte que existe aqui.
+              return { ok: true, como: ato.como };
+            }
+            await new Promise((r) => setTimeout(r, 400));
+          }
+          return {
+            ok: false,
+            motivo: `você ${ato.como || 'mandou'}, mas o texto continuou no campo — não concluí este atendimento`,
+          };
+        }
+
+        /**
+         * **Sem ato, o campo não decide nada** — e esta é a única coisa que ele ainda diz: se o
+         * texto NUNCA apareceu, a escrita falhou e esperar dez minutos por um Enter num campo
+         * vazio é a rodada parada. `textoDoComposer` devolve `''` também quando não há campo,
+         * então isto só vale nos primeiros segundos.
+         */
+        if (!viuOTexto) {
+          try {
+            if (await textoAindaNoCampo()) viuOTexto = true;
+          } catch (_) {
+            viuOTexto = true; // não deu para ler: não acuso escrita que talvez tenha funcionado
+          }
+          if (!viuOTexto && Date.now() - inicio >= 3000) {
+            return {
+              ok: false,
+              motivo: 'o texto não apareceu no campo de mensagem — não concluí este atendimento',
+            };
+          }
+        }
+
+        await new Promise((r) => setTimeout(r, 700));
+        continue;
       }
+
+      // Plataforma velha: não há ato para observar, então o campo esvaziar é tudo o que existe.
+      let agora = '';
+      try {
+        agora = String((await page.textoDoComposer()) || '');
+      } catch (err) {
+        // Não dá para ler o campo: não afirmo que saiu nem que não saiu. Quem chama pula.
+        return { ok: false, motivo: `não consegui ler o campo de mensagem (${err.message})` };
+      }
+      if (!agora.trim() || !agora.includes(trecho)) return { ok: true };
 
       await new Promise((r) => setTimeout(r, 700));
     }
