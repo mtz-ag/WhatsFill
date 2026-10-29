@@ -1,0 +1,43 @@
+---
+alwaysApply: false
+---
+
+# @fechar — nada fica aberto
+
+Na ordem, sem pular:
+
+1. ```bash
+   node tools/checar-modulos.mjs
+   node tools/checar-referencias.mjs
+   ```
+   **Leia a saída.** Verificação rodada em segundo plano e lida depois não é verificação — já
+   mandei uma janela que não carregava com o verificador dizendo o erro na tela.
+
+2. **As trinta suítes passando** (o comando inteiro está em `@10-ambiente`). Se escreveu arquivo
+   por script, `git diff --stat` antes: escrita truncada deixa o arquivo válido e incompleto.
+
+3. **Mudou comportamento visível? Suba a `version` do `manifest.json` no mesmo commit**, e a linha
+   da versão no cabeçalho do `CLAUDE.md`. É o que torna possível ele distinguir *"o fix não
+   funcionou"* de *"o fix não chegou"*.
+
+4. **`registro.md`: REESCREVA a entrada do topo**, não acrescente uma segunda. Ela é a passagem de
+   contexto e precisa descrever o **presente**:
+   - o que ele precisa fazer na mão (recarregar, F5, conferir a versão);
+   - o que está esperando decisão ou confirmação DELE;
+   - o que mudou, com a frase dele entre aspas e a causa raiz.
+
+5. **Armadilha nova de plataforma entra no `CLAUDE.md`, no mesmo commit** — só o que se paga: fato
+   que custou horas e que a próxima sessão redescobriria do zero.
+
+6. **Commit explícito** (`git add <arquivos>`, nunca `-A`), mensagem em português sem acentos,
+   `tipo(escopo): resumo`, corpo com a causa raiz. Depois `git push`.
+
+7. **Relate a ele em português, e sem enfeite:**
+   - o que estava errado, **em uma frase**;
+   - o que você **mediu** (com número) e o que descartou;
+   - o que ficou de **hipótese**, com todas as letras;
+   - o que **ele** precisa fazer agora;
+   - o que você **não** fez e por quê.
+
+**Parte do escopo ficou bloqueada?** Termine todo o resto, e diga explicitamente o que ficou de
+fora e por quê. Reduzir o escopo é decisão dele, não sua.

@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+---
+
+# O ambiente, e as armadilhas que ele já cobrou
+
+Windows 11. PowerShell e Git Bash disponíveis. Node 18+ só para os testes. JavaScript puro, ES
+modules, **sem build step**.
+
+## A pasta do repositório É a extensão carregada no Chrome
+
+O Chrome carrega esta pasta descompactada. Disso saem três consequências que já quebraram coisas:
+
+- **Arquivo temporário na raiz derruba a extensão inteira.** Nome começando com `_` é reservado
+  pelo Chrome: um `_s.cjs` esquecido ali deu *"Não foi possível carregar manifesto"* — e o erro
+  aponta para o manifesto, não para o arquivo. **Script de apoio vai para fora do repositório.**
+- **Trocar de branch troca a extensão em produção**, sem avisar ninguém. O que separa as duas é o
+  nome (`WhatsFill` vs `WhatsFill+IA`) e a série da versão: produção é `0.x`.
+- **"O fix não funcionou" pode ser "o fix não chegou".** Antes de qualquer diagnóstico, confira a
+  versão no topo do painel contra a do `manifest.json`.
+
+## Armadilhas de terminal que já comeram código em silêncio
+
+- **Crase dentro de `python -c` no Git Bash é EXECUTADA pelo bash.** O conteúdo entre crases vira
+  comando e some do arquivo. Nada estoura, o `git diff` parece certo e os verificadores passam.
+  **Cometido três vezes no mesmo dia.** Texto com crase vai pela ferramenta de edição ou por
+  arquivo de script — nunca por `python -c` inline.
+- **`\b` numa string Python normal é um backspace**, não as duas letras. Use `r'...'`.
+- **Heredoc do Git Bash falha com conteúdo longo.** Arquivo grande vai pela ferramenta de edição.
+- **Escrever arquivo por Python com emoji trunca no meio** (`surrogates not allowed`) e o que
+  sobra continua sintaticamente válido. Depois de qualquer escrita por script: `git diff --stat`.
+- **Inserir função ancorando em `t.index('function nome')`** cai no meio do JSDoc e na coluna
+  errada. Ancore na linha inteira anterior, com a indentação dentro do texto procurado.
+
+## Verificar NÃO é `node --check`
+
+`node --check` analisa como CommonJS; o Chrome carrega como ES module. Ele já disse OK sobre um
+arquivo que não carregava.
+
+```bash
+node tools/checar-modulos.mjs       # sintaxe de verdade + crase em comentário CSS
+node tools/checar-referencias.mjs   # chamada sem declaração, opção sem ramo, nome fora de escopo
+```
+
+O segundo leva **cerca de dois minutos**. Rode-o assim mesmo: ele pega a classe de erro que só
+estouraria no meio de uma rodada, na tela dele.
+
+**Crase dentro de template literal fecha a string no meio.** Com DUAS crases fica sintaticamente
+válido e só estoura em runtime, no instante em que o painel desenha. Comentário dentro de um
+`css()` não leva crase — `checar-modulos` tem uma passada para isso.
+
+## As trinta suítes
+
+Node puro, sem dependência, e **rodam offline**. Antes de dar tarefa por concluída, todas passando:
+
+```bash
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs && node tests/page-mob.test.mjs
+```
+
+**`panel.js` não é importável** (precisa de `window`), então os testes dele leem o arquivo como
+TEXTO e ancoram no código — nunca na prosa, porque o comentário do conserto costuma citar a frase
+do erro.
+
+## Git
+
+- Mensagem em **português sem acentos**: `tipo(escopo): resumo`. Tipos: `feat`, `fix`, `refactor`,
+  `docs`, `chore`, `test`.
+- O corpo explica a **causa raiz**, não o que mudou — o diff já diz o que mudou.
+- **Nunca `git add -A`.** Adicione os arquivos explicitamente.
+- **Todo commit leva o `registro.md` junto.**
+- Commit e push sem perguntar quando a tarefa fecha (autorização permanente dele).
+- `gh` no PowerShell devolve exit 255 mesmo dando certo; prefira o Bash.

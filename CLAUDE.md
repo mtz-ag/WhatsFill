@@ -37,6 +37,12 @@
 > 3. **`README.md`** — arquitetura, medições ao vivo e o porquê de cada escolha
 >
 > Ao concluir tarefa significativa, registre no **TOPO** do `registro.md`.
+>
+> **O Cursor le `.cursor/rules/*.mdc`** (29/10/2026). Eles carregam o METODO — medir antes de
+> mexer, a guarda so vale onde e alcancada, reintroduzir o defeito para provar o teste —, mais os
+> quatro passos como regras manuais (`@medir`, `@consertar`, `@provar`, `@fechar`).
+> **Os FATOS continuam so aqui**, de proposito: duas copias da mesma armadilha divergem na
+> primeira semana. Mexendo no metodo, mexa la; mexendo numa armadilha, mexa aqui.
 
 ---
 

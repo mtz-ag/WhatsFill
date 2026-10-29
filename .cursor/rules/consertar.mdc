@@ -1,0 +1,40 @@
+---
+alwaysApply: false
+---
+
+# @consertar — a causa já está medida
+
+1. **Conserte a CAUSA, não o lugar onde o sintoma apareceu.** Consertar o sintoma onde ele aparece
+   não conserta quem lê a tela antes — foi assim que o mesmo defeito voltou com outro nome, duas
+   vezes no mesmo dia. Pergunte: quem é o **único lugar** que sabe esta coisa? É lá.
+
+2. **Procure as outras cópias.** Antes de dar por pronto:
+   - `grep` por quem mais faz a mesma coisa (pelo nome da função de BAIXO nível, não a de cima);
+   - a guarda nova é alcançada em **todos** os caminhos? São três filas, e o motor é um só;
+   - são **dois** pontos de saída de mensagem, e cada um tem **dois ramos** (inserir e enviar).
+
+3. **Antes de pôr uma guarda na condição, pergunte quem decide quando ela barrar.** Sendo uma
+   caixa que ENVIA, a guarda tem de virar **desfecho**, não condição.
+
+4. **Trava que não deixa APERTAR é mais forte que a que recusa depois do clique** — e é a que
+   escapa quando se procura pelo texto do erro, porque nunca chega a produzir erro. Ao destravar um
+   caminho, procure `disabled`, `impedimentos`, `trava` e `comuns`, não só o `return`.
+
+5. **Ao criar, crie o par no mesmo commit:**
+   - resposta pronta nova ⇒ quem a aciona;
+   - opção na caixa da rodada ⇒ o ramo que a executa;
+   - pergunta que a rodada faz ⇒ a regra que reconhece a resposta;
+   - campo novo num retorno ⇒ a desestruturação de quem o usa;
+   - caixa que CONCLUI ⇒ o que impede fechar em cima de uma pergunta;
+   - tecla fixa que ENVIA ⇒ o que impede a segunda vez.
+
+6. **Mudou o nome de algo na tela?** `grep` pelo nome ANTIGO: ele vive também nos títulos, nas
+   descrições e nos avisos.
+
+7. **Escreva o comentário com a data, a frase dele e o porquê.** Inclua o que você NÃO fez e por
+   quê — é o que impede o próximo conserto de desfazer este.
+
+8. **Aviso que não envelhece com o que já foi feito é aviso que mente.** Ao escrever "falta fazer
+   X", escreva junto o que a tela diz DEPOIS de X feito.
+
+Depois: `@provar`.

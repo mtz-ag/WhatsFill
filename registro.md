@@ -34,6 +34,23 @@ nesta plataforma), entao o clique e reconhecido por estar **perto do campo**. Se
 de ser reconhecido, o custo e a rodada esperar os dez minutos e **pular** — nunca concluir errado.
 Pelo Enter nao ha essa duvida.
 
+### O CURSOR PASSOU A TRABALHAR DO MESMO JEITO
+
+Pedido seu. `.cursor/rules/` tem seis arquivos: dois que valem sempre (o **metodo** e as
+**armadilhas do ambiente**) e quatro que voce chama no chat — **`@medir`**, **`@consertar`**,
+**`@provar`**, **`@fechar`** —, um por etapa.
+
+**Comando de arquivo (`/nome`) eu NAO consegui confirmar nos docs oficiais** (a pagina devolve
+404), entao nao inventei: os quatro passos sao regras manuais, chamadas com `@`. Isso esta
+confirmado na documentacao.
+
+**Os FATOS nao foram copiados para la**, de proposito — eles continuam so no `CLAUDE.md`, porque
+duas copias da mesma armadilha divergem na primeira semana. As regras do Cursor carregam o
+**metodo** e mandam abrir os arquivos.
+
+Para outra IA ou outra ferramenta, ha `.cursor/PROMPT-AVULSO.md`: um bloco para colar como
+primeira mensagem.
+
 ### "A ETIQUETA DE ASSESSOR PAROU DE FUNCIONAR" — e levou mais tres listas junto
 
 Voce estava certo, e a causa nao era a regra: era **o rotulo da etiqueta nao resolver**.

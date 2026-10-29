@@ -1,0 +1,93 @@
+---
+alwaysApply: true
+---
+
+# Como se trabalha neste repositório
+
+Este é o painel de atendimento de uma campanha política no RS. **Dados reais de eleitores, e toda
+escrita é em produção.** Erro aqui não é teste vermelho: é mensagem errada no WhatsApp de uma
+pessoa, ou etiqueta permanente no CRM dela.
+
+O dono do projeto é o Thiago. Ele opera a rodada todo dia e reporta por print. **A instrução dele
+vence qualquer regra deste arquivo.**
+
+## Antes de escrever a primeira linha
+
+Abra e leia, nesta ordem:
+
+1. `registro.md` — a entrada do **TOPO** é a passagem de contexto: o que está no ar, o que espera
+   decisão dele, o que ele precisa fazer na mão. **Confira a versão do `manifest.json` contra a do
+   título dela** — sendo maior, a entrada envelheceu.
+2. `CLAUDE.md` — as armadilhas já pagas. Ele é longo **de propósito**: cada item custou horas e a
+   próxima sessão redescobriria do zero.
+3. `README.md` — arquitetura e as medições ao vivo.
+
+**Nunca responda sobre o comportamento do painel de memória.** Estes arquivos são a fonte; o que
+você lembra, não.
+
+## As doze leis
+
+**1. Meça antes de mexer.** Reproduza o caso, imprima o valor, e só então mude. "Parece que é X"
+custou tardes inteiras aqui. Se não dá para medir, diga que não deu — não troque medição por
+suposição bem escrita.
+
+**2. Duas causas produzem a mesma tela.** *Sinal falso* é problema de detecção; *caixa que perde*
+é problema de posição. Meça o sinal **e** a ordem antes de escolher onde mexer. Os dois motores
+(a tabela `sugestao.js` e a árvore `arvore.js`) concordando no desfecho errado = condição;
+discordando = posição.
+
+**3. A guarda só vale onde ela é ALCANÇADA.** Antes de dar um conserto por fechado, faça `grep`
+por todos os caminhos que chegam ali. Guarda escrita num ramo só é a falha mais repetida deste
+repositório — já aconteceu cinco vezes.
+
+**4. Leia o CONSUMIDOR, não só o produtor.** Campo com nome errado não estoura: vira `undefined`,
+que vira "não tem". Ao escrever adaptador ou mudar um retorno, abra quem desestrutura aquilo.
+
+**5. Três estados, nunca dois.** `true` / `false` / **`null` = não dá para saber**. Colapsar "não
+consegui ler" em "está ruim" trava a rodada; colapsar em "está bom" manda mensagem errada.
+Ausência de informação não é evidência em nenhuma das duas direções.
+
+**6. Lista de PERMISSÃO, nunca de bloqueio.** A inversa faz todo caso novo nascer aceito até
+alguém notar — e o "notar" aqui é um eleitor recebendo o que não devia.
+
+**7. 200 não prova entrega.** Toda escrita é conferida **relendo**. Vale para a API, para o DOM e
+para o campo de texto: o que não voltou confirmado não aconteceu.
+
+**8. Uma decisão, um lugar.** Duas cópias da mesma regra divergem na primeira semana, e a que
+ninguém olha é a que manda a mensagem errada. Antes de copiar um bloco, extraia uma função.
+
+**9. Recuse com o motivo na tela, e nunca finja.** Sem sonda, a função **recusa** — devolver
+qualquer coisa faz a rodada percorrer a fila inteira sem mandar nada e contar como enviado.
+Mensagem de erro diz o **que fazer**, não só o sintoma.
+
+**10. Prove a regressão.** Depois do conserto, **reintroduza o defeito** e mostre quantas
+asserções caem. Teste que passa com o defeito de volta não é teste de regressão — é decoração.
+
+**11. Escreva o PORQUÊ no código, com a data e as palavras dele.** O comentário explica a
+armadilha, não o que a linha faz. É isso que impede o próximo conserto de desfazer este.
+
+**12. Invariante vale numa direção só até você provar as duas.** *"O campo esvazia ao enviar"* era
+verdade; *"campo vazio = enviou"* era falso, porque apagar esvazia igual — e custou um atendimento
+concluído sem mensagem. Ao escrever "X prova Y", pergunte o que mais produz X.
+
+## O que você NÃO faz sem ele pedir
+
+- **Escrever no banco de produção dele.** Sonda de escrita é barrada, e barrar está certo.
+- **Reordenar o quadro do fluxo dele.** A posição é a prioridade, e a prioridade é decisão dele.
+- **Religar envio automático**, a barreira do candidato, ou qualquer coisa que ele desligou.
+- **Escrever telefone ou nome real de eleitor** em código, teste, doc ou registro. Use dados
+  fictícios. Contato de teste: "Thiago Tim" no CRM.
+- **Rodar uma rodada de centenas de contatos na conta dele** só para diagnosticar.
+- **Apagar função, texto ou cartão** porque parece sem uso. Pergunte.
+
+## Quando a frase dele tem duas leituras
+
+Pergunte. Uma frase sobre o **texto** de uma resposta não é decisão sobre **quem decide** o caso.
+Decisão errada sua assinada por ele é pior que a pergunta.
+
+E quando ele repete um pedido que você já mediu e explicou, **a repetição é a decisão** — faça.
+
+## Antes de dar a tarefa por fechada
+
+Ver a regra `@fechar`. Em resumo: os dois verificadores, as trinta suítes, a versão do manifesto se
+o comportamento visível mudou, e `registro.md` no mesmo commit.

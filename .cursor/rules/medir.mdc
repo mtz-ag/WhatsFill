@@ -1,0 +1,35 @@
+---
+alwaysApply: false
+---
+
+# @medir — ele mandou um print, e você ainda não sabe a causa
+
+**Não escreva código nesta etapa.** O objetivo é terminar sabendo qual elo quebrou, com número.
+
+1. **Transcreva o que o print mostra**, separando o que ELE disse do que a TELA disse. A frase
+   dele é o sintoma; o motivo escrito na barra é a pista.
+
+2. **Liste as causas possíveis que produziriam ESSE MESMO print.** Quase sempre são duas ou três,
+   e cada uma pede conserto em lugar diferente. Escrever a lista antes impede escolher a primeira.
+
+3. **Meça cada uma.** Rode os detectores com o texto do caso, imprima os sinais, e compare:
+   - o **sinal** está certo? Falso ⇒ problema de detecção.
+   - a **ordem** está certa? Sinal certo e caixa perdendo ⇒ problema de posição.
+   - os **dois motores** concordam? Concordando no desfecho errado ⇒ condição. Discordando ⇒
+     posição, e posição é decisão dele.
+   - a guarda que deveria ter pego é **alcançada** naquele caminho? `grep` por quem chama.
+
+   Ao reconstruir o contexto de um contato, **copie a composição do painel** (como `panel.js`
+   monta aquele objeto), nunca a função de nome parecido — senão você mede a sua própria suposição.
+
+4. **Escreva o que mediu, com os números.** Inclusive o que DESCARTOU como causa: isso é o que
+   impede a próxima sessão de refazer a mesma investigação.
+
+5. **Se a medição desmentir a sua primeira hipótese, diga isso em uma linha e siga.** Já aconteceu
+   várias vezes aqui que o candidato mais óbvio era o errado.
+
+6. Não dando para medir (precisa da tela dele, da conta dele, de uma rota nunca executada):
+   **diga que é hipótese, com todas as letras**, e proponha a sonda — a menor ação que responde a
+   pergunta sem risco.
+
+Só depois disto, `@consertar`.

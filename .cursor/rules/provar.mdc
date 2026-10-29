@@ -1,0 +1,44 @@
+---
+alwaysApply: false
+---
+
+# @provar — o teste de regressão, e a prova de que ele serve
+
+1. **Teste o USO, não só a função.** O defeito costuma ser a função ser chamada **uma vez só**, ou
+   chamada com os campos filtrados. Função pura com teste verde não garante nada se quem chama
+   jogar fora o campo que ela lê.
+
+2. **Ancore no CÓDIGO, nunca na prosa.** O comentário do conserto cita a frase do erro, então
+   procurar pelo texto da mensagem cai no comentário e não no ramo.
+
+3. **Metade das asserções de um detector são FALSO POSITIVO.** É ali que mora o risco: esta base é
+   de apoiadores que xingam o adversário o dia inteiro, e a regra mais destrutiva do projeto
+   aplica etiqueta permanente e conclui em silêncio.
+
+4. **REINTRODUZA O DEFEITO E CONTE AS ASSERÇÕES QUE CAEM.** Sem isto você não sabe se o teste pega
+   alguma coisa. Faça a cópia do arquivo fora do repositório, desfaça o conserto, rode, restaure:
+
+   ```bash
+   cp src/alvo.js "$SCRATCH/alvo.bak"   # fora do repositório: a raiz é a extensão
+   # ... desfaça o conserto ...
+   node tests/alvo.test.mjs | grep FALHA
+   cp "$SCRATCH/alvo.bak" src/alvo.js
+   ```
+
+   **Nenhuma asserção caiu? O teste é decoração** — reescreva até cair.
+
+5. **A asserção que cai tem de ter o nome certo.** Caindo por um motivo diferente do que o nome
+   diz, a próxima sessão vai procurar no lugar errado.
+
+6. **Mexeu em `semAcentoNemCaixa`, em `normalize` ou em palavra que sai do texto antes de casar?**
+   Rode a prova contra os **5.571 municípios do Brasil**, nunca contra os 497 do RS: contra o RS
+   caía 1 falso positivo e contra o Brasil, 21.
+
+7. **Mexeu em `fluxoPadrao`?** `node tools/exportar-fluxo.mjs` e commite `tools/fluxo-padrao.json`
+   junto — e **diga a ele que precisa IMPORTAR**, porque padrão novo não entra no quadro dele
+   sozinho. Mudança só de ORDEM o cartão "O padrão mudou?" **não acusa**: tem de ser dita em texto.
+
+8. **Mudança estrutural no quadro se prova com a varredura** de milhares de contextos antes/depois,
+   e não com um caso.
+
+Depois: `@fechar`.
