@@ -268,7 +268,7 @@ export const DEFAULT_TEMPLATES = [
      * **Medido: o que saiu é byte a byte a terceira variante daqui** — não foi a IA. Os três
      * textos justificavam o encontro na agenda com o período (*"Neste período de eleições"*, *"Em
      * período eleitoral"*, *"Agora, em campanha"*), e quem lê entende que é a campanha DELE. Ele
-     * foi eleito em 04/10; a campanha em curso é a do 2º turno, até 25/10, e não é dele.
+     * foi eleito em 04/10; o 2º turno da Presidência foi 25/10 e também já passou.
      *
      * **A cláusula de tempo saiu inteira, e isso é de propósito:** a resposta é verdadeira em
      * qualquer período — ele é encontrado nos eventos da agenda —, e texto com data dentro
@@ -798,6 +798,23 @@ const DEFAULTS = {
     escolhaPos: null,
     /** Posição da janelinha do contador. Própria, senão ela e a pergunta se empurram. */
     contadorPos: null,
+    /**
+     * Textos das teclas 2, 3, … do popup que aparece quando a rodada para para ele conferir.
+     * A tecla 1 não mora aqui: é sempre a mensagem do momento, lida na hora.
+     */
+    atalhosDaConferencia: [],
+    /** Onde ele largou esse popup. `null` = canto superior esquerdo, fora do cadastro. */
+    atalhosPos: null,
+    /**
+     * O que conta como "esta pessoa já foi atendida" quando a conversa se perdeu.
+     * `origens` nasce vazio: helena são 513 de 600 e não foi medido como atendimento.
+     * Importante não entra: ninguém definiu que essa etiqueta é trabalho já feito.
+     */
+    memoriaDeRetorno: {
+      origens: [],
+      etiquetas: ['Sem Retorno', 'Sem Interesse'],
+      dataDaMigracao: '',
+    },
   },
 
   /**
@@ -1390,6 +1407,16 @@ const DEFAULTS = {
    */
   ia: {
     ligada: false,
+    /**
+     * **O modo de trabalho** (31/10/2026): `'normal'` (fora da eleição, o padrão) ou `'campanha'`.
+     * `'pos-campanha'` continua sendo lido como `'normal'`. Ver `modo.js`.
+     */
+    fase: 'normal',
+    /**
+     * **O dossiê de ÓRGÃOS vai para o prompt** (31/10/2026). Ligado por padrão: só entra contato
+     * oficial lido na página do próprio órgão. Desligar devolve a IA ao "não temos esse contato".
+     */
+    orgaosAtivos: true,
     /** O modelo das CONFERÊNCIAS (cidade e etiquetas): pergunta de sim ou não, o barato dá conta. */
     modelo: 'claude-haiku-4-5',
     /**
@@ -1470,6 +1497,12 @@ const DEFAULTS = {
     tetoUsd: 20,
     /** Gasto do mês corrente: `{ mes, usd, chamadas, tokens }`. Zera sozinho na virada. */
     gasto: { mes: '', usd: 0, chamadas: 0, tokens: 0 },
+    /**
+     * O esquema do rascunho já diz "abaixo de 0,9 alguém lê antes". Este é o número que cobra
+     * isso. 0 desliga. `respeitarRevisao` falso ignora a mão que a própria IA levanta.
+     */
+    confiancaMinimaEnvio: 0.9,
+    respeitarRevisao: true,
   },
   /** { "<contactId>|<templateId>": timestamp } para o aviso de duplicata. */
   sentLog: {},

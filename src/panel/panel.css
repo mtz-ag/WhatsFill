@@ -590,6 +590,7 @@
   em 15px e a janelinha estreita o bastante para caber os dois e mais nada.
 */
 .wf-controle.wf-pergunta-solta { width: min(150px, calc(100vw - 32px)); }
+.wf-pergunta.wf-atalhos { width: min(280px, calc(100vw - 32px)); max-width: 280px; }
 .wf-controle { padding: 8px 10px; }
 .wf-controle .wf-pergunta-titulo { margin-bottom: 4px; }
 .wf-controle .wf-controle-estado { margin: 0 0 8px; color: var(--wf-muted); font-size: 12px; }

@@ -5,6 +5,7 @@
 import * as store from './store.js';
 import * as perfis from './perfis.js';
 import { semVocativo, usaNome } from './vars.js';
+import { chaveDoTelefone } from './memoria.js';
 
 let migrado = false;
 
@@ -667,6 +668,17 @@ function logKey(contactId, templateId) {
 }
 
 /**
+ * O id da conversa muda; o telefone não. O mapa vive só nesta aba: quem grava é o `markSent`,
+ * e a chave `tel:` no `sentLog` é o que sobrevive ao fechar o painel.
+ */
+const telefones = new Map();
+
+export function lembrarTelefone(contactId, telefone) {
+  const chave = chaveDoTelefone(telefone);
+  if (contactId && chave) telefones.set(String(contactId), chave);
+}
+
+/**
  * O registro guarda também o NOME de quem recebeu.
  *
  * Não é enfeite: o aviso "já enviei esta resposta" apareceu em contato que não tinha recebido, e
@@ -683,18 +695,25 @@ function normalizarEntrada(valor) {
 /** @returns {Promise<{at:number, nome:string}|null>} */
 export async function wasSent(contactId, templateId) {
   const log = await store.get('sentLog');
-  return normalizarEntrada(log[logKey(contactId, templateId)]);
+  const direto = normalizarEntrada(log[logKey(contactId, templateId)]);
+  if (direto) return direto;
+  const chave = telefones.get(String(contactId || ''));
+  if (!chave) return null;
+  return normalizarEntrada(log[logKey('tel:' + chave, templateId)]);
 }
 
 export async function markSent(contactId, templateId, { nome = '' } = {}) {
   const log = await store.get('sentLog');
-  log[logKey(contactId, templateId)] = { at: Date.now(), nome };
+  const entrada = { at: Date.now(), nome };
+  log[logKey(contactId, templateId)] = entrada;
+  const chave = telefones.get(String(contactId || ''));
+  if (chave) log[logKey('tel:' + chave, templateId)] = entrada;
 
-  // Mantém o registro enxuto: só os 5 mil envios mais recentes.
+  // Cada envio passa a gravar duas chaves (o id e o telefone). O teto dobrou por isso.
   const entries = Object.entries(log);
-  if (entries.length > 5000) {
+  if (entries.length > 10000) {
     entries.sort((a, b) => (normalizarEntrada(b[1])?.at || 0) - (normalizarEntrada(a[1])?.at || 0));
-    await store.set('sentLog', Object.fromEntries(entries.slice(0, 5000)));
+    await store.set('sentLog', Object.fromEntries(entries.slice(0, 10000)));
   } else {
     await store.set('sentLog', log);
   }
@@ -887,6 +906,44 @@ export function ehNegativaDeTrabalho(texto) {
  */
 export function abreCasoDeMaterial(texto) {
   return ehPedidoDeEndereco(texto) && !ehNegativaDeTrabalho(texto);
+}
+
+/**
+ * **Tira o pedido de nome e cidade de um texto que ja saiu com ele dentro.**
+ *
+ * Print dele (31/10/2026): o cabecalho mostra a cidade do cadastro e a mensagem no campo
+ * ainda diz para informar nome e cidade. A troca de id para `boas-vindas-tem-dados` (05/09)
+ * so funciona se ESSE texto nao pedir o cadastro. O que esta salvo no navegador e a redacao
+ * dele — a de fabrica, sem o pedido, nao chega a quem reescreveu as duas.
+ *
+ * Reconhece pelo mesmo invariante de `ehPedidoDeDados` (a frase, nao o id do template).
+ * Paragrafo que pede sai inteiro; frase no meio de uma linha sai e o resto fica. Linha em
+ * branco sobrando no meio some. Texto que nao pede volta igual.
+ *
+ * @param {string} texto ja renderizado (saudacao no lugar de `{{saudacao}}`)
+ * @returns {string}
+ */
+export function tirarPedidoDeCadastro(texto) {
+  const bruto = String(texto || '');
+  if (!bruto.trim() || !ehPedidoDeDados(bruto)) return bruto.trim();
+
+  const paragrafos = bruto.split(/\n/);
+  const saida = [];
+  for (const linha of paragrafos) {
+    if (!linha.trim()) {
+      saida.push('');
+      continue;
+    }
+    // A linha inteira que pede sai. Se o pedido esta no meio, sai so a frase: o resto da
+    // boas-vindas fica. "Nome , Cidade" nao tem ponto e cai no mesmo filtro.
+    const frases = linha.split(/(?<=[.!?])\s+/).filter((f) => f && !ehPedidoDeDados(f));
+    if (frases.length) saida.push(frases.join(' '));
+  }
+  return saida
+    .join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function ehPedidoDeDados(texto) {

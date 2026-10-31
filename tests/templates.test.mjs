@@ -235,6 +235,45 @@ grupo('ehPedidoDeDados — reconhece pelo INVARIANTE, não pela redação (01/09
   check(!ehPedidoDeDados(null), "nulo não explode");
 }
 
+grupo('boas-vindas com a cidade ja no cadastro nao pede o cadastro de novo (31/10/2026)');
+{
+  /**
+   * Print dele: o cabecalho ja mostra a cidade do cadastro e o campo pede nome e cidade.
+   * A redacao e a que ele salvou, nao a de fabrica — a troca de id sozinha nao tira a frase.
+   */
+  const { ehPedidoDeDados, tirarPedidoDeCadastro } = templates;
+  const dele =
+    'Boa tarde! Seja bem-vindo — aqui é a equipe.\n\n' +
+    'Para salvarmos seu contato nos diga seu nome e cidade.\n\n' +
+    'Em que podemos ajudar?';
+  check(ehPedidoDeDados(dele), 'a redacao salva pede nome e cidade');
+  const limpo = tirarPedidoDeCadastro(dele);
+  check(!ehPedidoDeDados(limpo), 'depois de tirar, o pedido sumiu');
+  check(/Seja bem-vindo/.test(limpo), 'a saudacao fica');
+  check(/Em que podemos ajudar/.test(limpo), 'a pergunta de ajuda fica');
+  check(!/salvarmos/.test(limpo), 'a frase do cadastro saiu');
+
+  const noMeio = 'Bem-vindo. Para salvarmos seu contato nos diga seu nome e cidade.';
+  const soASaudacao = tirarPedidoDeCadastro(noMeio);
+  check(soASaudacao === 'Bem-vindo.', `frase no meio: ficou "${soASaudacao}"`);
+
+  const semPedido = 'Boa tarde! Bem-vindo. Você está falando com a equipe.\n\nEm que podemos ajudar?';
+  check(tirarPedidoDeCadastro(semPedido) === semPedido, 'texto que nao pede volta igual');
+  check(tirarPedidoDeCadastro('') === '', 'vazio nao explode');
+  check(tirarPedidoDeCadastro(null) === '', 'nulo nao explode');
+
+  const fs = await import('node:fs');
+  const painel = fs.readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const envio = painel.indexOf('async function sendTemplate');
+  const campo = painel.indexOf('await page.setComposerText(text)', envio);
+  const corte = painel.indexOf('templatesLib.tirarPedidoDeCadastro(text)', envio);
+  check(envio > 0 && corte > envio && campo > corte, 'o corte fica em sendTemplate, antes de escrever no campo');
+  check(
+    /state\.grafiaDaCidade\?\.confianca === 'exata'/.test(painel.slice(corte - 800, corte)),
+    'so tira quando a cidade da ficha e municipio'
+  );
+}
+
 
 grupo('pedir-dados: "antes de qualquer coisa" (01/09/2026)');
 {

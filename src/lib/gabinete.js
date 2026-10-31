@@ -31,6 +31,7 @@
  */
 
 import * as store from './store.js';
+import { ORGAOS, CONFERIDO_EM } from '../data/orgaos-rs.js';
 
 const CAMINHO = 'src/data/gabinete.md';
 
@@ -271,3 +272,162 @@ export function chapaDoDossie(texto) {
 export async function chapa() {
   return chapaDoDossie(await lerArquivo());
 }
+
+
+// ---------------------------------------------------------------------------
+// O dossiê de ÓRGÃOS — para onde vai o que não é do mandato (31/10/2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Somos a equipe de um DEPUTADO ESTADUAL, e boa parte do que chega não é nosso** — pedido dele
+ * (31/10/2026): *"assuntos relacionados ao governador é com gabinete dele; se identificar que o
+ * assunto não é com relação ao nosso gabinete, teria que encaminhar para o órgão correto"*.
+ *
+ * O caso que puxou isto: uma contato de Porto Alegre quis apresentar uma mulher homenageada na
+ * Assembleia pelo trabalho nas enchentes e pediu **o telefone pessoal do governador**, porque o
+ * WhatsApp dele não respondia. O prompt não tinha contato oficial nenhum, e a IA só tinha a
+ * escolha entre inventar e negar seco.
+ *
+ * **Mesma conta do `precisaDoDossie`: a regex decide antes, de graça.** O dado está em
+ * `src/data/orgaos-rs.js`; aqui só se escolhe QUAIS entradas a conversa pede, e só elas vão para o
+ * prompt — as 22 inteiras custariam ~1.500 tokens em toda chamada.
+ *
+ * **Só contato `verificado` sai daqui.** O não verificado fica no arquivo para alguém conferir, e
+ * nunca chega à IA: um número que ninguém leu na página é exatamente o "palpite" que o dossiê
+ * inteiro proíbe.
+ */
+
+/** Minúscula, sem acento, pontuação virando espaço — a mesma forma em que as `palavras` estão. */
+export function normalizarParaOrgaos(texto) {
+  return ` ${String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()} `;
+}
+
+/**
+ * A palavra está no texto (já normalizado)? No COMEÇO de palavra, e INTEIRA quando é curta.
+ *
+ * Curta e solta casaria demais: `sus` dentro de "suspeito", `pis` dentro de "piscina", `cre`
+ * dentro de "credo". Até 4 letras, só a palavra inteira vale.
+ */
+export function casaPalavra(textoNormalizado, palavra) {
+  const p = normalizarParaOrgaos(palavra).trim();
+  if (!p) return false;
+  const inteira = p.replace(/\s/g, '').length <= 4;
+  return textoNormalizado.includes(` ${p}${inteira ? ' ' : ''}`);
+}
+
+/** Os contatos que podem ir para o prompt: só os que alguém leu na página. */
+export function contatosVerificados(orgao) {
+  return (orgao?.contatos || []).filter((c) => c && c.verificado === true && String(c.valor || '').trim());
+}
+
+/**
+ * **Quais órgãos ESTA conversa pede?** — pura e testada, como `precisaDoDossie`.
+ *
+ * Lê só o que ELA escreveu (`de !== 'nos'`): a nossa última mensagem falando de "Defesa Civil" não
+ * faz a conversa ser sobre enchente. Aceita string solta e `{ texto, de }`, pela armadilha de
+ * 04/09 (`[object Object]`).
+ *
+ * Ordem: emergência primeiro (quem está com água entrando em casa não pode ler o 156 antes do
+ * 199), depois quem casou mais palavras. Órgão sem nenhum contato verificado fica de fora: sem
+ * contato a IA só teria o nome, e o nome ela já diz pela regra 20.
+ *
+ * @param {Array<string|{texto?:string, de?:string}>} mensagens
+ * @param {{orgaos?: object[], max?: number}} [opcoes]
+ * @returns {Array<object>} as entradas, cada uma com `contatos` já filtrados para os verificados
+ */
+export function orgaosParaAConversa(mensagens, { orgaos = ORGAOS, max = 3 } = {}) {
+  const texto = normalizarParaOrgaos(
+    (Array.isArray(mensagens) ? mensagens : [mensagens])
+      .filter(Boolean)
+      .filter((m) => typeof m === 'string' || m?.de !== 'nos')
+      .map((m) => (typeof m === 'string' ? m : String(m?.texto || '')))
+      .join('\n')
+  );
+  if (!texto.trim()) return [];
+
+  /**
+   * **Emergência só passa na frente quando é AGORA.** Medido no caso real (31/10/2026): *"homenageada
+   * pelo trabalho nas enchentes"* punha a Defesa Civil antes do Gabinete do Governador — no RS de
+   * depois de 2024, "enchente" é assunto de conversa, não pedido de socorro. O peso só entra com
+   * sinal de presente (agora, socorro, entrando, subindo, ilhado…).
+   */
+  const AGORA = SINAL_DE_AGORA.some((p) => casaPalavra(texto, p));
+  const PESO_DA_ESFERA = { emergencia: AGORA ? 100 : 0 };
+  return (orgaos || [])
+    .map((o, ordem) => {
+      const acertos = (o.palavras || []).filter((p) => casaPalavra(texto, p)).length;
+      const exigeOk = !o.exige?.length || o.exige.some((p) => casaPalavra(texto, p));
+      const contatos = contatosVerificados(o);
+      const nota = acertos && exigeOk && contatos.length ? acertos + (PESO_DA_ESFERA[o.esfera] || 0) : 0;
+      return { o: { ...o, contatos }, nota, ordem };
+    })
+    .filter((x) => x.nota > 0)
+    .sort((a, b) => b.nota - a.nota || a.ordem - b.ordem)
+    .slice(0, Math.max(0, max))
+    .map((x) => x.o);
+}
+
+/** O que torna emergência uma emergência de AGORA — ver `orgaosParaAConversa`. */
+export const SINAL_DE_AGORA = [
+  'agora', 'socorro', 'urgente', 'urgencia', 'entrando', 'subindo', 'ilhad', 'preso', 'presa',
+  'desabando', 'pegando fogo', 'neste momento', 'nesse momento', 'me ajuda', 'me ajudem', 'acontecendo',
+];
+
+/** Uma linha por contato: "tel. (51) 3210-4339", "WhatsApp (51) 3433-0156 (só texto)". */
+function contatoEmTexto(c) {
+  const rotulo = { telefone: 'tel.', whatsapp: 'WhatsApp', email: 'e-mail', site: 'site' }[c.tipo] || c.tipo;
+  return `${rotulo} ${String(c.valor).trim()}${c.obs ? ` (${c.obs})` : ''}`;
+}
+
+/**
+ * O bloco que vai para o pedido da IA. Vazio quando nada casou — e vazio é o normal.
+ *
+ * Vai no bloco do CONTATO, e não no sistema: muda de conversa para conversa, e o sistema é o que
+ * fica em cache.
+ */
+export function blocoDeOrgaos(lista, { conferidoEm = CONFERIDO_EM } = {}) {
+  if (!lista?.length) return '';
+  const linhas = lista.map(
+    (o) => `- ${o.nome} — ${o.trata}: ${o.contatos.map(contatoEmTexto).join(' · ')}${o.obs ? `. Obs.: ${o.obs}` : ''}`
+  );
+  return [
+    `ÓRGÃOS QUE PODEM SER O CAMINHO CERTO (dossiê de órgãos, conferido em ${conferidoEm}). Use SÓ se o assunto dela for de um deles, e COPIE o contato exatamente como está aqui:`,
+    ...linhas,
+  ].join('\n');
+}
+
+/** Os números que a IA pode escrever — só dígitos. É o que a trava `telefoneForaDoDossie` aceita. */
+export function telefonesDosOrgaos(lista) {
+  const fora = [];
+  for (const o of lista || []) {
+    for (const c of o.contatos || []) {
+      if (c.tipo !== 'telefone' && c.tipo !== 'whatsapp') continue;
+      const d = String(c.valor || '').replace(/\D/g, '');
+      if (d) fora.push(d);
+      // "156 em Porto Alegre; de fora: (51) 3289-0156" — o número que mora na observação também vale.
+      for (const m of String(c.obs || '').match(/\(?\d{2}\)?\s*\d{4,5}-?\d{4}/g) || []) fora.push(m.replace(/\D/g, ''));
+    }
+  }
+  return [...new Set(fora)];
+}
+
+/**
+ * O que o painel chama: o bloco e os números permitidos, já respeitando a Config.
+ *
+ * `ia.orgaosAtivos` nasce **true** (ver `store.js`) — ao contrário do `dossieAtivo`, aqui só vai
+ * contato oficial lido em página do próprio órgão, e o pior caso de desligar é a IA voltar a
+ * responder "não temos esse contato".
+ */
+export async function orgaosParaOPrompt(mensagens) {
+  const cfg = await store.get('ia');
+  if (cfg?.orgaosAtivos === false) return { bloco: '', telefones: [], ids: [] };
+  const lista = orgaosParaAConversa(mensagens);
+  return { bloco: blocoDeOrgaos(lista), telefones: telefonesDosOrgaos(lista), ids: lista.map((o) => o.id) };
+}
+
+export { ORGAOS, CONFERIDO_EM };

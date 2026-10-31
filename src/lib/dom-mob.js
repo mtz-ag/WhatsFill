@@ -491,18 +491,17 @@ export async function escreverNoCampo(texto, { raiz = document, esperar = doisQu
  * teclado na pagina, e sem a guarda ela atenderia o proprio despacho e daria por enviado o que
  * ela mesma escreveu.
  *
- * **O clique precisa estar PERTO do campo**, senao "Resolver" e "Transferir" contariam como
- * envio. A conta sobe no maximo `NIVEIS_DO_BOTAO` ancestrais a partir do campo e pergunta se
- * algum deles contem o botao — declarada como heuristica porque o botao de enviar **nao tem
- * gancho** (a tela nova nao tem `data-cy`). **Errar para o lado de nao reconhecer custa uma
- * espera que vira `pulado`; errar para o outro concluiria atendimento sem mensagem**, que e o
- * defeito que isto existe para fechar.
+ * **O clique precisa ser o botao de ENVIAR**, e ele nao tem gancho (a tela nova nao tem
+ * `data-cy`). A etiqueta e o "salvar" do contato moram no mesmo bloco da conversa, entao "perto
+ * do campo" aceitava o X da etiqueta (30/10/2026, relato dele). Vale o que da para medir sem
+ * nome: mesma altura do campo e a direita do texto, que e onde o aviao fica. **Errar para o
+ * lado de nao reconhecer custa ele usar o Enter; errar para o outro concluiria ao tirar uma
+ * etiqueta.**
  *
  * **Clique dentro do painel nao conta:** o host e irmao do `#root`, e o `ev.target` de dentro de
  * um shadow root chega ao `document` como o proprio host — entao basta olhar o id.
  */
 const HOST_DO_PAINEL = 'whatsfill-host';
-const NIVEIS_DO_BOTAO = 6;
 
 let ato = { em: 0, como: '' };
 let vigiando = false;
@@ -515,15 +514,32 @@ function dentroDoPainel(no) {
   }
 }
 
-function pertoDoCampo(botao, raiz) {
+/**
+ * **So o botao na FAIXA do campo, a direita do texto** (30/10/2026).
+ *
+ * Relato dele: *"ao eu fazer outras acoes como remover etiquetas e corrigir as informacoes do
+ * contato a rodada nao termine ou faca nenhuma acao"*. A conta antiga subia seis ancestrais e
+ * aceitava QUALQUER botao dentro deles. O cadastro e a etiqueta moram no mesmo bloco da conversa,
+ * entao o X da etiqueta caia como "clique no botao de enviar".
+ *
+ * O aviao de papel fica na mesma altura do campo e a direita do texto. Etiqueta, salvar contato
+ * e Resolver nao. Sem retangulo, a resposta e nao — adivinhar concluiria o atendimento.
+ */
+function pareceBotaoDeEnviar(botao, raiz) {
   const campo = campoDeMensagem({ raiz });
-  if (!campo || !botao) return false;
-  let p = campo;
-  for (let i = 0; i < NIVEIS_DO_BOTAO && p; i += 1) {
-    if (p.contains && p !== botao && p.contains(botao)) return true;
-    p = p.parentElement;
-  }
-  return false;
+  if (!campo || !botao || typeof botao.getBoundingClientRect !== 'function') return false;
+  if (typeof campo.getBoundingClientRect !== 'function') return false;
+  const c = campo.getBoundingClientRect();
+  const b = botao.getBoundingClientRect();
+  if (!c || !b || c.width <= 0 || c.height <= 0 || b.width <= 0 || b.height <= 0) return false;
+  const topo = Number.isFinite(c.top) ? c.top : 0;
+  const fundo = Number.isFinite(c.bottom) ? c.bottom : topo + c.height;
+  const direita = Number.isFinite(c.right) ? c.right : (Number.isFinite(c.left) ? c.left : 0) + c.width;
+  const meioY = (Number.isFinite(b.top) ? b.top : 0) + b.height / 2;
+  const esquerda = Number.isFinite(b.left) ? b.left : 0;
+  if (meioY < topo - 12 || meioY > fundo + 12) return false;
+  if (esquerda < direita - 24) return false;
+  return true;
 }
 
 /**
@@ -552,7 +568,7 @@ export function vigiarEnvio({ raiz = document, onde = document } = {}) {
         const alvo = ev.target;
         if (!alvo || !alvo.closest || dentroDoPainel(alvo)) return;
         const botao = alvo.closest('button, [role="button"]');
-        if (!botao || !pertoDoCampo(botao, raiz)) return;
+        if (!botao || !pareceBotaoDeEnviar(botao, raiz)) return;
         ato = { em: Date.now(), como: 'clique no botão de enviar' };
       },
       true

@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.234.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.243.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -643,6 +643,34 @@ mudaram as maos, nao a cabeca.
   **O DESVIO FICA NO COMECO DE `applyTags`/`writeValues`, NUNCA em quem chama** — sao dez
   chamadores de `applyTags` no painel, e desviar em cada um e a duplicacao que este projeto paga
   caro desde o primeiro dia. O corpo da plataforma antiga fica intocado embaixo, e ha teste.
+  **A PORTA DO PAINEL FICOU** (30/10/2026, pedido dele: *"a funcao de identificar cidade e
+  preencher volte a funcionar"*). `writeValues` ja desviava; `aplicarAutomatico`, o botao Salvar
+  e `saveClassification` ainda exigiam o contrato aprendido. Sem ele, o palpite nascia e nada era
+  perguntado nem gravado. As tres leem `gravacaoLiberada`: na plataforma nova e verdade; na velha
+  continua sendo o contrato. **Nao reponha o `writeContract` na frente da gravacao daqui.**
+  **Ele confirmou no mesmo dia:** a cidade gravou. O cartao nativo "Dados do contato" so
+  mostra o valor depois de fechar e abrir o contato. Nao use esse cartao para verificar, e nao
+  construa atualizacao da tela sem ele pedir.
+  **AS ELEICOES DE 2026 TERMINARAM (30/10, v3.240).** A regra 19, a trava e a regra 8 do
+  comentario ainda tratavam o 2o turno de 25/10 como em curso. A trava `eleicaoEncerrada` so
+  barra "a eleicao acabou" quando a data e anterior a 26/10. O esquema ja dizia "abaixo de 0,9
+  alguem le antes"; `reguaDoRascunho` cobra esse 0,9 no envio sozinho. Confianca baixa nao tira
+  a espera do modo Eu mando. Helena nao e prova de retorno (513 de 600). A memoria do telefone
+  vale daqui para a frente e nao recupera o historico perdido.
+  **O NOME DO CADASTRO CONCORDA O TRATAMENTO (30/10, v3.241).** A regra de 06/09 dizia que o
+  nome nao servia para genero, e a boas-vindas saiu "bem-vindo" para uma mulher cujo nome
+  estava na ficha. `generoDoNome` le so o primeiro nome. `concordarGenero` troca bem-vindo e
+  atende-lo. Nao escreve o nome. Sem certeza (apelido de anuncio, cidade no campo), o texto
+  nao muda. "todo mundo e bem-vindo" fica. Tirar a chamada de `render` derruba 2 assercoes.
+  **MODO CAMPANHA / NORMAL E O DOSSIE DE ORGAOS (31/10, v3.242).** `ia.fase` nasce `normal`.
+  Campanha devolve o texto de ate 25/10. Normal desliga o fluxo do anuncio, esconde "trabalhar
+  na campanha" e "Dia 25", e pedido de telefone de outra autoridade vai para a IA com o contato
+  oficial do orgao (`src/data/orgaos-rs.js`). Contato nao verificado nao entra no prompt.
+  **BOAS-VINDAS COM A CIDADE JA NO CADASTRO (31/10, v3.243).** A troca de id para
+  `boas-vindas-tem-dados` nao alcanca a redacao salva no navegador: o campo pedia nome e
+  cidade com a cidade da ficha na tela. `tirarPedidoDeCadastro` tira a frase no `sendTemplate`,
+  antes dos dois ramos que escrevem no campo, so na rodada e so com municipio (`exata`) ou
+  com `pedirDadosNaoCabe`. Devolver o texto intacto derruba 3 assercoes.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no
@@ -769,10 +797,14 @@ mudaram as maos, nao a cabeca.
   serve e o ATO, que acontece uma vez.
   **A prova e o defeito reintroduzido:** por de volta um `return { ok: true }` que olha o campo
   antes do ato e **cai 1 assercao** (`com vigia, nada conclui antes do ato`).
-  **O clique precisa estar PERTO do campo** (ate 6 ancestrais), senao "Resolver" e "Transferir"
-  contariam como envio — **o botao de enviar nao tem gancho**, porque a tela nova nao tem
-  `data-cy`. **Isto e heuristica declarada, e o lado do erro foi escolhido:** nao reconhecer custa
-  uma espera que vira `pulado`; reconhecer demais concluiria atendimento sem mensagem.
+  **O clique precisa ser o botao de ENVIAR, nao qualquer um perto do campo** (30/10/2026). A
+  conta de 6 ancestrais tratava o X da etiqueta como envio, porque etiqueta e cadastro moram no
+  mesmo bloco da conversa. O botao **nao tem gancho** (`data-cy` nao existe). Vale o que da para
+  medir: mesma altura do campo e a direita do texto. Clique que nao esvazia o campo nao pula nem
+  conclui. **Nao volte a "qualquer botao dentro de N ancestrais".**
+  **Enquanto a rodada espera ele conferir, ha um popup de teclas** (pedido dele, 30/10). A tecla
+  1 e a mensagem do momento, lida na hora. 2, 3… sao `settings.atalhosDaConferencia`. O numero
+  troca o texto e envia (`page.sendText`). Numero dentro de um campo do cadastro nao e tecla.
   **Na plataforma velha `page.vigiarEnvio` devolve `false`, e a ausencia e informacao:** o painel
   cai no invariante antigo inteiro. Fingir um ato ali faria a rodada concluir no instante em que o
   texto entra no campo.

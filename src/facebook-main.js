@@ -177,6 +177,8 @@ async function carregarRespostas() {
     );
     estado.respostas = rapidas.sanitizar(lista);
     estado.indices = (await store.get('varianteIndex')) || {};
+    // O modo Campanha / Normal da Config decide quais aparecem na tira — ver `daTiraNoModo`.
+    estado.fase = (await store.get('ia'))?.fase;
   } catch (_) {
     // Falha de armazenamento nao pode derrubar o painel: sem a tira ele ainda le e insere.
     estado.respostas = [];
@@ -829,6 +831,7 @@ async function pedirRascunho(comentario, dizer, redesenhar) {
     regras: cfg.regras || '',
     gabinete: dossie,
     candidato,
+    fase: cfg.fase,
     chapa,
     modelo: cfg.modeloRascunho || cfg.modelo,
     agora: new Date(),
@@ -1242,7 +1245,7 @@ function doDigito(k) {
   const acao = ACOES_DA_TIRA.find((a) => a.tecla === k);
   if (acao) return { acao };
   const i = DIGITOS_DE_RESPOSTA.indexOf(k);
-  return i < 0 ? {} : { resposta: estado.respostas[i] };
+  return i < 0 ? {} : { resposta: rapidas.daTiraNoModo(estado.respostas, estado.fase)[i] };
 }
 
 /**
@@ -1491,7 +1494,7 @@ function montarTira(shadow, dizer, comGerir) {
    * O laco percorre 1..9 perguntando a `ACOES_DA_TIRA` — a MESMA fonte que o teclado consulta —,
    * entao nao ha como o botao dizer "3 Ocultar" e a tecla 3 mandar uma resposta pronta.
    */
-  const fila = [...estado.respostas];
+  const fila = [...rapidas.daTiraNoModo(estado.respostas, estado.fase)];
   for (const d of DIGITOS_E_ACOES) {
     const acao = ACOES_DA_TIRA.find((a) => a.tecla === d);
     if (acao) {

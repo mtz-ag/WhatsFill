@@ -434,4 +434,30 @@ grupo('a resposta da AGENDA sai sem cidade, pelo link padrao (07/09/2026)');
   }
 }
 
+grupo('o nome do cadastro concorda o tratamento, e nao entra no texto');
+{
+  const base = '{{saudacao}}! Seja bem-vindo — aqui é a equipe. Para melhor atendê-lo. Todo mundo é bem-vindo.';
+  const ctx = (nome) => ({
+    values: { saudacao: 'Boa noite', nome, primeiro_nome: nome.split(' ')[0], cidade: 'x', link_grupo: 'http://exemplo', telefone: '' },
+    reasons: {},
+  });
+  const ela = vars.render(base, ctx('Ana Clara')).text;
+  check(ela.includes('bem-vinda'), 'nome feminino: bem-vinda');
+  check(ela.includes('atendê-la'), 'e atendê-la');
+  check(ela.includes('Todo mundo é bem-vindo'), 'todo mundo continua no masculino');
+  check(!/Ana Clara/.test(ela), 'o nome nao entra na mensagem');
+
+  const ele = vars.render(base, ctx('João Pedro')).text;
+  check(ele.includes('Seja bem-vindo'), 'nome masculino fica bem-vindo');
+  check(ele.includes('atendê-lo'), 'e atendê-lo');
+
+  const sem = vars.render(base, ctx('[NOVO] (51) 90000-0001')).text;
+  check(sem.includes('Seja bem-vindo') && sem.includes('atendê-lo'), 'apelido de anuncio nao muda o texto');
+
+  check(vars.generoDoNome('Santa Cruz') === null, 'cidade no campo do nome nao vira genero');
+  check(vars.generoDoNome('Carlos') === 'm', 'Carlos e masculino mesmo sem terminar em o');
+  check(vars.generoDoNome('Marli') === 'f', 'Marli e feminino, o caso de 06/09');
+  check(vars.generoDoNome('') === null, 'sem nome nao ha genero');
+}
+
 fim();

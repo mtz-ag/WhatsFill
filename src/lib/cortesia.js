@@ -2118,6 +2118,17 @@ const QUER_FALAR_COM_ELE = [
  */
 const FALAR_CONOSCO = /(^|[^\p{L}])(falar|conversar)\s+(com\s+)?(voces?|vcs?|contigo|com\s+a\s+(equipe|assessoria)|com\s+alguem)/iu;
 
+/**
+ * **O contato pedido é de OUTRA autoridade** (31/10/2026) — medido antes de mexer:
+ * `pedeFalarComDeputado` casava *"me passa o whats do governador"*, porque o objeto do pedido de
+ * contato acima é OPCIONAL. A resposta pronta então diria que o WhatsApp pessoal DO CAPITÃO não é
+ * repassado — a quem perguntou do governador.
+ *
+ * Com outra autoridade nomeada e sem ele nomeado, a mensagem segue para a IA, que tem a regra 20.
+ */
+const DE_OUTRA_AUTORIDADE = /(^|[^\p{L}])(governador\p{L}*|vice-?\s*governador\p{L}*|prefeit[oa]s?|president[ea]|ministr[oa]|secret[áa]ri[oa]|delegad[oa]|ju[íi]z\p{L}*|desembargador\p{L}*|governo\s+do\s+estado|pal[áa]cio)(?![\p{L}])/iu;
+const ELE_NOMEADO = /(^|[^\p{L}])(deputad[oa]|capit[ãa]o|martim)(?![\p{L}])/iu;
+
 /** Ela contando que falou, ou que vai falar com um terceiro — não é pedido para nós. */
 const NAO_E_PEDIDO = [
   /(^|[^\p{L}])(falei|conversei|encontrei|vi)\s+(com\s+)?(o\s+)?(ele|deputado|capitao|martim)/iu,
@@ -2133,6 +2144,7 @@ export function pedeFalarComDeputado(entrantes, nossaUltimaAt) {
     const texto = semLinks(msg?.texto);
     if (!texto.trim()) continue;
     if (NAO_E_PEDIDO.some((re) => re.test(texto))) continue;
+    if (DE_OUTRA_AUTORIDADE.test(texto) && !ELE_NOMEADO.test(texto)) continue;
     if (FALAR_CONOSCO.test(texto)) continue;
     if (QUER_FALAR_COM_ELE.some((re) => re.test(texto))) {
       return { motivo: 'quer falar com o deputado em pessoa — o encontro é na agenda, e o número pessoal não é repassado' };

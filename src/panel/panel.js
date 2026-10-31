@@ -9,6 +9,7 @@ import * as api from '../lib/api.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
 import * as templatesLib from '../lib/templates.js';
+import * as memoriaLib from '../lib/memoria.js';
 import * as store from '../lib/store.js';
 import * as vars from '../lib/vars.js';
 import * as cities from '../lib/cities.js';
@@ -20,6 +21,7 @@ import * as iaCliente from '../lib/ia-cliente.js';
 import * as iaLib from '../lib/ia.js';
 import * as gabineteLib from '../lib/gabinete.js';
 import * as anunciosLib from '../lib/anuncios.js';
+import * as modoLib from '../lib/modo.js';
 import * as perfisLib from '../lib/perfis.js';
 import * as observacoesLib from '../lib/observacoes.js';
 import * as imagemLib from '../lib/imagem.js';
@@ -39,6 +41,7 @@ import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
 import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
+import { ehCampoDeMensagem } from '../lib/dom-mob.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -673,7 +676,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.ultimaMensagem = null;
     state.hsmTemplates = [];
     state.error = null;
-    state.hasContract = !!(await store.get('writeContract'))?.entries?.length;
+    state.hasContract = await gravacaoLiberada();
     state.settings = await store.get('settings');
     /**
      * **QUEM ESTÁ LOGADO** — e é isto que decide tudo o que a tela mostra (25/09/2026).
@@ -751,6 +754,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ]);
       state.contact = contact;
       state.classify = classify;
+      const fone = contact?.phonenumber || contact?.telefone || contact?.phone || '';
+      templatesLib.lembrarTelefone(contact?.id, fone);
+      const doCatalogo = await rotulosDoContato().catch(() => []);
+      const doContato = (contact?.tags || [])
+        .map((t) => String(t?.name ?? t?.label ?? '').trim())
+        .filter(Boolean);
+      state.provaDeRetorno = await memoriaLib.provasDeRetorno({
+        telefone: fone,
+        etiquetas: [...new Set([...doCatalogo, ...doContato])],
+        origem: contact?.origem || '',
+        cfg: state.settings?.memoriaDeRetorno,
+        log: await store.get('sentLog'),
+      });
       state.schema = await fieldsLib.loadSchema();
 
       // Antes de qualquer palpite: o que você já recusou para este contato não volta a perguntar.
@@ -1430,15 +1446,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * etiquetas de origem, que são permanentes de propósito. O que passou a depender da resposta é
        * o MODELO e o sinal do quadro.
        */
-      state.anuncioSemResposta = anunciosLib.reconhecer(
-        [
-          ...rajadaFinal(state.entrantes, state.nossaUltimaAt).map((m) => m?.texto),
-          ...(state.nossaUltimaAt
-            ? []
-            : [state.session?.utm?.campaign, state.session?.utm?.headline, state.session?.utm?.referralUrl]),
-        ],
-        anunciosDoMomento
-      );
+      /*
+       * Modo Normal (31/10/2026): o clique no anúncio não pede resposta própria. As etiquetas de
+       * origem continuam em `state.anuncio`, acima.
+       */
+      state.anuncioSemResposta = !emCampanha()
+        ? null
+        : anunciosLib.reconhecer(
+            [
+              ...rajadaFinal(state.entrantes, state.nossaUltimaAt).map((m) => m?.texto),
+              ...(state.nossaUltimaAt
+                ? []
+                : [state.session?.utm?.campaign, state.session?.utm?.headline, state.session?.utm?.referralUrl]),
+            ],
+            anunciosDoMomento
+          );
 
       /**
        * **A UF de quem mora fora do RS** — pedido dele (08/09/2026), print da etiqueta
@@ -1779,6 +1801,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   function naPlataformaNova() {
     return !!state.pageState?.plataforma;
+  }
+
+  /**
+   * **Na plataforma nova nao ha contrato para aprender** (30/10/2026, pedido dele: *"preciso que
+   * a funcao de identificar cidade e preencher volte a funcionar"*).
+   *
+   * O preenchimento parava na porta: `aplicarAutomatico`, o botao Salvar e `saveClassification`
+   * exigiam o contrato gravado na plataforma velha. Aqui a cidade e uma coluna, `writeValues` ja
+   * grava por ela, e `learnStart` responde que nao ha o que aprender. A porta fechada fazia o
+   * palpite aparecer e nada ser perguntado nem gravado.
+   *
+   * **Um lugar so.** As tres portas leem esta funcao. Na plataforma velha continua valendo o
+   * contrato aprendido — la a coluna nao existe e gravar sem contrato suja o contato.
+   */
+  async function gravacaoLiberada() {
+    if (naPlataformaNova()) return true;
+    const contract = await store.get('writeContract');
+    return !!contract?.entries?.length;
   }
 
   /**
@@ -2535,7 +2575,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       concluir,
     ]));
 
-    for (const template of state.templates) body.append(renderTemplateCard(template));
+    for (const template of respostasEmUso()) body.append(renderTemplateCard(template));
     if (!state.templates.length) {
       body.append(h('p', { class: 'wf-hint' }, 'Nenhuma resposta cadastrada. Vá na aba Config.'));
     }
@@ -3080,7 +3120,37 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const alvo = state.contact;
     // Peek, não avança: só o envio de verdade lá embaixo (`page.sendText`) avança o ponteiro.
     const textoVariante = await templatesLib.varianteAtual(template);
-    const { text, missing, reasons } = vars.render(textoVariante, await currentVarContext());
+    const renderizado = vars.render(textoVariante, await currentVarContext());
+    let text = renderizado.text;
+    const missing = renderizado.missing;
+    const reasons = renderizado.reasons;
+
+    /**
+     * **A cidade ja esta no cadastro e a boas-vindas ainda pede nome e cidade** (31/10/2026,
+     * print dele: o cabecalho mostra a cidade vinda do cadastro, a origem e importacao, e o
+     * campo pede nome e cidade do mesmo jeito).
+     *
+     * A troca de id para `boas-vindas-tem-dados` (05/09) escolhe OUTRO template. O texto que
+     * esta salvo no navegador e o dele: se essa redacao ainda pede o cadastro, trocar o id nao
+     * muda o que a pessoa le. O corte e o invariante (`ehPedidoDeDados`), aqui, antes dos dois
+     * ramos que poem `text` no campo (Eu mando e envio automatico).
+     *
+     * So na rodada, e so com municipio de verdade (`confianca === 'exata'`) ou com a mesma conta
+     * que ja dispensa o formulario (`pedirDadosNaoCabe`): lixo no campo continua recebendo o
+     * pedido. Fora da rodada, o clique no cartao manda o texto que ele escolheu.
+     */
+    const dispensaOCadastro =
+      state.grafiaDaCidade?.confianca === 'exata' ||
+      (state.sinais && sugestaoLib.pedirDadosNaoCabe(state.sinais));
+    if (
+      state.auto?.rodando &&
+      (template?.id === 'boas-vindas' || template?.id === 'boas-vindas-tem-dados') &&
+      dispensaOCadastro &&
+      templatesLib.ehPedidoDeDados(text)
+    ) {
+      const limpo = templatesLib.tirarPedidoDeCadastro(text);
+      if (limpo && !templatesLib.ehPedidoDeDados(limpo)) text = limpo;
+    }
 
     if (missing.length) {
       const bloqueio = 'Bloqueado: ' + vars.explainMissing(missing, reasons);
@@ -4961,7 +5031,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       ),
       h('div', { class: 'wf-hint' },
         'Não é mais o filtro da rodada: serve para reconhecer quem voltou clicando no anúncio de ' +
-          'novo. Os anúncios em si ficam na aba Config, em "Anúncios do momento".')
+          'novo. Os anúncios em si ficam na aba Config, em "Anúncios do momento".'),
+      ...(emCampanha()
+        ? []
+        : [h('div', { class: 'wf-hint', 'data-fica': '1' },
+            'Modo Normal: esta frase não é consultada. Ela volta a valer no modo Campanha (aba Config, "Modo").')])
     );
 
     /**
@@ -6795,6 +6869,104 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   const ESPERA_DO_ENTER_MS = 10 * 60 * 1000;
 
+  /**
+   * **As teclas 1, 2, 3… enquanto a rodada espera ele conferir** (30/10/2026).
+   *
+   * Pedido dele: *"crie uma popup que tenha o numero 1, 2, 3 e a opcao de adicionar mais, os
+   * numeros vao ser referentes aos do teclado"*. A tecla 1 e sempre a mensagem do momento, lida
+   * na hora — nao uma copia, senao ela envelhece no dia em que ele troca o texto.
+   *
+   * **Numero apertado dentro do cadastro nao e tecla.** Ele escreveu no mesmo pedido que remover
+   * etiqueta e corrigir o contato nao pode fazer a rodada agir. O campo de mensagem e a excecao:
+   * e nele que o rascunho esta, e e dali que ele aperta 1.
+   */
+  function abrirPopupDeAtalhos(aoEscolher) {
+    const caixa = h('div', { class: 'wf-pergunta wf-atalhos' });
+    const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Trocar o texto e enviar');
+    caixa.append(barra);
+    tornarArrastavel(caixa, barra, 'atalhosPos');
+    const corpo = h('div', { class: 'wf-pergunta-botoes' });
+    caixa.append(corpo);
+    caixa.append(h('div', { class: 'wf-pergunta-dica' },
+      '1, 2, 3… trocam o que esta no campo e enviam. Enter ou o botao de enviar manda o texto que ficou. Etiqueta e cadastro nao avancam a rodada.'));
+
+    let formulario = null;
+
+    function extrasGuardados() {
+      const lista = Array.isArray(state.settings.atalhosDaConferencia) ? state.settings.atalhosDaConferencia : [];
+      return lista.map((t) => String(t || '').trim());
+    }
+
+    function itens() {
+      const extras = extrasGuardados();
+      while (extras.length < 2) extras.push('');
+      return [{ momento: true }, ...extras.map((texto) => ({ momento: false, texto }))].slice(0, 9);
+    }
+
+    function desenhar() {
+      corpo.replaceChildren();
+      formulario = null;
+      itens().forEach((item, i) => {
+        const n = String(i + 1);
+        const rotulo = item.momento ? 'Mensagem do momento' : (item.texto ? truncate(item.texto, 80) : '(vazio)');
+        const btn = h('button', { class: 'wf-btn', type: 'button' }, n + '  ' + rotulo);
+        btn.addEventListener('click', () => aoEscolher(i + 1));
+        corpo.append(btn);
+      });
+      const mais = h('button', { class: 'wf-btn', type: 'button' }, 'Adicionar mais');
+      mais.addEventListener('click', () => {
+        if (formulario || itens().length >= 9) {
+          if (itens().length >= 9) setStatus('Ja ha 9 teclas. Nao cabe outra no teclado.', 'err');
+          return;
+        }
+        const area = h('textarea', { rows: '3', placeholder: 'Texto da proxima tecla' });
+        const guardar = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Guardar');
+        guardar.addEventListener('click', () => {
+          const texto = area.value.trim();
+          if (!texto) return;
+          const guardados = extrasGuardados();
+          while (guardados.length < 2) guardados.push('');
+          const vazio = guardados.findIndex((t) => !t);
+          if (vazio >= 0) guardados[vazio] = texto;
+          else guardados.push(texto);
+          while (guardados.length && !guardados[guardados.length - 1]) guardados.pop();
+          salvarAjuste({ atalhosDaConferencia: guardados }).then(desenhar).catch((err) => {
+            setStatus('Nao guardei a tecla: ' + (err?.message || err), 'err');
+          });
+        });
+        formulario = h('div', {}, [area, guardar]);
+        corpo.append(formulario);
+        area.focus();
+      });
+      corpo.append(mais);
+    }
+
+    function aoTeclar(ev) {
+      if (!ev || ev.isTrusted !== true || ev.repeat) return;
+      if (!/^[1-9]$/.test(ev.key)) return;
+      const alvo = ev.composedPath?.()[0] || ev.target;
+      if (ehCampoDeTexto(alvo) && !ehCampoDeMensagem(alvo)) return;
+      const n = Number(ev.key);
+      if (n > itens().length) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      aoEscolher(n);
+    }
+
+    desenhar();
+    document.addEventListener('keydown', aoTeclar, true);
+    destinoDaCaixa().append(fundo);
+    if (!state.settings.atalhosPos) aplicarPosicao(caixa, { left: 8, top: 52 });
+    return {
+      fechar() {
+        document.removeEventListener('keydown', aoTeclar, true);
+        fundo.remove();
+      },
+      itens,
+    };
+  }
+
   async function esperarVoceEnviar(texto, { timeoutMs = ESPERA_DO_ENTER_MS } = {}) {
     const alvo = String(texto || '').trim();
     if (!alvo) return { ok: true, motivo: 'sem texto para esperar' };
@@ -6854,12 +7026,74 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let viuOTexto = false;
     setStatus(
       observando
-        ? 'Escrevi no campo. Revise e envie (Enter ou o botão) — eu concluo e abro o próximo. Se não for enviar, aperte Parar.'
-        : 'Escrevi no campo. Revise e dê Enter — eu concluo e abro o próximo.'
+        ? 'Escrevi no campo. Revise e envie (Enter ou o botão), ou aperte 1, 2, 3… para trocar o texto e enviar. Etiqueta e cadastro não avançam a rodada.'
+        : 'Escrevi no campo. Revise e dê Enter, ou aperte 1, 2, 3… para trocar o texto e enviar.'
     );
 
+    let pedido = 0;
+    let ocupado = false;
+    const popup = abrirPopupDeAtalhos((n) => { if (!ocupado) pedido = n; });
+
+    async function mandarPelaTecla(n) {
+      const item = popup.itens()[n - 1];
+      if (!item) return { ok: false, motivo: 'não há tecla ' + n };
+      let bruto = '';
+      let templateMomento = null;
+      if (item.momento) {
+        const base = String(state.auto.cfg.mensagemMomento || '').trim();
+        if (!base) {
+          return { ok: false, motivo: 'a tecla 1 é a mensagem do momento, e ela está vazia — preencha no cartão da aba Automatizado' };
+        }
+        templateMomento = {
+          id: 'momento:' + chaveDoTexto(base),
+          text: base,
+          variantes: state.auto.cfg.mensagemMomentoVariantes,
+        };
+        bruto = String((await templatesLib.varianteAtual(templateMomento)) || '').trim();
+      } else {
+        bruto = String(item.texto || '').trim();
+        if (!bruto) return { ok: false, motivo: 'a tecla ' + n + ' está vazia — use Adicionar mais' };
+      }
+      const rendido = vars.render(bruto, await currentVarContext());
+      if (rendido.missing.length) {
+        return { ok: false, motivo: 'Bloqueado: ' + vars.explainMissing(rendido.missing, rendido.reasons) };
+      }
+      if (templateMomento && state.settings.antiDup && state.contact?.id) {
+        const already = await templatesLib.wasSent(state.contact.id, templateMomento.id);
+        if (already && !confirm('A mensagem do momento já foi enviada para este contato. Enviar de novo?')) {
+          return { ok: false, motivo: 'a mensagem do momento já tinha sido enviada — não mandei de novo' };
+        }
+      }
+      await page.setComposerText(rendido.text);
+      await page.sendText(rendido.text);
+      try { await page.setComposerText(''); } catch (_) { /* a mensagem ja saiu; o campo e o que sobrou na tela */ }
+      if (templateMomento) {
+        await templatesLib.avancarVariante(templateMomento);
+        if (state.contact?.id) {
+          await templatesLib.markSent(state.contact.id, templateMomento.id, { nome: state.contact.name || '' });
+        }
+      }
+      return { ok: true, como: 'tecla ' + n };
+    }
+
+    try {
     while (Date.now() < fim) {
       if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada', parar: true };
+
+      if (pedido) {
+        const n = pedido;
+        pedido = 0;
+        ocupado = true;
+        try {
+          const saiu = await mandarPelaTecla(n);
+          if (saiu.ok) return { ok: true, como: saiu.como };
+          setStatus(saiu.motivo, 'err');
+        } catch (err) {
+          setStatus('A tecla ' + n + ' não enviou: ' + (err?.message || err), 'err');
+        } finally {
+          ocupado = false;
+        }
+      }
 
       if (observando) {
         /**
@@ -6885,10 +7119,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             try {
               if (!(await textoAindaNoCampo())) return { ok: true, como: ato.como };
             } catch (_) {
-              // Não dá para ler o campo: o ato dele é a prova mais forte que existe aqui.
-              return { ok: true, como: ato.como };
+              // Sem leitura, so o Enter conta: um clique que nao da para conferir nao conclui.
+              if (/Enter/.test(String(ato.como || ''))) return { ok: true, como: ato.como };
             }
             await new Promise((r) => setTimeout(r, 400));
+          }
+          /**
+           * **Clique que nao esvaziou o campo nao foi envio** (30/10/2026). Ele tira etiqueta e
+           * corrige o cadastro com a rodada parada, e isso nao pode pular nem concluir. O Enter
+           * que sai e a mensagem nao (canal fora do ar) continua sendo dito na tela.
+           */
+          if (!/Enter/.test(String(ato.como || ''))) {
+            atoAntes = ato;
+            continue;
           }
           return {
             ok: false,
@@ -6933,6 +7176,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await new Promise((r) => setTimeout(r, 700));
     }
     return { ok: false, motivo: 'passaram 10 minutos e a mensagem continuava no campo, sem ser enviada' };
+    } finally {
+      popup.fechar();
+    }
   }
 
   async function esperarTelaLivre(timeoutMs = 3 * 60 * 1000) {
@@ -9561,7 +9807,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         state.grafiaDaCidade?.confianca === 'exata' && state.contact?.origem !== 'importacao';
 
       const jaRespondemosAntes = (() => {
-        if (state.temConversaAnterior || cidadeJaNoCrm || cidadeDoCadastroConta) return true;
+        if (state.temConversaAnterior || cidadeJaNoCrm || cidadeDoCadastroConta || state.provaDeRetorno?.retorno) return true;
         if (!state.nossas.length) return false;
 
         const perguntas = ['pedir-dados', 'interesse-conteudo', 'perguntar-como-ajudar']
@@ -9626,7 +9872,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * igual"*). O padrão é o contrário: é o que sai quando não se sabe o que ela pediu, e para
        * quem já está cadastrada ele é repetição.
        */
-      const veioDeUmAnuncio = !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
+      const veioDeUmAnuncio = emCampanha() && !!(state.session?.utm?.source || state.session?.utm?.referralUrl);
       /**
        * **O modelo PADRÃO só sai na PRIMEIRA vinda pelo anúncio** — regra dele (04/09/2026):
        * *"a exceção de mandar modelo novamente é somente quando o modelo não é o padrão; contato
@@ -9948,7 +10194,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * preâmbulo, ou uma reescrita minha, e a fatia deixava de casar. O invariante `Nome / Cidade`
        * não depende de redação nenhuma.
        */
-      const jaPediramDados = nossosPedidos.length > 0;
+      const jaPediramDados =
+        nossosPedidos.length > 0 ||
+        memoriaLib.pedimosDados(await store.get('sentLog'), state.contact?.phonenumber || state.contact?.telefone || '');
 
       /**
        * **Quem ignorou o pedido de dados não recebe a mensagem do momento seca** — pedido dele
@@ -10111,6 +10359,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * verdade tanto para quem recebeu formulário quanto para quem recebeu modelo.
        */
       const voltouPorOutroAnuncio =
+        emCampanha() &&
         state.nossas.length > 0 &&
         !!padraoAnuncio &&
         achatarTexto(ultimaDoContato).includes(achatarTexto(padraoAnuncio));
@@ -10351,6 +10600,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const cidadeVale = !!doPedido.cidade && doPedido.cidade.confidence !== 'nao-reconhecida';
         return cidadeVale || !!doPedido.nome;
       })();
+
+      /**
+       * **A grafia tem de ser a da cidade que esta na ficha AGORA** (31/10/2026, print dele: o
+       * cabecalho ja mostra a cidade do cadastro e a boas-vindas pede nome e cidade).
+       *
+       * `cidadeNoCadastro` so le `state.grafiaDaCidade`, e essa conferencia roda no `load()`. Se
+       * ela nao rodou, ou rodou sobre outro valor, o sinal fica falso e a troca para o texto sem
+       * pedido nao acontece — com a cidade escrita na tela. Recalcula aqui, antes do objeto, que
+       * e sincrono de proposito (`matchCity` no meio dele viraria Promise e o formulario sairia
+       * para todo mundo).
+       */
+      const cidadeNaFicha = valueNamed('Cidade');
+      const grafiaBate =
+        state.grafiaDaCidade?.confianca === 'exata' &&
+        cities.semAcentoNemCaixa(state.grafiaDaCidade.oficial || cidadeNaFicha) ===
+          cities.semAcentoNemCaixa(cidadeNaFicha);
+      if (cidadeNaFicha && !grafiaBate) {
+        try {
+          state.grafiaDaCidade = await cities.conferirGrafia(cidadeNaFicha);
+        } catch (err) {
+          console.warn('[WhatsFill] nao conferi a grafia antes da decisao:', err?.message || err);
+        }
+      }
 
       /**
        * Os sinais ficam num nome próprio porque o painel os consulta DEPOIS — e a primeira consulta
@@ -10826,7 +11098,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         return [pronta.text, ...(pronta.variantes || [])].some((texto) => jaSaiuNaConversa(texto));
       })();
 
-      const doAnuncio = anunciosLib.decidirComAnuncio(
+      const doAnuncio = !emCampanha() ? null : anunciosLib.decidirComAnuncio(
         state.anuncio?.anuncio,
         sugestao,
         sugestao?.id ? sugestaoLib.efeitoDaRegra(sugestao.id, state.fluxo) : null,
@@ -10982,7 +11254,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * (*"volte a mensagem automática da IA"*): eu a criei diagnosticando como alucinação da IA
          * uma mensagem que era do determinístico. Ver `rascunhoPodeSairSozinho`.
          */
-        if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {
+        const euMando = !state.settings.autoSend;
+        const avisosDuros = [...(rascunho.avisos || [])];
+        if (rascunho.ok) {
+          const daRegua = iaLib.reguaDoRascunho(rascunho, state.ia || {});
+          if (daRegua.length) rascunho.avisos = [...avisosDuros, ...daRegua];
+        }
+        const duroOk = iaLib.rascunhoPodeSairSozinho(avisosDuros);
+        if (rascunho.ok && rodadaAutomatica() && duroOk && (euMando || iaLib.rascunhoPodeSairSozinho(rascunho.avisos))) {
           /**
            * **O MODO "EU MANDO" VALE AQUI TAMBÉM** (29/10/2026, print dele com o rascunho parado no
            * campo e a rodada encerrada: *"o gatilho está errado, eu pedi para o gatilho ser quando
@@ -11004,8 +11283,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * **E não espera com o automático LIGADO**, de propósito: lá quem manda é o painel, e
            * esperar o campo esvaziar seria esperar um Enter que ninguém vai dar.
            */
-          const euMando = !state.settings.autoSend;
-
           if (euMando) {
             const mandou = await esperarVoceEnviar(rascunho.texto);
             if (!mandou.ok) {
@@ -11039,6 +11316,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             }
           }
           state.lastSendAt = Date.now();
+          try {
+            await templatesLib.markSent(state.contact.id, 'ia-rascunho', { nome });
+            if (templatesLib.ehPedidoDeDados(rascunho.texto)) {
+              await templatesLib.markSent(state.contact.id, 'pedir-dados', { nome });
+            }
+          } catch (err) {
+            registrarNaRodada(nome, 'aviso', `a mensagem saiu, mas o registro do telefone não gravou: ${err?.message || err}`);
+          }
 
           /**
            * **Este é um SEGUNDO ponto de saída, e o `CLAUDE.md` diz que só devia haver um.**
@@ -11197,7 +11482,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           : sugestao?.resposta === 'pedido-emprego' && sinaisDoContato?.pedeEmprego?.tipo === 'campanha'
           ? 'trabalhar-na-campanha'
           : sugestao?.resposta;
-      const doFluxo = respostaDoFluxo ? state.templates.find((tpl) => tpl.id === respostaDoFluxo) : null;
+      const doFluxo = respostaDoFluxo ? respostasEmUso().find((tpl) => tpl.id === respostaDoFluxo) : null;
       const doFluxoTrava = doFluxo
         ? vars.render(await templatesLib.varianteAtual(doFluxo), contexto).missing.length > 0
         : false;
@@ -14432,8 +14717,7 @@ const CONTATOS_POR_PAGINA = 200;
       return true;
     }
 
-    const contract = await store.get('writeContract');
-    if (!contract?.entries?.length) {
+    if (!(await gravacaoLiberada())) {
       setStatus(fieldsLib.NO_CONTRACT, 'err');
       return false;
     }
@@ -15803,10 +16087,21 @@ const CONTATOS_POR_PAGINA = 200;
         .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
     })();
 
+    /**
+     * O dossiê de órgãos desta conversa (31/10/2026). Sem o bloco, a regra 20 manda dizer só o
+     * nome do órgão, e a trava de telefone fica calada (`telefones: null`).
+     */
+    let orgaosDaConversa = { bloco: '', telefones: null, ids: [] };
+    try {
+      orgaosDaConversa = await gabineteLib.orgaosParaOPrompt(dela);
+    } catch {
+      /* segue sem o bloco */
+    }
+
     // `async` é obrigatório: há `await` no meio dos argumentos (o dossiê e a chapa saem de funções).
     const chamarIA = async () =>
       iaCliente.rascunhar({
-        templates: state.templates,
+        templates: respostasEmUso(),
         regras: state.ia.regras,
         gabinete: await gabineteLib.paraOPrompt(dela, { perfil: state.perfil }),
         modelo: modeloDoRascunho(),
@@ -15848,7 +16143,8 @@ const CONTATOS_POR_PAGINA = 200;
          * que o atendimento diz a esta pessoa" a quem tem cidade no CRM, e o rascunho se apresentava.
          * É o `jaRespondemosAntes` da rodada; fora dela, o botão "Ver conversa anterior".
          */
-        jaNosConhece: !!(state.sinais?.jaRespondemosAntes || state.temConversaAnterior),
+        jaNosConhece: !!(state.sinais?.jaRespondemosAntes || state.temConversaAnterior || state.provaDeRetorno?.retorno),
+        provas: state.provaDeRetorno?.motivos || [],
         anterior: anteriorParaIA,
         /**
          * **O CANDIDATO desta conversa** — 24/09/2026. Sai do canal do atendimento, e é ele que dá
@@ -15856,6 +16152,9 @@ const CONTATOS_POR_PAGINA = 200;
          * pedido à mão continua como sempre foi.
          */
         candidato: state.perfil || null,
+        fase: faseAtual(),
+        orgaos: orgaosDaConversa.bloco,
+        telefonesPermitidos: orgaosDaConversa.telefones,
       });
 
     let rascunho;
@@ -15895,9 +16194,10 @@ const CONTATOS_POR_PAGINA = 200;
         modeloDoRascunho(),
         iaLib.tokensAproximados(
           iaLib.montarSistemaRascunho({
-            templates: state.templates,
+            templates: respostasEmUso(),
             regras: state.ia.regras,
             gabinete: await gabineteLib.paraOPrompt(dela, { perfil: state.perfil }),
+            fase: faseAtual(),
           })
         )
       );
@@ -16073,7 +16373,15 @@ const CONTATOS_POR_PAGINA = 200;
     );
     // `texto` e `avisos` existem para o cartão da aba Respostas MOSTRAR o que foi para o campo.
     // A rodada só olha `ok`/`motivo`, e continua funcionando igual.
-    return { ok: true, enviado: false, motivo: 'rascunho pronto no campo de mensagem', texto, avisos };
+    return {
+      ok: true,
+      enviado: false,
+      motivo: 'rascunho pronto no campo de mensagem',
+      texto,
+      avisos,
+      confianca: escolhida.confianca,
+      precisaDeRevisao: escolhida.precisaDeRevisao === true,
+    };
   }
 
 
@@ -16932,6 +17240,7 @@ const CONTATOS_POR_PAGINA = 200;
 
   function renderConfig() {
     renderCartaoCandidatos();
+    body.append(boxDoModo());
     renderConfigIA();
     body.append(h('h3', { class: 'wf-h' }, 'Envio'));
     // O MESMO box da aba Automatizado — uma configuracao so, mostrada nos dois lugares, e a tela
@@ -17864,6 +18173,12 @@ const CONTATOS_POR_PAGINA = 200;
   function renderRecorderSection() {
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Gravar campos no CRM'));
 
+    if (naPlataformaNova()) {
+      body.append(h('div', { class: 'wf-origin' },
+        'A cidade e os outros campos gravam direto na ficha do contato. Não há contrato para aprender nesta plataforma.'));
+      return;
+    }
+
     const contractBox = h('div', { class: 'wf-origin' }, '');
     store
       .get('writeContract')
@@ -18041,6 +18356,36 @@ const CONTATOS_POR_PAGINA = 200;
    * nome na mesma pagina (a aba Config e a Automatizado mostram a mesma escolha) brigariam pela
    * marcacao.
    */
+  function faseAtual() {
+    return modoLib.normalizarFase(state.ia?.fase);
+  }
+
+  function emCampanha() {
+    return modoLib.emCampanha(faseAtual());
+  }
+
+  /**
+   * As respostas como valem NESTE modo. O editor da Config continua em `state.templates`: gravar
+   * o texto do modo Normal por cima apagaria o de campanha.
+   */
+  function respostasEmUso() {
+    return modoLib.respostasDoModo(state.templates, faseAtual(), { de: iaLib.quemE(state.perfil).de });
+  }
+
+  /** O primeiro cartão da Config, depois do candidato. Uma chave só: `ia.fase`. */
+  function boxDoModo() {
+    const caixa = h('div', { class: 'wf-card' }, [
+      h('h4', {}, 'Modo'),
+      h('div', { class: 'wf-hint' }, modoLib.explicacaoDoModo(faseAtual())),
+    ]);
+    caixa.append(escolha('wf-modo-fase', modoLib.MODOS, faseAtual(), async (v) => {
+      await store.set('ia', { ...(await store.get('ia')), fase: v });
+      state.ia = await store.get('ia');
+      renderAll();
+    }));
+    return caixa;
+  }
+
   function escolha(nome, opcoes, valor, onChange) {
     // `wf-radios`, e nao `wf-escolha`: aquela ja e da janela de escolha da IA, e duas coisas com
     // o mesmo nome de classe colidem no dia em que uma delas ganhar estilo novo.

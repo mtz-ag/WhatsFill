@@ -13,7 +13,7 @@ Na ordem, sem pular:
    **Leia a saída.** Verificação rodada em segundo plano e lida depois não é verificação — já
    mandei uma janela que não carregava com o verificador dizendo o erro na tela.
 
-2. **As trinta suítes passando** (o comando inteiro está em `@10-ambiente`). Se escreveu arquivo
+2. **As suítes passando** (o comando inteiro está em `@10-ambiente`). Se escreveu arquivo
    por script, `git diff --stat` antes: escrita truncada deixa o arquivo válido e incompleto.
 
 3. **Mudou comportamento visível? Suba a `version` do `manifest.json` no mesmo commit**, e a linha

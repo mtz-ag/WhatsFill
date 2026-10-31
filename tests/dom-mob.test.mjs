@@ -427,11 +427,14 @@ grupo('O ATO DE ENVIAR: apagar o texto NAO e enviar');
   const onde = { addEventListener: (tipo, fn) => ouvintes.set(tipo, fn) };
 
   const campo = campoFalso({ placeholder: 'Mensagem' });
-  const botao = { tag: 'button' };
-  const fora = { tag: 'button' };
-  const linhaDoCampo = { contains: (n) => n === campo || n === botao };
+  const rect = (top, left, width, height) => ({ top, left, width, height, right: left + width, bottom: top + height });
+  campo.getBoundingClientRect = () => rect(500, 80, 400, 48);
+  const botao = { tag: 'button', getBoundingClientRect: () => rect(504, 490, 36, 40) };
+  const fora = { tag: 'button', getBoundingClientRect: () => rect(40, 200, 80, 28) };
+  const etiqueta = { tag: 'button', getBoundingClientRect: () => rect(80, 120, 18, 18) };
+  const linhaDoCampo = { contains: (n) => n === campo || n === botao || n === etiqueta };
   campo.parentElement = linhaDoCampo;
-  linhaDoCampo.contains = (n) => n === campo || n === botao;
+  linhaDoCampo.contains = (n) => n === campo || n === botao || n === etiqueta;
 
   const raiz = telaDeCampos([campo]);
   const alvoQueFecha = (el, dono) => ({ ...el, closest: (sel) => (sel.includes('button') ? dono : null) });
@@ -472,8 +475,11 @@ grupo('O ATO DE ENVIAR: apagar o texto NAO e enviar');
   clicar({ isTrusted: true, target: alvoQueFecha({}, fora) });
   check(ultimoAtoDeEnvio().em === 0, 'botao longe do campo (Resolver, Transferir) NAO e envio');
 
+  clicar({ isTrusted: true, target: alvoQueFecha({}, etiqueta) });
+  check(ultimoAtoDeEnvio().em === 0, 'tirar etiqueta NAO e enviar — o X nao esta na faixa do campo');
+
   clicar({ isTrusted: true, target: alvoQueFecha({}, botao) });
-  check(ultimoAtoDeEnvio().em > 0 && /clique/.test(ultimoAtoDeEnvio().como), 'e o botao ao lado do campo conta');
+  check(ultimoAtoDeEnvio().em > 0 && /clique/.test(ultimoAtoDeEnvio().como), 'e o botao a direita do campo conta');
 
   /** Clique dentro do painel nunca conta: o `ev.target` de um shadow root chega como o host. */
   esquecerEnvio();

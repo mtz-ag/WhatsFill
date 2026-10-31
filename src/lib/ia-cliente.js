@@ -19,6 +19,7 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   validarRascunho,
+  telefonesDoTexto,
   tokensAproximados,
   ANTERIOR_MAX_FALAS,
   ELA_SE_DESCULPOU,
@@ -268,7 +269,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [], candidato = null }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -283,14 +284,14 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    */
   // O CANDIDATO desta conversa — 24/09/2026. Nulo é o de fábrica, então com um perfil só o
   // prompt sai como sempre saiu. Ver `lib/perfis.js`.
-  const sistema = montarSistemaRascunho({ templates, regras, gabinete, candidato });
+  const sistema = montarSistemaRascunho({ templates, regras, gabinete, candidato, fase });
   /**
    * **`perguntaDoMandato` é "o dossê foi puxado"** — `gabinete` só vem preenchido quando
    * `precisaDoDossie` reconheceu que a conversa pergunta do candidato, da chapa ou das pautas.
    * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
    */
   const contato = montarContatoRascunho({
-    mensagens, campos, agora, pedirDados, jaNosConhece, anterior, candidato,
+    mensagens, campos, agora, pedirDados, jaNosConhece, anterior, candidato, provas, fase, orgaos,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   });
   const lidoPelaIA = {
@@ -372,7 +373,27 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
        * de `dossieAtivo`**: o modelo tem saber próprio sobre estes nomes, e foi ele que trocou o
        * cargo do Van Hattem na print da Nara. Trava não pode depender de uma caixa marcada.
        */
-      ...validarRascunho(r.decisao, agora, { jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho, nossaUltima, jaFalamosHoje, candidato }),
+      ...validarRascunho(r.decisao, agora, {
+        jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho,
+        nossaUltima, jaFalamosHoje, candidato, nome: campos?.Nome || '', fase,
+        /**
+         * Lista nula deixa a trava de telefone calada. Lista (mesmo vazia) soma o que já está na
+         * conversa, no dossiê, nas regras e nas respostas prontas — número que ela mesma escreveu
+         * não é palpite da IA.
+         */
+        telefonesPermitidos: Array.isArray(telefonesPermitidos)
+          ? [
+              ...telefonesPermitidos,
+              ...telefonesDoTexto([
+                ...(mensagens || []).map((m) => m?.texto),
+                ...(anterior || []).map((m) => m?.texto),
+                gabinete,
+                regras,
+                ...(templates || []).flatMap((t) => [t?.text, ...(t?.variantes || [])]),
+              ].join('\n')),
+            ]
+          : null,
+      }),
       custo: r.custo,
       custoUsd: r.custoUsd,
       gastoMes: r.gastoMes,
@@ -656,8 +677,9 @@ export async function rascunharComentario({
   chapa = [],
   modelo,
   agora = new Date(),
+  fase,
 }) {
-  const sistema = montarSistemaComentario({ regras, gabinete, candidato });
+  const sistema = montarSistemaComentario({ regras, gabinete, candidato, fase });
   const contato = montarComentario({ autor, texto, post });
 
   const lidoPelaIA = {
@@ -699,7 +721,7 @@ export async function rascunharComentario({
     };
   }
 
-  const revisto = revisarRascunho(lido.texto, agora, {});
+  const revisto = revisarRascunho(lido.texto, agora, { fase });
   const avisos = [...revisto.avisos];
 
   /**

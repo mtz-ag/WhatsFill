@@ -1906,12 +1906,13 @@ grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');
    */
   const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
 
-  const i = painel.indexOf('if (rascunho.ok && rodadaAutomatica() && iaLib.rascunhoPodeSairSozinho(rascunho.avisos)) {');
+  const i = painel.indexOf('const euMando = !state.settings.autoSend;\n        const avisosDuros');
   check(i > 0, 'achei o ramo do envio automatico do rascunho');
-  const corpo = painel.slice(i, i + 3600);
+  const corpo = painel.slice(i, i + 6000);
 
-  check(corpo.includes('const euMando = !state.settings.autoSend;'),
-    'o ramo do rascunho consulta o modo de envio');
+  check(corpo.includes('reguaDoRascunho'), 'a regua entra nos avisos antes de decidir se sai sozinho');
+  check(corpo.includes('duroOk && (euMando || iaLib.rascunhoPodeSairSozinho(rascunho.avisos))'),
+    'confianca baixa nao tira o modo Eu mando; trava dura continua barrando os dois');
   check(corpo.includes('await esperarVoceEnviar(rascunho.texto)'),
     'e no modo "Eu mando" ele ESPERA o Enter dele, em vez de mandar sozinho');
 
@@ -2021,6 +2022,47 @@ grupo('quem e contato novo: as tres pernas, e as duas que estavam cegas');
     'coluna vazia devolve NULO — vazio e desconhecido, nunca "importado"');
   check(contatoDoBanco({ ...linha, origem: 'helena' }).origem === 'helena',
     'e as outras origens passam intactas: so `importacao` e tratada');
+}
+
+grupo('popup das teclas enquanto ele confere o texto');
+{
+  /**
+   * **Pedido dele (30/10/2026):** *"crie uma popup que tenha o numero 1, 2, 3 e a opcao de
+   * adicionar mais"*, e *"a opcao 1 deve ser a mensagem do momento"*. Apertar o numero troca o
+   * texto e envia. Remover etiqueta e corrigir o cadastro nao pode fazer a rodada agir.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const ini = painel.indexOf('function abrirPopupDeAtalhos');
+  const fimPopup = painel.indexOf('async function esperarVoceEnviar');
+  const popup = painel.slice(ini, fimPopup);
+  check(ini > 0 && popup.includes('Mensagem do momento'), 'a tecla 1 e a mensagem do momento');
+  check(popup.includes('Adicionar mais'), 'da para acrescentar tecla');
+  check(popup.includes('ehCampoDeMensagem'), 'numero dentro do cadastro nao dispara a tecla');
+  check(popup.includes('atalhosDaConferencia'), 'a tecla nova fica gravada');
+  const espera = painel.slice(fimPopup, painel.indexOf('async function esperarTelaLivre'));
+  check(espera.includes('await page.sendText(rendido.text)'), 'a tecla envia de verdade, nao so troca o texto');
+  check(espera.includes("if (!/Enter/.test(String(ato.como || '')))"),
+    'clique que nao esvaziou o campo nao pula nem conclui');
+}
+
+grupo('identificar a cidade e preencher — a porta do contrato nao existe aqui');
+{
+  /**
+   * **Pedido dele (30/10/2026):** *"preciso que a funcao de identificar cidade e preencher volte
+   * a funcionar"*. O palpite ja nascia. Quem gravava exigia o contrato aprendido na plataforma
+   * velha, e aqui `learnStart` responde que nao ha o que aprender. A porta fechada fazia a
+   * cidade ser reconhecida e nada ser perguntado nem gravado.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const i = painel.indexOf('async function gravacaoLiberada');
+  const fn = painel.slice(i, i + 280);
+  check(i > 0 && fn.includes('if (naPlataformaNova()) return true;'),
+    'na plataforma nova a gravacao nao espera contrato');
+  check(painel.includes('state.hasContract = await gravacaoLiberada()'),
+    'o botao Salvar e a gravacao automatica leem essa mesma funcao');
+  const save = painel.slice(painel.indexOf('async function saveClassification'), painel.indexOf("setStatus('Gravando no CRM"));
+  check(save.includes('await gravacaoLiberada()'),
+    'e quem escreve no contato tambem — senao o popup abre e a gravacao recusa');
 }
 
 fim();

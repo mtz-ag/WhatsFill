@@ -89,5 +89,5 @@ E quando ele repete um pedido que você já mediu e explicou, **a repetição é
 
 ## Antes de dar a tarefa por fechada
 
-Ver a regra `@fechar`. Em resumo: os dois verificadores, as trinta suítes, a versão do manifesto se
+Ver a regra `@fechar`. Em resumo: os dois verificadores, as suítes, a versão do manifesto se
 o comportamento visível mudou, e `registro.md` no mesmo commit.

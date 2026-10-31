@@ -73,6 +73,71 @@ function firstName(fullName) {
 }
 
 /**
+ * Primeiro nome que não é nome de gente. Cidade no campo do nome é o caso que a regra do
+ * vocativo já recusa ("Santa Cruz - Serlei"); aqui o mesmo lixo não pode virar gênero.
+ */
+const NAO_E_NOME = new Set(['santa', 'santo', 'porto', 'rio', 'sao', 'nova', 'novo', 'vila', 'morro', 'vale', 'serra']);
+
+/** Não termina em -a e mesmo assim é feminino. Marli é o caso de 06/09. */
+const FEMININOS = new Set([
+  'beatriz', 'isabel', 'raquel', 'ines', 'rute', 'ruth', 'ester', 'esther', 'miriam',
+  'alice', 'nicole', 'caroline', 'ellen', 'karen', 'ingrid', 'jennifer', 'simone',
+  'denise', 'marlene', 'neide', 'irene', 'ione', 'rose', 'noemi', 'marli', 'sueli',
+  'cleci', 'neli', 'ivani', 'solange', 'josiane', 'eliane',
+]);
+
+/** Não termina em -o e mesmo assim é masculino. Cauã vira "caua" sem acento. */
+const MASCULINOS = new Set([
+  'jose', 'joao', 'andre', 'luiz', 'luis', 'carlos', 'marcos', 'lucas', 'matheus',
+  'mateus', 'jonas', 'felipe', 'filipe', 'henrique', 'vicente', 'jorge', 'luca',
+  'caua', 'kaua',
+]);
+
+/**
+ * 'f', 'm' ou null. Null é "não dá para saber" — aí o texto não muda.
+ *
+ * Só o primeiro nome. O resto do cadastro (sobrenome, cidade) não entra. Apelido de
+ * anúncio e nome sem vogal devolvem null: é o mesmo lixo que a regra 1 recusa usar.
+ */
+export function generoDoNome(nome) {
+  if (looksLikePlaceholder(nome) || nomeSemSentido(nome)) return null;
+  const primeiro = achatarNome(firstName(nome)).split(' ')[0];
+  if (!primeiro || primeiro.length < 2 || NAO_E_NOME.has(primeiro)) return null;
+  if (FEMININOS.has(primeiro)) return 'f';
+  if (MASCULINOS.has(primeiro)) return 'm';
+  if (primeiro.endsWith('a')) return 'f';
+  if (primeiro.endsWith('o')) return 'm';
+  return null;
+}
+
+/**
+ * As duas palavras que as boas-vindas usam para falar COM a pessoa.
+ *
+ * "todo mundo é bem-vindo" fica: aquilo não é o tratamento dela. "bem-vindos" também,
+ * porque é plural. O "obrigado" de quem escreve não entra — é do mandato, e continua
+ * no masculino por decisão dele.
+ */
+export function concordarGenero(texto, nome) {
+  const g = generoDoNome(nome);
+  if (g !== 'f' && g !== 'm') return String(texto || '');
+  const pares = g === 'f'
+    ? [[/bem-vindo(?!s)/giu, 'bem-vinda'], [/atendê-lo/giu, 'atendê-la'], [/atende-lo/giu, 'atende-la']]
+    : [[/bem-vinda(?!s)/giu, 'bem-vindo'], [/atendê-la/giu, 'atendê-lo'], [/atende-la/giu, 'atende-lo']];
+  let s = String(texto || '');
+  for (const [re, para] of pares) {
+    s = s.replace(re, (m, ...rest) => {
+      const offset = rest[rest.length - 2];
+      const antes = s.slice(Math.max(0, offset - 9), offset);
+      if (/mundo é $|mundo e $/i.test(antes)) return m;
+      const letra = m[0];
+      if (letra !== letra.toLowerCase()) return para[0].toUpperCase() + para.slice(1);
+      return para;
+    });
+  }
+  return s;
+}
+
+/**
  * O contato que chega do anúncio vem cadastrado como "[NOVO] (51) 99999-9999", e mandar
  * "Boa noite, [NOVO]!" é pior do que não usar nome nenhum. Aqui a extensão reconhece esses
  * apelidos automáticos e trata como "sem nome" — o que faz o envio travar em vez de sair
@@ -233,7 +298,12 @@ export function render(template, context) {
     return value;
   });
 
-  return { text, missing: [...new Set(missing)], reasons: context.reasons || {} };
+  // O texto de fábrica é masculino. O nome do contato, quando dá para saber, concorda.
+  // Sem nome (ou nome que não é nome), o texto sai como está.
+  // O texto de fábrica é masculino. O nome do contato, quando dá para saber, concorda.
+  // Sem nome (ou nome que não é nome), o texto sai como está.
+  const concordado = concordarGenero(text, context.values?.nome || '');
+  return { text: concordado, missing: [...new Set(missing)], reasons: context.reasons || {} };
 }
 
 /** Mensagem curta explicando por que o envio está bloqueado. */

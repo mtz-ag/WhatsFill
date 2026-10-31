@@ -59,6 +59,8 @@ import {
   semRepetirONosso,
   soRepeteONosso,
   rascunhoPodeSairSozinho,
+  reguaDoRascunho,
+  CONFIANCA_MINIMA_RASCUNHO,
   AVISOS_QUE_IMPEDEM_ENVIO,
   AVISOS_QUE_SO_AVISAM,
   validarRascunho,
@@ -247,8 +249,20 @@ grupo('rascunho: o prompt proíbe o que a lei proíbe, e ensina o tom pelos text
    */
   check(/na d[úu]vida, escreva no NEUTRO/i.test(sistema), 'manda escrever no neutro quando nao souber o genero');
   check(/coberto de raz[ãa]o/i.test(sistema), 'e mostra COMO, com o exemplo da print da Marli');
-  check(/o nome do cadastro N[ÃA]O serve/i.test(sistema),
-    'e proibe deduzir o genero pelo nome do cadastro, que e o mesmo que a regra 1 manda nao usar');
+  check(/quando o bloco do contato disser o g[eê]nero/i.test(sistema),
+    'o primeiro nome do cadastro conta para a concordancia');
+  check(/N[ÃA]O autoriza escrever o nome/i.test(sistema),
+    'e concordar nao autoriza chamar a pessoa pelo nome');
+
+  const bloco = montarContatoRascunho({ campos: { Nome: 'Ana Clara', Cidade: 'Canoas' }, mensagens: ['oi'] });
+  check(/GÊNERO: feminino/.test(bloco), 'o bloco do contato diz o genero quando o primeiro nome permite');
+  check(!/Ana Clara/.test(bloco.split('GÊNERO')[1] || ''), 'e a linha do genero nao repete o nome');
+  const neutro = montarContatoRascunho({ campos: { Nome: 'Santa Cruz' }, mensagens: ['oi'] });
+  check(!/GÊNERO:/.test(neutro), 'cidade no nome nao inventa genero');
+
+  const trocado = revisarRascunho('Boa noite! Seja bem-vindo — aqui é a equipe.', new Date('2026-10-30T19:00:00'), { nome: 'Ana Clara' });
+  check(trocado.texto.includes('bem-vinda'), 'o rascunho que saiu no masculino e corrigido pelo nome');
+  check(/concordei o tratamento/.test(trocado.avisos.join(' ')), 'e o aviso diz que a concordancia foi do codigo');
   check(/Obrigado pela atenção/.test(sistema), 'as respostas DELE entram como exemplo de estilo');
   check(/agenda de terça/.test(sistema), 'as instruções dele entram');
   check(/n[ãa]o invente/i.test(sistema), 'proíbe inventar informação');
@@ -1809,9 +1823,9 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    */
   const regra8 = prompt.slice(prompt.indexOf('8. QUEM QUER FALAR COM O DEPUTADO'));
   const bloco8 = regra8.slice(0, regra8.indexOf('\n9. '));
-  check(/N[AÃ]O diga "em per[ií]odo eleitoral" nem "em campanha"/.test(bloco8),
+  check(/n[aã]o fale em\s+"per[ií]odo eleitoral"/.test(bloco8),
     'a regra 8 proibe justificar a agenda pelo periodo');
-  check(/ELEITO em 04\/10/.test(bloco8), 'e diz por que: ele ja foi eleito');
+  check(/A campanha acabou/.test(bloco8), 'e diz por que: a campanha acabou');
 
   /**
    * **A POSICAO importa, e e a licao de 07/09** (o item 22 do tamanho): regra que vive longe do
@@ -2606,7 +2620,7 @@ grupo('o endereco em texto livre barra o envio sozinho (12/09/2026)');
     campos: {},
     agora,
   });
-  check(bloco.includes('s\u00f3 pe\u00e7a o endere\u00e7o dela se ela pediu MATERIAL DE CAMPANHA'),
+  check(bloco.includes('ENDERE\u00c7O: N\u00c3O pe\u00e7a o endere\u00e7o dela'),
     'e a mesma regra vai no fim do bloco do contato');
   check(
     sistema.includes('n\u00e3o feche uma NEGATIVA pedindo o cadastro'),
@@ -3086,7 +3100,7 @@ grupo('"como esta o capitao?" e carinho: ele esta bem e na correria (17/09/2026)
 
   const com = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Como está o capitão?' }] });
   check(/COMO ELE ESTÁ:/.test(com), 'a regra vai colada no pedido quando ela pergunta');
-  check(/está bem e na\s+correria da campanha/.test(com.replace(/\s+/g, ' ')), 'com a resposta que ele quer');
+  check(/está bem e na\s+correria do mandato/.test(com.replace(/\s+/g, ' ')), 'com a resposta que ele quer');
   check(/notícia dele/.test(com), 'e a noticia do dossie ou das instrucoes vence');
   const respondida = montarContatoRascunho({
     mensagens: [{ de: 'contato', texto: 'Como está o capitão?' }, { de: 'nos', texto: 'Está bem, na correria!' }, { de: 'contato', texto: 'que bom' }],
@@ -3147,29 +3161,25 @@ grupo('a IA confere as etiquetas de PEDIDO e SEM INTERESSE antes de marcar (17/0
  * **Medido: o dossie FOI puxado e dizia a coisa certa.** O que o modelo copiou foram os TITULOS
  * em caixa alta - o do dossie e o da regra 12, este escrito por mim na vespera para outro caso.
  */
-grupo('a eleicao nao acabou: o 2o turno e nosso (15/10/2026)');
+grupo('as eleicoes de 2026 terminaram (30/10/2026)');
 {
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
-  const i19 = p.indexOf('19. A ELEI');
+  const i19 = p.indexOf('19. A ELEIÇÃO DE 2026 ACABOU');
   check(i19 > 0, 'a regra 19 existe');
-  const r19 = p.slice(i19, i19 + 1400);
+  const fim19 = p.indexOf('20. O ASSUNTO', i19);
+  const r19 = p.slice(i19, fim19 > i19 ? fim19 : i19 + 1400);
 
-  /** As DUAS metades na mesma regra: metade de um fato e lida como o fato inteiro. */
   check(
-    r19.includes('04/10/2026') && /deputado, senador e governador/.test(r19),
-    'diz o que acabou em 04/10, pelo CARGO'
+    r19.includes('04/10/2026') && /não há mais eleição nenhuma este ano/.test(r19),
+    'diz o que acabou em 04/10'
   );
   /**
    * O NOME de quem ganhou NAO entra: este prompt e dos dois candidatos, e quem foi eleito e fato
    * do DOSSIE, que ja e por candidato. `perfis.test.mjs` pega o vazamento; aqui fica o PORQUE.
    */
-  check(!/Martim|Pedri/.test(r19), 'e nao nomeia candidato nenhum');
-  check(r19.includes('25/10/2026') && /Fl[áa]vio Bolsonaro/.test(r19), 'e diz o que continua, com o nosso candidato');
-  check(/campanha acontecendo, e ela [ée] nossa/.test(r19), 'e que a campanha em curso e NOSSA');
-
-  /** A frase que vazou vira frase PROIBIDA, escrita - proibicao que nao a nomeia nao a evita. */
-  check(/NUNCA diga ao contato que "a elei[çc][ãa]o j[áa] passou"/.test(r19), 'proibe a frase que saiu, com as palavras');
-  check(/tem NOME/.test(r19) && /cargo escrito/.test(r19), 'e diz como se fala do que de fato acabou');
+  check(!/Martim|Pedri|Fl[áa]vio/.test(r19), 'e nao nomeia candidato nenhum');
+  check(r19.includes('25/10/2026') && /n[aã]o pe[cç]a voto/i.test(r19), 'o 2o turno ja foi, e nao se pede voto');
+  check(!/campanha acontecendo/.test(r19), 'a campanha em curso saiu');
 
   /** O que fazer com quem oferece evento: nem marcar nem recusar sozinha. */
   check(/nunca marque nada e nunca recuse por conta pr[óo]pria/.test(r19), 'oferta de evento nao se marca nem se recusa');
@@ -3178,24 +3188,44 @@ grupo('a eleicao nao acabou: o 2o turno e nosso (15/10/2026)');
    * **A TRAVA, e por que ela BARRA:** e da familia do `afirmouAcao` - afirmacao falsa sobre o
    * mundo dita a um eleitor. A guarda e NOMEAR o cargo decidido, que e a frase verdadeira.
    */
-  const agora = new Date('2026-10-15T16:00:00');
+  const antes = new Date('2026-10-15T16:00:00');
+  const depois = new Date('2026-10-30T12:00:00');
   const aviso = AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada;
-  const barra = (t) => (revisarRascunho(t, agora).avisos || []).includes(aviso);
+  const barra = (t, quando) => (revisarRascunho(t, quando).avisos || []).includes(aviso);
 
-  check(barra('Como a eleição já passou, não vou conseguir combinar um evento de campanha agora.'), 'a frase da print e barrada');
-  check(barra('Infelizmente a campanha acabou.'), 'e "a campanha acabou"');
-  check(barra('As eleições já passaram.'), 'e o plural');
-  check(barra('O período eleitoral acabou.'), 'e o periodo eleitoral');
+  check(barra('Como a eleição já passou, não vou conseguir combinar um evento de campanha agora.', antes), 'antes de 26/10 a frase da print e barrada');
+  check(barra('Infelizmente a campanha acabou.', antes), 'e "a campanha acabou"');
+  check(barra('As eleições já passaram.', antes), 'e o plural');
+  check(barra('O período eleitoral acabou.', antes), 'e o periodo eleitoral');
 
-  check(!barra('A eleição de deputado estadual já acabou, mas seguimos trabalhando.'), 'com o CARGO escrito e verdade, e passa');
-  check(!barra('A eleição para governador já passou e o Zucco foi eleito.'), 'o governador tambem');
-  check(!barra('Agora é levar todo mundo no dia 25, no segundo turno!'), 'o convite do dia 25 passa');
-  check(!barra('A campanha do Flávio segue até o dia 25.'), 'falar da campanha do Flavio passa');
-  check(!barra('Obrigado pelo apoio! Vamos com tudo.'), 'agradecimento comum passa');
-  check(!barra('Infelizmente não estamos contratando.'), 'a negativa de vaga passa');
+  check(!barra('A eleição de deputado estadual já acabou, mas seguimos trabalhando.', antes), 'com o CARGO escrito e verdade, e passa');
+  check(!barra('A eleição para governador já passou e o Zucco foi eleito.', antes), 'o governador tambem');
+  check(!barra('Agora é levar todo mundo no dia 25, no segundo turno!', antes), 'o convite do dia 25 passa');
+  check(!barra('A campanha do Flávio segue até o dia 25.', antes), 'falar da campanha do Flavio passa');
+  check(!barra('Obrigado pelo apoio! Vamos com tudo.', antes), 'agradecimento comum passa');
+  check(!barra('Infelizmente não estamos contratando.', antes), 'a negativa de vaga passa');
 
-  check(!rascunhoPodeSairSozinho(revisarRascunho('Como a eleição já passou, não vou conseguir combinar um evento.', agora).avisos),
-    'e o rascunho da print nao sai mais sozinho');
+  check(!rascunhoPodeSairSozinho(revisarRascunho('Como a eleição já passou, não vou conseguir combinar um evento.', antes).avisos),
+    'e o rascunho da print nao sai sozinho enquanto o 2o turno nao acabou');
+
+  check(!barra('Como a eleição já passou, agradeço o apoio.', depois), 'depois de 25/10 a frase verdadeira nao e barrada');
+  check(rascunhoPodeSairSozinho(revisarRascunho('Como a eleição já passou, agradeço o apoio.', depois).avisos),
+    'e esse rascunho sai sozinho: o 2o turno ja foi');
+}
+
+grupo('a regua do rascunho cobra o 0,9 que o esquema ja prometia');
+{
+  check(CONFIANCA_MINIMA_RASCUNHO === 0.9, 'o corte e 0,9, o mesmo numero do esquema');
+  const baixo = reguaDoRascunho({ confianca: 0.8, precisaDeRevisao: false });
+  check(baixo.includes(AVISOS_QUE_IMPEDEM_ENVIO.confiancaBaixa), '0,8 nao sai sozinho');
+  check(!rascunhoPodeSairSozinho(baixo), 'e a regua entra na lista que barra');
+  check(reguaDoRascunho({ confianca: 0.9, precisaDeRevisao: false }).length === 0, '0,9 sem mao levantada passa');
+  check(reguaDoRascunho({ precisaDeRevisao: false }).includes(AVISOS_QUE_IMPEDEM_ENVIO.confiancaBaixa),
+    'confianca ausente barra: sem numero nao ha limiar');
+  check(reguaDoRascunho({ confianca: 0.95, precisaDeRevisao: true }).includes(AVISOS_QUE_IMPEDEM_ENVIO.iaPediuRevisao),
+    'a mao levantada barra mesmo com confianca alta');
+  check(reguaDoRascunho({ confianca: 0.5, precisaDeRevisao: true }, { confiancaMinimaEnvio: 0, respeitarRevisao: false }).length === 0,
+    'os dois interruptores desligam as duas metades');
 }
 
 grupo('a IA assume o encerramento (15/10/2026)');
@@ -3295,8 +3325,9 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
   check(/DINHEIRO — O CRAS NÃO É PARA TODO MUNDO/.test(pix), 'a regra entra quando ela pede dinheiro');
   check(/só aponte CRAS, assistência social, Cadastro Único ou Defensoria se ELA DISSER a dificuldade/.test(pix.replace(/\s+/g, ' ')),
     'e condiciona o encaminhamento a ela dizer a dificuldade');
-  check(/diga em UMA frase gentil que a lei eleitoral me proíbe de fazer isso e PARE/.test(pix.replace(/\s+/g, ' ')), 'sem dificuldade dita, nega com o motivo (a lei) e para');
-  check(/diga SEMPRE o motivo, numa frase curta: "a lei eleitoral me proíbe"/.test(montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).replace(/\s+/g, ' ')),
+  check(/a lei não permite que um mandato faça doações/.test(pix.replace(/\s+/g, ' ')) && /e PARE — sem CRAS/.test(pix.replace(/\s+/g, ' ')),
+    'sem dificuldade dita, nega com o motivo (a lei) e para');
+  check(/diga SEMPRE o motivo, numa frase curta: "a lei não permite que um mandato faça doações"/.test(montarSistemaRascunho({ templates: [], regras: '', gabinete: '' }).replace(/\s+/g, ' ')),
     'e a negativa diz sempre o motivo: a lei (22/09/2026)');
   check(!/DINHEIRO —/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'bom dia, tudo bem?' }] })),
     'quem nao pediu dinheiro nao recebe a regra');
@@ -3309,10 +3340,10 @@ grupo('o CRAS nao e para todo mundo que fala de dinheiro (17/09/2026)');
 grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
 {
   const janta = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Vou fazer uma janta para a campanha, voces participam com a comida?' }] });
-  check(/APOIO COM EVENTO — NÃO É PEDIDO DE AJUDA/.test(janta), 'a regra do apoio com evento entra');
+  check(/CONVITE PARA EVENTO — NÃO É PEDIDO DE AJUDA/.test(janta), 'a regra do apoio com evento entra');
   check(/NADA de CRAS, assistência social, Cadastro Único/.test(janta), 'e proibe o CRAS com todas as letras');
-  check(/a campanha não entra com comida, bebida, som nem custo/.test(janta.replace(/\s+/g, ' ')), 'e diz o que responder');
-  check(/repassa o convite para a equipe da agenda/.test(janta), 'o repasse do convite e a unica promessa que cabe');
+  check(/não temos como contribuir com isso — sem citar lei/.test(janta.replace(/\s+/g, ' ')), 'e diz o que responder');
+  check(/passo o convite para o responsável pela agenda/.test(janta), 'o repasse do convite e a unica promessa que cabe');
   check(!/NÃO SOMOS CANAL/.test(janta), 'e a regra 11 NAO entra: apoio nao e problema pessoal');
   check(!/DINHEIRO —/.test(janta), 'nem a regra do dinheiro');
   check(/NÃO SOMOS CANAL/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim' }] })),
@@ -3711,10 +3742,11 @@ grupo('xingar o adversario e apoio, e apoio nao se corrige (25/09/2026)');
   check(/Nunca corrija o placar, a data, o calendário nem a previsão dela/.test(p), 'e proibe corrigir a previsao dela');
   check(/ainda será decidida no segundo turno/.test(p), 'com a frase do caso real escrita como o que NAO dizer');
   /**
-   * **A guarda que mantem a regra util:** quem PERGUNTA de verdade continua sendo respondida, e o
-   * dia 25 continua podendo entrar — como convite, que e o que serve a campanha, nunca como reparo.
+   * **O convite do dia 25 saiu em 30/10.** O 2o turno ja foi. Quem pergunta de verdade continua
+   * sendo respondida; convite para uma data que passou nao.
    */
-  check(/como CONVITE/.test(p), 'e o segundo turno continua entrando como convite');
+  check(!/como CONVITE/.test(p) && /o resultado que não estiver lá, você não afirma/.test(p),
+    'o 2o turno nao entra mais como convite');
   check(/Perguntando de verdade/.test(p), 'e quem pergunta de verdade continua recebendo a resposta');
 }
 
@@ -3810,7 +3842,7 @@ grupo('comentario do Facebook: o canal e PUBLICO, e as regras mudam por isso');
   check(/NUNCA prometa/i.test(r), 'proibe prometer, como no WhatsApp');
   check(/mensagem privada/i.test(r), 'pedido pessoal vai para o privado, em vez de ser negado em publico');
   check(/nunca modere/i.test(r), 'quem xinga o adversario esta do nosso lado -- a regra 17 do WhatsApp vale aqui');
-  check(/2o turno e 25\/10/i.test(r), 'a eleicao nao acabou');
+  check(/eleicoes de 2026 terminaram/i.test(r) && /Nao peca voto/i.test(r), 'a eleicao acabou e nao se pede voto');
   check(/UMA ou DUAS frases/i.test(r), 'o tamanho e regra, porque comentario longo parece robo');
 
   /** O padrao de atendimento DELE nao entra: foi escrito para conversa de um para um. */

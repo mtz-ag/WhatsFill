@@ -38,6 +38,8 @@
  * dele.
  */
 
+import { emCampanha } from './modo.js';
+
 /**
  * **Teto de botoes.** O painel tem 380px e a tira fica junto do campo: passando disso ela empurra
  * a lista de comentarios para fora da vista, que e o que ele veio ler. **As teclas vao so ate 9**
@@ -145,6 +147,18 @@ export const RESPOSTAS_DE_FABRICA = [
     ],
   },
 ];
+
+/**
+ * **As respostas rapidas que so existem na campanha** (31/10/2026). "Dia 25 — 2o turno" pede voto
+ * com data: fora da eleicao ela some da tira, mas continua guardada.
+ */
+export const RAPIDAS_SO_NA_CAMPANHA = ['dia-25'];
+
+/** A tira como vale no modo. A lista guardada nao muda. */
+export function daTiraNoModo(lista, fase) {
+  const todas = Array.isArray(lista) ? lista : [];
+  return emCampanha(fase) ? todas : todas.filter((r) => !RAPIDAS_SO_NA_CAMPANHA.includes(r?.id));
+}
 
 /** Id novo, curto e sem relógio no meio — o relógio faria o `git diff` acusar mudança à toa. */
 export function novoId() {

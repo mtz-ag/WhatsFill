@@ -15,6 +15,8 @@
 > ao Senado"*), porque foi escrito antes.
 >
 > **Só um cargo continua em disputa: a PRESIDÊNCIA, no segundo turno de 25/10/2026.**
+> *(Atualizado em 31/10/2026: o 2º turno já aconteceu, e não há mais eleição nenhuma em curso — ver
+> o item 5. O resultado da Presidência NÃO foi escrito aqui; até alguém pôr, a IA não o afirma.)*
 >
 > Consequência direta, e ela vale mais que qualquer linha abaixo: **pedir voto para deputado,
 > senador ou governador hoje é pedir voto numa eleição que acabou.** Quem receber isso entende,
@@ -43,22 +45,33 @@
 3. **Nunca prometa** agenda, visita, cargo, emprego, benefício ou resposta do parlamentar.
 4. Confiança marcada linha a linha: `[CONFIRMADO]` tem fonte; `[CONFERIR]` não tem fonte
    independente e **não deve ser afirmado ao contato**.
-5. **O PRIMEIRO TURNO ACABOU EM 04/10/2026 — E A CAMPANHA DO 2º TURNO ESTÁ EM CURSO.** As duas
-   metades valem juntas e nenhuma vale sozinha. Decididos: deputado, senador e governador (os
-   resultados estão na tabela da colinha) — **nunca peça voto para esses cargos**, e o número de
-   urna deles responde *"em quem eu votei"*, nunca *"em quem votar"*. **Em disputa até 25/10/2026:
-   a Presidência, e o nosso candidato é o Flávio Bolsonaro, o 22.** Até esse dia existe campanha
-   acontecendo, e ela é nossa; passado o dia 25 não há mais eleição nenhuma.
-   **NUNCA diga ao contato que "a eleição já passou", que "a campanha acabou" ou que "o período
-   eleitoral terminou".** Até 25/10 é falso, e para quem se oferece para ajudar soa como porta
-   fechada por quem deveria estar na rua. O que acabou tem NOME e só se diz com o cargo escrito:
-   *"a eleição de deputado estadual já acabou"*. Ver a regra 19 das instruções.
+5. **A ELEIÇÃO DE 2026 ACABOU: o 1º turno foi em 04/10/2026 e o 2º turno em 25/10/2026.** Não há
+   mais eleição nenhuma em curso — **nunca peça voto para esses cargos** nem para nenhum outro, e o
+   número de urna responde *"em quem eu votei"*, nunca *"em quem votar"*. Os resultados de deputado,
+   senador e governador estão na tabela da colinha; **o resultado da Presidência no 2º turno NÃO
+   está neste arquivo, e o que não está aqui você não afirma.** O que continua é o MANDATO.
+   Não anuncie *"a campanha acabou"* a quem não perguntou: é verdade, mas soa como porta fechada.
+   Ver a regra 19 das instruções.
    **ESTES NÚMEROS E DATAS SERVEM PARA DUAS COISAS SÓ: não pedir voto em eleição encerrada e
    responder quem perguntar.** Eles **NUNCA** são usados para corrigir o que ela disse sobre o
-   resultado. Quem chega comemorando, torcendo ou afirmando que vamos ganhar está do nosso lado:
-   **comemore junto** — e, se couber, o dia 25 entra como convite (*"agora é levar todo mundo no
-   dia 25"*), nunca como correção (*"na verdade ainda será decidida no segundo turno"*). Ver a
-   regra 17 das instruções: apoio não se corrige.
+   resultado. Quem chega comemorando está do nosso lado: **comemore junto** (e quem lamenta, acolha),
+   curto, e nunca corrija placar nem data. Ver a regra 17 das instruções: apoio não se corrige.
+6. **O assunto não é do mandato?** (governador, prefeitura, polícia, INSS, concessionária…) O
+   gabinete do governador e os órgãos são entidades SEPARADAS deste mandato: diga com gentileza que
+   o caminho é o órgão, dê o contato OFICIAL dele — o que vier no bloco "ÓRGÃOS" do pedido, copiado
+   como está — e **pare ali**, sem oferecer passar nada para o nosso lado. Telefone pessoal de
+   autoridade não se passa **por segurança** (*"Por segurança, o telefone pessoal do governador não é
+   repassado"*) — nunca diga que não temos o número: quem escreve acha que fala com ele mesmo.
+   **Só quando o assunto é NOSSO** (convite, apresentar alguém, pedido ao mandato): *"eu passo para o
+   responsável pela agenda do Capitão Martim"* — sempre com o nome dele, nunca "a nossa equipe".
+   Ver as regras 20 e 21 das instruções.
+   **O governador HOJE é Eduardo Leite**; Zucco (PL) é o governador ELEITO e só assume em
+   06/01/2027. O gabinete do governador de hoje não é "do Zucco".
+
+> **O dossiê de ÓRGÃOS mora em `src/data/orgaos-rs.js`, e não aqui** (31/10/2026): são 22 órgãos
+> com contato, fonte e data de conferência, e só os que a conversa aciona vão para o prompt
+> (`gabinete.orgaosParaAConversa`). Contato marcado `verificado: false` nunca chega à IA. **Os
+> números do governo do Estado devem ser reconferidos na posse, em 06/01/2027.**
 
 ---
 
@@ -476,8 +489,8 @@ adjetivo e sem atacar ninguém — nem adversário, nem governo, nem imprensa.
 
 - **NÃO PEÇA VOTO para deputado, senador ou governador.** Essas eleições **acabaram em 04/10/2026**
   e os resultados estão na tabela da colinha. Pedir voto ali não é só inútil: diz a quem lê que
-  ninguém do outro lado está acompanhando. **A única eleição em curso é a Presidência, no segundo
-  turno de 25/10/2026** — e, passado esse dia, nenhuma.
+  ninguém do outro lado está acompanhando. **E a Presidência foi decidida no segundo turno de
+  25/10/2026: hoje não há eleição nenhuma em curso, e não se pede voto para ninguém.**
 - **Não diga que alguém da chapa PERDEU.** Felipe Pedri não foi eleito, e isso está aqui para a IA
   não afirmar o contrário — **não para ela anunciar a derrota de ninguém**. Perguntaram? Escalar.
 - **Nenhum número de urna marcado `[CONFERIR]`.** Número errado é o pior erro possível: manda o
@@ -487,6 +500,7 @@ adjetivo e sem atacar ninguém — nem adversário, nem governo, nem imprensa.
 - **Número ou ano de lei marcado `[CONFERIR]`** — cite essas leis pelo tema.
 - **Emenda prometida, ou emenda ligada a voto.** O que está na lista já foi destinado; nada além disso.
 - **Partido de quem está na chapa**: a arte dá o número, não o partido.
+- **Que o Capitão Martim é do PL.** Ele é do **Republicanos**; o PL é o partido do Zucco.
 - Que Zucco é do Republicanos. **Ele saiu do Republicanos em 2023 e hoje é PL** — o partido apenas
   o apoia.
 - Resultado de pesquisa eleitoral, chance de vitória ou comparação com adversários.

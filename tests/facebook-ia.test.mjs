@@ -157,10 +157,16 @@ grupo('as travas do WhatsApp valem aqui — e e por isso que nao foram duplicada
   check(promessa.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.promessa), 'promessa de entregar e barrada');
 
   worker(devolve({ texto: 'Como a eleicao ja acabou, nao temos mais agenda.', confianca: 0.9, naoResponder: false }));
-  const eleicao = await rascunharComentario(PEDIDO);
+  const eleicao = await rascunharComentario({ ...PEDIDO, agora: new Date('2026-10-15T16:00:00') });
   check(
     eleicao.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada),
-    'dizer que a eleicao acabou e barrado — o 2o turno e 25/10'
+    'antes de 26/10 dizer que a eleicao acabou e barrado'
+  );
+  worker(devolve({ texto: 'Como a eleicao ja acabou, nao temos mais agenda.', confianca: 0.9, naoResponder: false }));
+  const depois = await rascunharComentario({ ...PEDIDO, agora: new Date('2026-10-30T12:00:00') });
+  check(
+    !depois.avisos.includes(AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada),
+    'depois de 25/10 a frase e verdadeira e nao e barrada'
   );
 
   // E a correcao MECANICA tambem atravessa: o traco eme vira hifen.

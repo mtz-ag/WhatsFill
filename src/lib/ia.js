@@ -30,6 +30,7 @@
  * propriedade que importa continua de pé: dá para testar a decisão inteira offline.
  */
 import * as atendimento from './atendimento.js';
+import { concordarGenero, generoDoNome } from './vars.js';
 /**
  * `ehPedidoDeEndereco` vem de lá e não é reescrito aqui: é o INVARIANTE do nosso pedido de
  * endereço, e a regra deste projeto é que duas cópias de um invariante divergem na primeira
@@ -37,6 +38,8 @@ import * as atendimento from './atendimento.js';
  */
 import { ehPedidoDeEndereco, semGabinete } from './templates.js';
 import { PERFIL_DE_FABRICA, trocarONome } from './perfis.js';
+import { ORGAOS } from '../data/orgaos-rs.js';
+import { FASE_PADRAO as FASE_DO_MODO, emCampanha } from './modo.js';
 import {
   ehPedidoDeRoupa,
   falouDeSaude,
@@ -1187,7 +1190,7 @@ export function validarCidade(bruto, { municipios = [], normalizar = soLetras } 
  * Tudo o que aqui dizia "Capitão Martim" literal passou a sair daqui. O padrão é o de fábrica, e é
  * por isso que **com um perfil só o prompt sai byte a byte igual ao de ontem** — tem teste.
  */
-function quemE(candidato) {
+export function quemE(candidato) {
   const nome = String(candidato?.nome || PERFIL_DE_FABRICA.nome).trim() || PERFIL_DE_FABRICA.nome;
   const tratamento = String(candidato?.tratamento || `o ${nome}`).trim();
   return {
@@ -1212,8 +1215,62 @@ function quemE(candidato) {
   };
 }
 
-export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '', candidato = null } = {}) {
+/**
+ * **O MODO do mandato** (31/10/2026): `'normal'` é o padrão; `'campanha'` devolve o texto de até
+ * 25/10. Ver `modo.js`. `'pos-campanha'` continua valendo como `'normal'`.
+ */
+export const FASE_PADRAO = FASE_DO_MODO;
+
+/** Um contato verificado do órgão, como texto. Vazio se não houver. */
+function contatoDoOrgao(id, tipo, indice = 0) {
+  const o = ORGAOS.find((x) => x.id === id);
+  const c = (o?.contatos || []).filter((x) => x.verificado === true && x.tipo === tipo)[indice];
+  return c ? String(c.valor).trim() : '';
+}
+
+/**
+ * **Dois exemplos de escopo, montados a partir do dossiê** — o telefone não é escrito à mão aqui.
+ * O primeiro é o caso real (31/10/2026): apresentar alguém e pedir o telefone pessoal do governador.
+ * Sem o nome da pessoa: a regra 1 proíbe chamar pelo nome.
+ */
+export function exemplosDeEscopo(candidato = null) {
+  const ELE = quemE(candidato);
+  const NOSSA_AGENDA = `o responsável pela agenda ${ELE.de}`;
+  const telGov = contatoDoOrgao('gabinete-governador', 'telefone');
+  const emailGov = contatoDoOrgao('gabinete-governador', 'email');
+  const defesa = contatoDoOrgao('defesa-civil-rs', 'telefone');
+  const bombeiros = contatoDoOrgao('bombeiros', 'telefone');
+  const linhas = ['EXEMPLOS DE ESCOPO (ensinam a FORMA das regras 20 e 21; o contato certo vem SEMPRE do bloco ÓRGÃOS desta conversa):', ''];
+  if (telGov || emailGov) {
+    const canal = [telGov && `pelo ${telGov}`, emailGov && `pelo e-mail ${emailGov}`].filter(Boolean).join(' ou ');
+    linhas.push(
+      'Ela: "Sou de Porto Alegre. Queria apresentar uma senhora que foi homenageada na Assembleia pelo trabalho nas enchentes. Vocês me passam o telefone pessoal do governador? O WhatsApp dele não responde."',
+      `Resposta: "Bom dia! Por segurança, o telefone pessoal do governador não é repassado. O caminho é o gabinete dele, ${canal}. Um abraço!"`,
+      '(O assunto é do governador: o motivo (segurança) e o canal oficial, e PARE. Sem oferecer passar nada para o nosso lado, sem repetir a história dela, sem prometer falar com o governador.)',
+      ''
+    );
+  }
+  if (defesa || bombeiros) {
+    const numeros = [defesa && `a Defesa Civil no ${defesa}`, bombeiros && `os Bombeiros no ${bombeiros}`].filter(Boolean).join(' ou para ');
+    linhas.push(
+      'Ela: "Socorro, a água está entrando aqui em casa agora, a rua virou um rio"',
+      `Resposta: "Ligue agora para ${numeros}.\\n\\nSe puder, vá para um lugar alto e seguro. Se cuida! 🙏"`,
+      '(Emergência é do órgão: o número na primeira frase, e nada do nosso lado.)',
+      ''
+    );
+  }
+  linhas.push(
+    `Ela: "Queria convidar ${ELE.tratamento} para a festa da nossa comunidade em Canoas, dia 20."`,
+    `Resposta: "Que convite bonito, obrigado! 🙏\\n\\nMe manda o horário e o local que eu passo para ${NOSSA_AGENDA}."`,
+    ''
+  );
+  return linhas.join('\n');
+}
+
+export function montarSistemaRascunho({ templates = [], regras = '', gabinete = '', candidato = null, fase = FASE_PADRAO } = {}) {
   const ELE_E = quemE(candidato);
+  /** `'campanha'` devolve o texto de até 25/10/2026 — ver `FASE_PADRAO`. */
+  const CAMPANHA = emCampanha(fase);
   /**
    * **As respostas prontas iam SEM NOME e cortadas em oito** — print da nicce (09/09/2026).
    *
@@ -1291,6 +1348,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     `   E NUNCA escreva "gabinete". Quem fala aqui é a EQUIPE ou a ASSESSORIA ${ELE_E.de} —`,
     '   é assim que este mandato se apresenta. Vale para qualquer forma: "o gabinete", "nosso',
     '   gabinete", "gabinete do deputado".',
+    '   EXCEÇÃO: o NOME OFICIAL de órgão de OUTRA autoridade vai como é ("Gabinete do Governador").',
+    '   O mesmo para "o gabinete dele" quando "dele" é o governador ou outra autoridade.',
     /**
      * **Gênero: na dúvida, neutro** — regra dele (06/09/2026), com a print da Marli.
      *
@@ -1303,17 +1362,22 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * porque erra. Usá-lo para deduzir gênero seria confiar, para uma coisa, no dado que não se
      * confia para outra.
      *
-     * **Fica no PROMPT e não em `revisarRascunho`** porque concordância não é mecânica: consertar
-     * exigiria saber o gênero e analisar a frase. É a fronteira que separa o traço eme (troca) de
-     * "abriu com entendi" (aviso) — e aqui não dá nem para avisar sem julgar.
+     * **O nome do cadastro passou a contar em 30/10/2026.** Ele: *"a plataforma tem o nome da
+     * pessoa e a resposta veio como bem-vindo, gênero errado"*. A regra de 06/09 dizia que o
+     * nome não servia, e o modelo obedeceu: com o nome na ficha, saiu no masculino.
+     *
+     * Continua proibido ESCREVER o nome (regra 1). O que o nome decide é a concordância, e só
+     * quando `generoDoNome` tem certeza. Sem certeza, o neutro de 06/09 fica. As duas palavras
+     * das boas-vindas são trocadas no código (`concordarGenero`), porque prompt é pedido.
      *
      * Os exemplos são concretos de propósito: mandar "escreva no neutro" sem mostrar como fazer
      * deixa o modelo no masculino, que é o padrão dele em português.
      */
-    '2. CONCORDÂNCIA DE GÊNERO: só use masculino ou feminino quando tiver certeza. O sinal que vale',
-    '   é como a própria pessoa fala de si na conversa ("obrigada", "estou cansada", "sozinha") —',
-    '   o nome do cadastro NÃO serve, é o mesmo que a regra 1 manda não usar porque erra demais.',
-    '   Na dúvida, escreva no NEUTRO: contorne o adjetivo em vez de escolher um gênero.',
+    '2. CONCORDÂNCIA DE GÊNERO: quando o bloco do contato disser o gênero, use esse. O primeiro',
+    '   nome do cadastro serve para isso e NÃO autoriza escrever o nome (a regra 1 continua).',
+    '   Sem gênero no bloco, o sinal é como a própria pessoa fala de si ("obrigada", "estou',
+    '   cansada", "sozinha"). Na dúvida, escreva no NEUTRO: contorne o adjetivo em vez de',
+    '   escolher um gênero.',
     '   "Você está coberto de razão" → "Você tem toda razão".',
     '   "Fico grato pela mensagem" → "Agradeço a mensagem".',
     '   "Seja bem-vindo" → "Que bom ter você por aqui".',
@@ -1334,7 +1398,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     // Os exemplos citam o candidato desta conversa. É a ÚNICA linha do prompt de sistema que mudou
     // de redação em 24/09/2026 — antes eram "o capitão" e "o Martim", escritos à mão.
     `   EXCEÇÃO: perguntar COMO ELE ESTÁ ("como está ${ELE_E.tratamento}?", "${ELE_E.tratamento} está bem?") não é pedido`,
-    '   de informação, é carinho. Responda que ele está bem e na correria da campanha — nunca "não sei",',
+    `   de informação, é carinho. Responda que ele está bem e na correria ${CAMPANHA ? 'da campanha' : 'do mandato'} — nunca "não sei",`,
     '   "não tenho essa informação" nem "vou verificar". Se as instruções ou o "Quem é quem" trouxerem',
     '   notícia dele (viagem, saúde, acontecimento), use a notícia no lugar.',
     /**
@@ -1539,11 +1603,26 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * Emprega Brasil, não foi tocado** — ele é dele, é detalhado e não é brusco; a regra nova vale
      * para o que a IA escreve, não para a resposta pronta.
      */
-    'A lei eleitoral (9.504/97) proíbe prometer dinheiro, cesta, remédio, passagem, emprego, vaga',
-    'ou qualquer bem ou benefício, e vale o ano inteiro. Negar com respeito é o item 9 do padrão',
-    'acima; prometer, nunca — nem "vou ver o que consigo".',
-    'Ao NEGAR dinheiro, compra, pagamento ou doação, diga SEMPRE o motivo, numa frase curta: "a lei',
-    'eleitoral me proíbe" — sem citar artigo e sem aula. Sem o motivo, o "não" soa como má vontade.',
+    /*
+     * Modo Normal (31/10/2026): o mesmo "não prometa", sem citar a lei eleitoral. O texto de
+     * campanha volta inteiro com `fase: 'campanha'`.
+     */
+    ...(CAMPANHA
+      ? [
+          'A lei eleitoral (9.504/97) proíbe prometer dinheiro, cesta, remédio, passagem, emprego, vaga',
+          'ou qualquer bem ou benefício, e vale o ano inteiro. Negar com respeito é o item 9 do padrão',
+          'acima; prometer, nunca — nem "vou ver o que consigo".',
+          'Ao NEGAR dinheiro, compra, pagamento ou doação, diga SEMPRE o motivo, numa frase curta: "a lei',
+          'eleitoral me proíbe" — sem citar artigo e sem aula. Sem o motivo, o "não" soa como má vontade.',
+        ]
+      : [
+          'Não prometa obras, cargos, benefícios ou favores — nem dinheiro, cesta, remédio, passagem,',
+          'emprego ou vaga. Negar com respeito é o item 9 do padrão acima; prometer, nunca — nem "vou',
+          'ver o que consigo".',
+          'Ao NEGAR dinheiro, compra, pagamento ou doação, diga SEMPRE o motivo, numa frase curta: "a lei',
+          'não permite que um mandato faça doações" — sem citar artigo e sem aula. Sem o motivo, o "não"',
+          'soa como má vontade.',
+        ]),
     '',
     /**
      * **O TAMANHO já estava no padrão dele, e o modelo não o cumpria** — print do contato que
@@ -1594,16 +1673,32 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * A resposta pronta `falar-com-deputado` cobre o caso quando a rodada o reconhece; isto aqui é
      * para quando o pedido vem embrulhado em outra coisa e o caso chega à IA.
      */
-    '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: o caminho é encontrá-lo',
-    '   nos EVENTOS DA AGENDA. O WhatsApp e o telefone pessoais dele NÃO são repassados, por motivo',
-    '   de segurança — diga isso com desculpas e sem rodeio, é uma frase.',
-    '   **NÃO diga "em período eleitoral" nem "em campanha" aqui.** Ele foi ELEITO em 04/10; a',
-    '   campanha em curso é a do 2º turno e não é dele, e justificar a agenda com o período faz',
-    '   parecer que ele ainda está se candidatando (ver a regra 19).',
-    '   NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma reunião": está fora de',
-    '   questão por decisão dele, e prometer é abrir porta que não abre.',
-    '   E não diga que vai passar o recado para ele. O que você pode dizer com verdade é que a',
-    '   mensagem chegou e é lida por aqui.',
+    /**
+     * **Depois de 25/10 não há mais "eventos da agenda" de campanha** (31/10/2026). O texto de
+     * campanha volta inteiro com `fase: 'campanha'`.
+     */
+    ...(CAMPANHA
+      ? [
+          '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: o caminho é encontrá-lo',
+          '   nos EVENTOS DA AGENDA. O WhatsApp e o telefone pessoais dele NÃO são repassados, por motivo',
+          '   de segurança — diga isso com desculpas e sem rodeio, é uma frase.',
+          '   **NÃO diga "em período eleitoral" nem "em campanha" aqui.** Ele foi ELEITO em 04/10; a',
+          '   campanha em curso é a do 2º turno e não é dele, e justificar a agenda com o período faz',
+          '   parecer que ele ainda está se candidatando (ver a regra 19).',
+          '   NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma reunião": está fora de',
+          '   questão por decisão dele, e prometer é abrir porta que não abre.',
+          '   E não diga que vai passar o recado para ele. O que você pode dizer com verdade é que a',
+          '   mensagem chegou e é lida por aqui.',
+        ]
+      : [
+          '8. QUEM QUER FALAR COM O DEPUTADO EM PESSOA: o WhatsApp e o telefone pessoais dele NÃO são',
+          '   repassados, por motivo de segurança — diga isso com desculpas e sem rodeio, é uma frase.',
+          '   A campanha acabou: NÃO ofereça "eventos da agenda", comício nem encontro, e não fale em',
+          '   "período eleitoral". NÃO ofereça a Assembleia, o gabinete parlamentar nem "marcar uma',
+          '   reunião": agenda não é sua, e prometer é abrir porta que não abre.',
+          '   O que você pode oferecer com verdade é a regra 21: ela conta o assunto aqui e você passa',
+          `   para o responsável pela agenda ${ELE_E.de}. NUNCA diga que vai passar o recado PARA ELE nem que ele vai ler.`,
+        ]),
     /**
      * **A regra 9 é a FRONTEIRA da regra 8, e nasceu de ela ter sido cruzada** — print de
      * 09/09/2026. A contato escreveu *"Posso falar com algum representante?"* e recebeu a regra 8
@@ -1802,8 +1897,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    porta SEM explicar por quê. O jeito dele, que é o modelo: "infelizmente não estamos',
     '    contratando". Uma frase e PARE.',
     '    **A campanha DELE terminou em 04/10/2026** — ele foi reeleito, e a equipe que existia foi',
-    '    junto. Isso é motivo INTERNO, vale só para esta regra e NÃO se diz ao contato (ver a regra',
-    '    19: há campanha em curso, a do 2º turno). NÃO ofereça o trabalho voluntário, NÃO diga "só',
+    '    junto. As eleições de 2026 terminaram em 25/10. Isso é motivo INTERNO da falta de vaga e',
+    '    NÃO se diz ao contato como explicação de emprego (ver a regra 19). NÃO ofereça o trabalho voluntário, NÃO diga "só',
     '    estamos trabalhando com voluntários" e NÃO convide com "se tiver interesse nesse formato,',
     '    me avise": é porta que não abre, e quem aceitar fica esperando um chamado que não vem.',
     '    **QUEM PERGUNTA O PREÇO NÃO ESTÁ PEDINDO VAGA.** "Quanto paga?", "quanto vocês pagam?" e',
@@ -1954,8 +2049,15 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    JUNTO. **Nunca corrija o placar, a data, o calendário nem a previsão dela** — nada de "na',
     '    verdade a Presidência ainda será decidida no segundo turno, em 25 de outubro". Ela não',
     '    perguntou nada; ela veio dividir a alegria, e a correção responde uma pergunta que ninguém',
-    '    fez. O segundo turno só entra como CONVITE ("agora é levar todo mundo no dia 25"), nunca',
-    '    como reparo. Perguntando de verdade ("quando é o segundo turno?"), aí sim você responde.',
+    ...(CAMPANHA
+      ? [
+          '    fez. O segundo turno só entra como CONVITE ("agora é levar todo mundo no dia 25"), nunca',
+          '    como reparo. Perguntando de verdade ("quando é o segundo turno?"), aí sim você responde.',
+        ]
+      : [
+          '    fez. Perguntando de verdade (quem ganhou, quando foi), responda só o que estiver no "Quem é',
+          '    quem" — e o resultado que não estiver lá, você não afirma.',
+        ]),
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
      *
@@ -1973,26 +2075,73 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * com data entra escrito nas DUAS metades — o que acabou e o que continua —, porque metade de
      * um fato é lida como o fato inteiro.
      *
-     * **E esta é a regra que envelhece sozinha no dia 25**: ela já diz o que vale depois, mas na
-     * manhã de 26/10 o "em curso" precisa sair. Dito a ele.
+     * **O "em curso" saiu em 30/10/2026.** O comentário de 15/10 já dizia que na manhã de 26/10
+     * ele precisava sair. O 2º turno foi 25/10. A frase que resta é: não peça voto, fale do
+     * mandato, não afirme cargo que ainda não começou.
      */
     // O NOME do candidato NÃO entra aqui: este prompt é dos dois, e `perfis.test.mjs` exige que
     // nada de um sobre no do outro. Quem foi eleito é fato do DOSSIÊ, que já é por candidato — e
     // a regra 19 fala da eleição, não de quem ganhou.
-    '19. A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA. Em 04/10/2026 ficaram decididos',
-    '    deputado, senador e governador: essas eleições acabaram. Mas a Presidência vai a SEGUNDO',
-    '    TURNO em 25/10/2026, e o nosso candidato é o Flávio Bolsonaro, o 22. Até esse dia existe',
-    '    campanha acontecendo, e ela é nossa.',
-    '    **NUNCA diga ao contato que "a eleição já passou", que "a campanha acabou" nem que "o',
-    '    período eleitoral terminou".** Hoje é falso, e para quem se oferece para ajudar soa como',
-    '    porta fechada por quem deveria estar na rua. Quem fala em "antes da eleição", em evento, em',
-    '    reunir gente ou em ajudar está falando do DIA 25 — trate assim.',
-    '    O que de fato acabou tem NOME, e só se diz com o cargo escrito ("a eleição de deputado',
-    '    estadual já acabou"), e só para não pedir voto em quem já foi eleito.',
-    '    **Quem oferece espaço, evento ou mobilização:** agradeça e diga que vai levar adiante —',
-    '    nunca marque nada e nunca recuse por conta própria. Marcar agenda não é sua.',
-    '    **Passado 25/10 não há mais eleição nenhuma**: aí não se pede voto para ninguém, e continua',
-    '    valendo não anunciar ao contato que acabou.',
+    ...(CAMPANHA
+      ? [
+          '19. A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA. Em 04/10/2026 ficaram decididos',
+          '    deputado, senador e governador: essas eleições acabaram. Mas a Presidência vai a SEGUNDO',
+          '    TURNO em 25/10/2026, e o nosso candidato é o Flávio Bolsonaro, o 22. Até esse dia existe',
+          '    campanha acontecendo, e ela é nossa.',
+          '    **NUNCA diga ao contato que "a eleição já passou", que "a campanha acabou" nem que "o',
+          '    período eleitoral terminou".** Hoje é falso, e para quem se oferece para ajudar soa como',
+          '    porta fechada por quem deveria estar na rua. Quem fala em "antes da eleição", em evento, em',
+          '    reunir gente ou em ajudar está falando do DIA 25 — trate assim.',
+          '    O que de fato acabou tem NOME, e só se diz com o cargo escrito ("a eleição de deputado',
+          '    estadual já acabou"), e só para não pedir voto em quem já foi eleito.',
+          '    **Quem oferece espaço, evento ou mobilização:** agradeça e diga que vai levar adiante —',
+          '    nunca marque nada e nunca recuse por conta própria. Marcar agenda não é sua.',
+          '    **Passado 25/10 não há mais eleição nenhuma**: aí não se pede voto para ninguém, e continua',
+          '    valendo não anunciar ao contato que acabou.',
+        ]
+      : [
+          '19. A ELEIÇÃO DE 2026 ACABOU, E O QUE CONTINUA É O MANDATO. O 1º turno foi em 04/10/2026 e o',
+          '    2º turno em 25/10/2026: não há mais eleição nenhuma este ano.',
+          '    **NÃO peça voto para ninguém, não fale de campanha, comício, santinho nem "evento da',
+          '    agenda"** — nada disso existe mais, e oferecer é abrir porta que não abre (regra 7).',
+          '    **Quem oferece espaço, evento ou ajuda:** agradeça e diga que vai passar para o',
+          '    responsável pela agenda dele (regra 21) — nunca marque nada e nunca recuse por conta própria.',
+          '    **Quem comemora ou lamenta o resultado:** acompanhe o sentimento, curto, sem corrigir',
+          '    placar nem data (regra 17). Resultado que não está no "Quem é quem", você não afirma.',
+          '    Não anuncie "a campanha acabou" a quem não perguntou: é verdade, mas soa a porta fechada.',
+        ]),
+    '20. O ASSUNTO NÃO É NOSSO? SÓ O CAMINHO CERTO. Este mandato é de um DEPUTADO ESTADUAL, e o',
+    '    gabinete do governador, a prefeitura, a polícia, o INSS, a Justiça e as concessionárias são',
+    '    entidades SEPARADAS. Assunto deles: diga com gentileza, numa frase, que o caminho é o órgão,',
+    '    e COPIE o contato dele do bloco "ÓRGÃOS" do contato, exatamente como está lá.',
+    '    **Pediram o contato PESSOAL de outra autoridade** (governador, prefeito, secretário, outro',
+    '    deputado)? O motivo é SEGURANÇA: "Por segurança, o telefone pessoal do governador não é',
+    '    repassado." Depois o canal oficial ("O caminho é o gabinete dele, pelo …").',
+    '    **Nunca quebre a voz:** quem escreve acha que fala com ele mesmo. NÃO diga "aqui é o',
+    '    gabinete", "aqui é a equipe" nem "não temos o telefone/o número" — nunca dê a entender que',
+    '    falta o número. E nunca escreva o número pessoal, nem que soubesse.',
+    '    **E PARE ali.** NÃO ofereça passar nada para o nosso lado — nem para o responsável pela agenda',
+    '    dele, nem "para a equipe", nem "me manda o nome que eu passo": misturar os dois gabinetes é',
+    '    exatamente o erro.',
+    '    **NUNCA prometa encaminhar, levar ou falar com o governador ou com órgão nenhum** — nós não',
+    '    temos como, e dizer que vamos é afirmar o que ninguém fez.',
+    '    **Só escreva número, e-mail ou site que esteja no bloco ÓRGÃOS ou na conversa.** Sem o',
+    '    bloco, diga só o NOME do órgão — nunca um número de memória.',
+    '    **Emergência AGORA** (água entrando, gente presa, violência acontecendo): o número de',
+    '    emergência vem na PRIMEIRA frase, antes de qualquer carinho.',
+    `21. O ASSUNTO É NOSSO (e SÓ quando é nosso — ver a regra 20): diga que vai passar para o RESPONSÁVEL PELA AGENDA ${ELE_E.de.toUpperCase()}`,
+    `    ("vou passar para o responsável pela agenda ${ELE_E.de}", "eu passo para o responsável pela`,
+    `    agenda ${ELE_E.de}"). SEMPRE com o nome dele: sozinho, "o responsável da agenda" se confunde com`,
+    '    a agenda do governador ou do órgão citado na mesma mensagem. NÃO escreva "nossa equipe" nem',
+    '    "a equipe": quem fala JÁ É a equipe, e a frase fica vaga.',
+    '    NUNCA diga que vai chegar ao deputado, que ele vai ler, ver ou responder.',
+    '    **NUNCA fale de urgência, prioridade, avaliação ou análise** ("vamos avaliar a urgência",',
+    '    "é prioridade", "vamos analisar"): ninguém aqui faz triagem, e a pessoa lê que vão decidir',
+    '    se ela merece.',
+    'SEM ECO: não repita nem resuma o que ela escreveu ("Entendi que você quer apresentar…",',
+    '"Você me contou que…"). Ela sabe o que disse. Vá direto à resposta, curta e calorosa.',
+    '',
+    exemplosDeEscopo(candidato),
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
     // desabafo de 58 s do Adair (18/09/2026) receber três respostas de uma frase por parágrafo, contra
     // os dois parágrafos que o ChatGPT escreveu dentro da regra dele.
@@ -2134,7 +2283,8 @@ export function esquemaDoRascunho() {
     properties: {
       texto: {
         type: 'string',
-        description: 'A resposta pronta para enviar, no tom do Thiago. Sem marcador, sem colchete.',
+        description:
+          'A resposta pronta para enviar, na voz do candidato (padrão de atendimento acima). Sem marcador, sem colchete.',
       },
       confianca: {
         type: 'number',
@@ -2562,7 +2712,16 @@ function blocoDoAtendimentoAnterior(anterior, agora) {
   ];
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null } = {}) {
+function linhaDoGenero(nome) {
+  const g = generoDoNome(nome);
+  if (g === 'f') return 'GÊNERO: feminino, pelo primeiro nome do cadastro. Concorde (bem-vinda, atendê-la). Não escreva o nome.';
+  if (g === 'm') return 'GÊNERO: masculino, pelo primeiro nome do cadastro. Concorde (bem-vindo, atendê-lo). Não escreva o nome.';
+  return '';
+}
+
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '' } = {}) {
+  /** Ver `FASE_PADRAO`. As linhas deste bloco que falavam de campanha seguem a mesma chave. */
+  const EM_CAMPANHA = emCampanha(fase);
   /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
   const ELE_E = quemE(candidato);
   /**
@@ -2746,8 +2905,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'NÃO peça nada que já esteja nesta linha. Pedir de novo dá a impressão de que ninguém leu',
         'a conversa. (O nome está aqui para você saber que já o temos: continua proibido usá-lo no',
         'texto.)',
-      ].join('\n')
-    : '';
+        linhaDoGenero(campos?.Nome),
+      ].filter(Boolean).join('\n')
+    : linhaDoGenero(campos?.Nome);
 
   return [
     /**
@@ -2825,7 +2985,10 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       ? 'VOZ: esta pessoa JÁ CONHECE o atendimento — conversou conosco em outro dia, e a conversa ' +
         `de antes só não aparece aqui. NÃO se apresente: nada de "somos a equipe ${ELE_E.de}", ` +
         '"aqui é", "seja bem-vindo". Só diga quem somos se ela PERGUNTAR quem está do outro lado ' +
-        '(regra 9).'
+        '(regra 9).' +
+        (Array.isArray(provas) && provas.length
+          ? ' Por que ela já é conhecida: ' + provas.filter((p) => !/\d{8,}/.test(String(p))).join('; ') + '.'
+          : '')
       : `VOZ: é a primeira coisa que o atendimento diz a esta pessoa. Escreva como ${ELE_E.tratamento}, ` +
         'na primeira pessoa. NÃO se apresente por hábito: responda o que ela trouxe. Só diga quem ' +
         // O "do Capitão" vivia COLADO aqui e sobrava como "a equipe do Capitão Felipe Pedri" —
@@ -3002,7 +3165,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     perguntouComoEleEsta
       ? `COMO ELE ESTÁ: ela perguntou como está ${ELE_E.tratamento}. É carinho, não pedido de informação — ` +
         'NÃO diga que não sabe, que não tem a informação nem que vai verificar. Diga que ele está bem e na ' +
-        'correria da campanha, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ' +
+        `correria ${EM_CAMPANHA ? 'da campanha' : 'do mandato'}, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ` +
         'notícia dele, use a notícia no lugar.'
       : '',
     /**
@@ -3025,9 +3188,18 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * **A regra do endereço, colada no pedido** — mesma razão da regra 11 acima, e mesma decisão
      * dele (12/09/2026): o conserto é o que a IA lê, não uma trava que para a rodada depois.
      */
-    'ENDEREÇO: só peça o endereço dela se ela pediu MATERIAL DE CAMPANHA (folheto, adesivo, bandeira, ' +
-      'santinho) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
-      'ou um bem para comprar NÃO recebe pedido de endereço — pedir endereço é prometer uma entrega.',
+    /*
+     * Modo Normal (31/10/2026): fora da eleição não há material. A linha de campanha só vale com
+     * `fase: 'campanha'`.
+     */
+    EM_CAMPANHA
+      ? 'ENDEREÇO: só peça o endereço dela se ela pediu MATERIAL DE CAMPANHA (folheto, adesivo, bandeira, ' +
+        'santinho) ou se já disse que aceita ser voluntária sem pagamento. Quem pediu dinheiro, emprego ' +
+        'ou um bem para comprar NÃO recebe pedido de endereço — pedir endereço é prometer uma entrega.'
+      : 'ENDEREÇO: NÃO peça o endereço dela. A campanha acabou e não há material para entregar, e pedir ' +
+        'endereço é prometer uma entrega. Se ela pediu material (folheto, adesivo, bandeira, santinho), ' +
+        'agradeça o carinho e diga numa frase que o material da campanha já foi encerrado — sem prometer ' +
+        'nada para depois.',
     /**
      * **FALTAR O DADO NÃO É A RESPOSTA** — print do caminhoneiro de fronteira (22/09/2026). Ele
      * perguntou o que o mandato tem de projeto para caminhoneiros e se haveria uma agenda do Flávio
@@ -3053,7 +3225,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'que ela pediu, a falta é UMA frase da mensagem — nunca a mensagem inteira. Antes dela, ' +
         'responda o TEMA que ela trouxe: por que aquilo importa para o Estado e o que precisa estar ' +
         'no debate, e diga que quer conhecer o que ELA vive naquele tema. Isso é conversa de ' +
-        'campanha, não é "me conte seu caso". Sem inventar projeto, lei, posição tomada nem ' +
+        `${EM_CAMPANHA ? 'campanha' : 'mandato'}, não é "me conte seu caso". Sem inventar projeto, lei, posição tomada nem ` +
         'promessa de resolver.'
       : '',
     /**
@@ -3087,8 +3259,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'Defensoria se ELA DISSER a dificuldade concreta (está desempregada, sem comida, com aluguel ou ' +
         'luz atrasados, ameaçada de despejo, com criança pequena sem o que comer, com benefício cortado ' +
         'ou negado, doença na família). Se ela só pediu dinheiro, PIX ou um valor, sem dizer nada disso: ' +
-        'diga em UMA frase gentil que a lei eleitoral me proíbe de fazer isso e PARE — sem CRAS, sem lista ' +
-        'de órgãos, sem citar artigo nem dar aula, e sem perguntar do caso. Assistência social é para quem ' +
+        (EM_CAMPANHA
+          ? 'diga em UMA frase gentil que a lei eleitoral me proíbe de fazer isso e PARE — sem CRAS, sem lista ' +
+            'de órgãos, sem citar artigo nem dar aula, e sem perguntar do caso. '
+          : 'diga em UMA frase gentil que a lei não permite que um mandato doe dinheiro ("Infelizmente não ' +
+            'posso ajudar com dinheiro, a lei não permite que um mandato faça doações.") e PARE — sem CRAS, ' +
+            'sem lista de órgãos, sem citar artigo nem dar aula, e sem perguntar do caso. ') +
+        'Assistência social é para quem ' +
         'está em vulnerabilidade; mandar todo mundo para lá é resposta de máquina, e erra com quem ' +
         'precisa de verdade.'
       : '',
@@ -3102,14 +3279,22 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * comida, bebida nem custo. O repasse do convite é a única promessa que cabe (a regra da Jonice,
      * 08/09), e é ele que dá um desfecho em vez de um "não" seco.
      */
-    eventoPelaCampanha
+    eventoPelaCampanha && EM_CAMPANHA
       ? 'APOIO COM EVENTO — NÃO É PEDIDO DE AJUDA: ' + eventoPelaCampanha.motivo + '. Ela está do NOSSO ' +
         'lado, gastando tempo e dinheiro dela. É proibido tratar isso como pedido de ajuda: NADA de CRAS, ' +
         'assistência social, Cadastro Único ou "não podemos ajudar com dinheiro". Agradeça a iniciativa ' +
         'pelo nome (a janta, o café, o bingo), diga com franqueza que a campanha não entra com comida, ' +
         'bebida, som nem custo — a lei eleitoral e a prestação de contas não permitem —, e que o apoio ' +
         `dela vale do jeito que ela puder fazer. Se ela convidar ${ELE_E.tratamento}, pode dizer que repassa ` +
-        'o convite para a equipe da agenda; nada além disso, e sem prometer presença.'
+        `o convite para o responsável pela agenda ${ELE_E.de}; nada além disso, e sem prometer presença.`
+      : eventoPelaCampanha
+      ? 'CONVITE PARA EVENTO — NÃO É PEDIDO DE AJUDA: ' + eventoPelaCampanha.motivo + '. Ela está do NOSSO ' +
+        'lado. É proibido tratar isso como pedido de ajuda: NADA de CRAS, assistência social, Cadastro ' +
+        'Único ou "não podemos ajudar com dinheiro". Agradeça com carinho a iniciativa pelo nome (a janta, ' +
+        'o café, o bingo). Se ela pedir que a gente entre com comida, bebida, som ou custo, diga numa frase ' +
+        'gentil que não temos como contribuir com isso — sem citar lei. Se ela convidar ' +
+        `${ELE_E.tratamento}, diga "passo o convite para o responsável pela agenda ${ELE_E.de}"; nada além ` +
+        'disso, e sem prometer presença.'
       : '',
     saude
       ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Doença não se despacha. Acolha ` +
@@ -3130,6 +3315,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * das três opções mandava variar *"fechar ou não com pergunta"*, e para fechar com pergunta sem ter
      * o que perguntar o modelo inventa uma oferta. Vale nos dois modos, então fica fora do ternário.
      */
+    orgaos
+      ? `${String(orgaos).trim()}\n` +
+        'Regra 20: COPIE o contato do órgão certo exatamente como está acima — nenhum outro número. Não prometa ' +
+        'encaminhar nada ao órgão nem ao governador, e se o assunto é do órgão, NÃO ofereça passar nada para o ' +
+        'nosso lado: o contato oficial e pare.' +
+        (pediuDinheiro ? ' Se ela só pediu dinheiro sem dizer a dificuldade, vale a linha DINHEIRO: não use esta lista.' : '')
+      : '',
     'NÃO OFEREÇA O QUE ELA NÃO PEDIU: colinha, lista de candidatos, link de grupo, agenda, material ou ' +
       'conteúdo só entram se ela pediu ou perguntou por isso. Nada de "quer que eu te mande…?", "posso ' +
       'te encaminhar…?" ou "qual prefere?" para criar assunto. Se fechar com pergunta, a pergunta é ' +
@@ -3210,10 +3402,25 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    */
   afirmouAcao: 'afirma que alguém já providenciou algo — confira, porque ninguém fez isso',
   /**
-   * **"A eleição já passou" é falso até 25/10** — ver a trava em `revisarRascunho`. Há 2º turno da
-   * Presidência, e é campanha nossa: o Flávio é o 22 da chapa.
+   * **"A eleição já passou" era falso até 25/10/2026.** A trava só dispara enquanto
+   * `eleicaoAindaEmCurso` for verdade. Depois do dia 25 a frase é verdadeira e não barra.
    */
   eleicaoEncerrada: 'diz que a eleição ou a campanha acabou — o 2º turno é 25/10 e estamos nele',
+  /**
+   * **As travas do ESCOPO** (31/10/2026) — regras 20 e 21. Barram o envio sozinho.
+   */
+  falouDeUrgencia: 'fala de urgência, prioridade ou de avaliar o pedido — isso não se diz ao contato',
+  prometeuChegarAEle: 'promete que o recado chega ao deputado ou que ele vai ler — quem lê é a equipe',
+  prometeuOrgao: 'promete encaminhar o pedido ao governador ou a outro órgão — o certo é dar o contato oficial',
+  telefoneForaDoDossie: 'tem um telefone que não está no dossiê de órgãos nem na conversa — confira o número',
+  disseQueNaoTemONumero: 'diz que não temos o telefone ou o contato — o motivo é segurança, e quem escreve acha que fala com ele',
+  misturouOrgaoENos: 'dá o contato de outro órgão E oferece passar para o nosso lado — assunto do órgão termina no contato',
+  /**
+   * A própria IA levantou a mão, ou a confiança ficou abaixo do corte do esquema (0,9).
+   * Os dois só barram o envio sozinho. No modo "Eu mando" o texto continua no campo.
+   */
+  iaPediuRevisao: 'a própria IA pediu revisão humana — alguém lê antes de mandar',
+  confiancaBaixa: 'a confiança do rascunho ficou abaixo do corte — alguém lê antes de mandar',
   /**
    * **A IA afirmou que TEMOS uma coisa** — print do Lucas Mendes (07/09/2026).
    *
@@ -3642,9 +3849,119 @@ export function conferirChapa(texto, chapa) {
  * **As duas travas de TEXTO continuam** (marcador esquecido, promessa de entregar), mais a de
  * afirmar ação, que entrou na 2.74 e é sobre o que a IA escreve — não sobre o caso.
  */
+/**
+ * Todo número com cara de telefone no texto, só dígitos. Os de 3 dígitos ficam de fora: "R$ 100"
+ * e "o 22" são o caso comum, e os curtos de emergência são os únicos que um palpite acerta.
+ */
+export function telefonesDoTexto(texto) {
+  const achados = String(texto || '').match(/(?:\+?55[\s.-]*)?\(?\d{2}\)?[\s.-]*9?\d{4}[\s.-]?\d{4}|0?800[\s.-]?\d{3}[\s.-]?\d{4}/g) || [];
+  return [...new Set(achados.map((t) => t.replace(/\D/g, '')).filter((d) => d.length >= 10))];
+}
+
+/** O mesmo número? Tira o 55 do país e o zero do 0800 antes de comparar. */
+function mesmoTelefone(a, b) {
+  const n = (d) => String(d).replace(/^55(?=\d{10,11}$)/, '').replace(/^0(?=800)/, '');
+  const x = n(a);
+  const y = n(b);
+  return x === y || (x.length >= 8 && y.endsWith(x)) || (y.length >= 8 && x.endsWith(y));
+}
+
+/**
+ * **As travas do ESCOPO** — regras 20 e 21 (31/10/2026). Barram o envio.
+ * `telefoneForaDoDossie` só quando o chamador diz quais números valem. Sem a lista, a trava fica calada.
+ */
+export function travasDoEscopo(texto, contexto = {}) {
+  const t = String(texto || '');
+  const avisos = [];
+  const L = String.raw`(^|[^\p{L}])`;
+
+  const URGENCIA = [
+    new RegExp(`${L}(urg[êe]ncia|prioridade|prioriz\\p{L}*|priorit[áa]ri\\p{L}*)`, 'iu'),
+    new RegExp(`${L}(vou|vamos|iremos|irei|a\\s+equipe\\s+vai|v[ãa]o)\\s+(avaliar|analisar|estudar|triar)`, 'iu'),
+    new RegExp(`${L}(ser[áa]|est[áa]|fica)\\s+(avaliad\\p{L}*|analisad\\p{L}*|em\\s+an[áa]lise|em\\s+avalia[çc][ãa]o)`, 'iu'),
+  ];
+  if (URGENCIA.some((re) => re.test(t))) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.falouDeUrgencia);
+
+  const nome = String(contexto?.candidato?.nome || '')
+    .trim()
+    .split(/\s+/)
+    .pop()
+    ?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const ELE = `(o\\s+|ao\\s+)?(deputad[oa]|capit[ãa]o|candidat[oa]|martim${nome ? `|${nome}` : ''}|ele)(?![\\p{L}])`;
+  const VERBO_PASSAR = '(passar|passo|levar|levo|encaminhar|encaminho|repassar|repasso|mostrar|mostro|entregar|entrego|mandar|mando)(?![\\p{L}])';
+  const CHEGA_A_ELE = [
+    new RegExp(`${L}(vou|vamos|irei|iremos|posso|eu)?\\s*${VERBO_PASSAR}[^.!?\\n]{0,40}?\\s(para|pra|pro|ao|a)\\s+${ELE}`, 'iu'),
+    new RegExp(`${L}(ele|o\\s+deputad[oa]|o\\s+capit[ãa]o)\\s+(vai|ir[áa]|vai\\s+poder)\\s+(te\\s+)?(ler|ver|responder|receber|retornar|ligar)`, 'iu'),
+    new RegExp(`${L}chega(r|r[áa])?\\s+(at[ée]\\s+)?(a\\s+)?ele(?![\\p{L}])|${L}chega(r|r[áa])?\\s+(ao|at[ée]\\s+o)\\s+(deputad|capit)`, 'iu'),
+  ];
+  if (CHEGA_A_ELE.some((re) => re.test(t))) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.prometeuChegarAEle);
+
+  const ORGAO = '(governador\\p{L}*|governo\\s+do\\s+estado|pal[áa]cio|piratini|secretari\\p{L}*|prefeit\\p{L}*|defesa\\s+civil|minist[ée]rio|brigada|pol[íi]cia|[óo]rg[ãa]o)';
+  const PROMETE_ORGAO = new RegExp(`${L}(vou|vamos|irei|iremos|posso)\\s+${VERBO_PASSAR}([^.!?\\n]{0,60}?)${ORGAO}`, 'giu');
+  for (const m of t.matchAll(PROMETE_ORGAO)) {
+    if (!/(contato|telefone|n[úu]mero|e-?mail|whats|canal|endere[çc]o|site|link)/iu.test(m[4] || '')) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.prometeuOrgao);
+      break;
+    }
+  }
+
+  const DEU_CONTATO_DE_ORGAO =
+    telefonesDoTexto(t).length > 0 ||
+    /[\w.+-]+@[\w-]+(\.[\w-]+)+/u.test(t) ||
+    /(^|[^\p{L}])[\w-]+(\.[\w-]+)*\.(gov|def|mp|jus)\.br/iu.test(t) ||
+    new RegExp(`${L}(no|pelo|o|ao|para\\s+o)\\s+(1[0-9]{2})(?!\\d)`, 'iu').test(t);
+  const OFERECEU_REPASSE = new RegExp(
+    `${L}${VERBO_PASSAR}[^.!?\\n]{0,40}?(respons[áa]vel\\s+(pela|da)\\s+agenda|nossa\\s+equipe|(para|pra)\\s+a\\s+equipe|nosso\\s+lado)`,
+    'iu'
+  );
+  if (DEU_CONTATO_DE_ORGAO && OFERECEU_REPASSE.test(t)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.misturouOrgaoENos);
+
+  if (new RegExp(`${L}n[ãa]o\\s+(temos|tenho|possu[íi]mos|possuo|sabemos|sei)\\s+(o\\s+|esse\\s+|este\\s+|nenhum\\s+)?(telefone|n[úu]mero|contato|whats\\p{L}*|celular|zap)`, 'iu').test(t)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.disseQueNaoTemONumero);
+  }
+
+  if (Array.isArray(contexto?.telefonesPermitidos)) {
+    const permitidos = contexto.telefonesPermitidos.map((d) => String(d).replace(/\D/g, '')).filter(Boolean);
+    if (telefonesDoTexto(t).some((d) => !permitidos.some((p) => mesmoTelefone(d, p)))) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.telefoneForaDoDossie);
+    }
+  }
+  return avisos;
+}
+
 export function rascunhoPodeSairSozinho(avisos = []) {
   const impedem = Object.values(AVISOS_QUE_IMPEDEM_ENVIO);
   return !(avisos || []).some((a) => impedem.includes(a));
+}
+
+/**
+ * O corte que o esquema já prometia e ninguém cobrava.
+ *
+ * O texto do campo `confianca` diz "Abaixo de 0,9 alguém lê antes". Este é o 0,9.
+ * Confiança ausente também barra: sem número não há como aplicar limiar.
+ * `minimo` 0 desliga a régua de confiança. `respeitarRevisao: false` desliga a mão levantada.
+ * `precisaDeRevisao` só conta com `=== true`, para um campo omitido no objeto cru não barrar
+ * todo mundo antes de o validador ler. Quem chama passa o rascunho já lido.
+ */
+export const CONFIANCA_MINIMA_RASCUNHO = 0.9;
+
+export function reguaDoRascunho(rascunho, cfg = {}) {
+  const avisos = [];
+  const minimo = cfg.confiancaMinimaEnvio == null ? CONFIANCA_MINIMA_RASCUNHO : Number(cfg.confiancaMinimaEnvio);
+  const respeitar = cfg.respeitarRevisao !== false;
+  if (minimo > 0) {
+    const c = rascunho?.confianca;
+    if (!(Number.isFinite(c) && c >= minimo)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.confiancaBaixa);
+  }
+  if (respeitar && rascunho?.precisaDeRevisao === true) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.iaPediuRevisao);
+  return avisos;
+}
+
+/** O 2º turno foi 25/10/2026. Na manhã de 26/10 "a eleição acabou" deixou de ser frase falsa. */
+export function eleicaoAindaEmCurso(agora) {
+  const d = agora instanceof Date ? agora : new Date(agora || Date.now());
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getTime() < new Date(2026, 9, 26).getTime();
 }
 
 export function revisarRascunho(bruto, agora, contexto = {}) {
@@ -3723,7 +4040,8 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * **Gabinete de OUTRA pessoa fica** — *"fui no gabinete do prefeito"* é um lugar, e trocar mudaria o
    * sentido.
    */
-  if (!/gabinetes?\s+d[oa]s?\s+(prefeit|vereador|governador|secret|ministr|juiz|presiden)/i.test(texto)) {
+  const FALA_DE_OUTRA_AUTORIDADE = /(^|[^\p{L}])(governador\p{L}*|prefeit[oa]s?|secret[áa]ri[oa]s?|ministr[oa]s?|president[ea]s?|vereador\p{L}*)(?![\p{L}])/iu;
+  if (!/gabinetes?\s+d[oa]s?\s+(prefeit|vereador|governador|secret|ministr|juiz|presiden)/i.test(texto) && !FALA_DE_OUTRA_AUTORIDADE.test(texto)) {
     const trocado = semGabinete(texto);
     if (trocado !== texto) {
       texto = trocado;
@@ -3877,9 +4195,25 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
   );
   /** Falou do 2º turno na mesma mensagem: não está dizendo que acabou tudo. */
   const FALA_DO_SEGUNDO_TURNO = /(segundo|2[oº°])\s*turno|25\s*de\s*outubro|25\/10|fl[áa]vio/iu;
-  if (!SOBRE_CARGO_DECIDIDO.test(texto) && !FALA_DO_SEGUNDO_TURNO.test(texto) && DIZ_QUE_ACABOU.test(texto)) {
+  /**
+   * **Campanha: a trava vale o tempo todo. Sem fase dita: vale a data** (31/10/2026). Com
+   * `fase: 'normal'` a frase é verdadeira e não barra. Sem fase, a data de 15/10 continua barrando,
+   * que é o que os testes da print ainda exercitam.
+   */
+  const faseDita = contexto?.fase != null && String(contexto.fase).trim() !== '';
+  const travaEleicao = faseDita ? emCampanha(contexto.fase) : eleicaoAindaEmCurso(agora);
+  if (travaEleicao && !SOBRE_CARGO_DECIDIDO.test(texto) && !FALA_DO_SEGUNDO_TURNO.test(texto) && DIZ_QUE_ACABOU.test(texto)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.eleicaoEncerrada);
   }
+
+  const NOSSA_EQUIPE = /(para|pra)\s+(a\s+)?nossa\s+equipe(?![\p{L}]|\s+d[aeo]s?\s)|à\s+nossa\s+equipe(?![\p{L}]|\s+d[aeo]s?\s)/giu;
+  if (NOSSA_EQUIPE.test(texto)) {
+    NOSSA_EQUIPE.lastIndex = 0;
+    texto = texto.replace(NOSSA_EQUIPE, `para o responsável pela agenda ${quemE(contexto?.candidato).de}`);
+    avisos.push('a IA escreveu "nossa equipe" — troquei por "o responsável pela agenda", com o nome dele');
+  }
+
+  avisos.push(...travasDoEscopo(texto, contexto));
 
   /**
    * **Dizer que o áudio falhou quando ele chegou** — ver `AVISOS_QUE_IMPEDEM_ENVIO.pediuReenvio`.
@@ -4070,6 +4404,14 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    */
   if (ABRE_REPETINDO.test(texto)) {
     avisos.push('abriu repetindo o que ela disse — você pediu para não começar assim');
+  }
+
+  if (contexto?.nome) {
+    const ajustado = concordarGenero(texto, contexto.nome);
+    if (ajustado !== texto) {
+      texto = ajustado;
+      avisos.push('concordei o tratamento com o nome do cadastro');
+    }
   }
 
   return { texto, avisos };
@@ -4370,8 +4712,9 @@ export function podeGastar({ gasto, tetoUsd = 0, ts = Date.now() } = {}) {
  * oposto do que vale num comentario publico.                           *
  * ==================================================================== */
 
-export function regrasDoComentario(candidato = null) {
+export function regrasDoComentario(candidato = null, { fase = FASE_PADRAO } = {}) {
   const ELE_E = quemE(candidato);
+  const CAMPANHA = emCampanha(fase);
   return [
     'Voce escreve a RESPOSTA a um comentario na pagina do Facebook de ' + ELE_E.tratamento + '.',
     '',
@@ -4388,7 +4731,11 @@ export function regrasDoComentario(candidato = null) {
     '6. NUNCA afirme que ja fizemos alguma coisa, nem que temos alguma coisa.',
     '7. NUNCA discuta, corrija nem de licao de moral em quem apoia. Quem xinga o adversario esta do',
     '   nosso lado: agradeca ou nao responda, mas nunca modere.',
-    '8. NUNCA diga que a eleicao ou a campanha acabou. O 2o turno e 25/10 e estamos nele.',
+    CAMPANHA
+      ? '8. NUNCA diga que a eleicao ou a campanha acabou. O 2o turno e 25/10 e estamos nele.'
+      : '8. As eleicoes de 2026 terminaram (1o turno 04/10, 2o turno 25/10). Nao peca voto e nao fale de campanha.\n' +
+        '   Assunto de outro orgao (governador, prefeitura, policia): diga em uma linha que e com o orgao e chame\n' +
+        '   para a mensagem privada. NUNCA prometa levar nada ao governador nem a orgao nenhum.',
     '9. NUNCA use travessao eme, excesso de emoji, nem marcador como [nome].',
     '',
     'COMO RESPONDER CADA CASO:',
@@ -4412,8 +4759,8 @@ export function regrasDoComentario(candidato = null) {
  * sao dele e ele espera que valham em todo canal; o dossie entra so quando o
  * comentario pede, pela mesma conta do WhatsApp — cada token e dinheiro.
  */
-export function montarSistemaComentario({ regras = '', gabinete = '', candidato = null } = {}) {
-  const partes = [regrasDoComentario(candidato)];
+export function montarSistemaComentario({ regras = '', gabinete = '', candidato = null, fase = FASE_PADRAO } = {}) {
+  const partes = [regrasDoComentario(candidato, { fase })];
 
   if (String(gabinete || '').trim()) {
     partes.push('', 'O QUE SE SABE SOBRE O MANDATO E A CHAPA:', String(gabinete).trim());

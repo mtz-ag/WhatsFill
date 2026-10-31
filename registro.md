@@ -1,19 +1,156 @@
-## 2026-10-29 - v3.237.0 - ESTADO DE AGORA - quem e contato novo: duas pernas estavam cegas
+## 2026-10-31 - v3.243.0 - ESTADO DE AGORA - boas-vindas pedindo o que o cadastro ja tem
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.237.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.243.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.237.0** na linha pequena do topo do painel (`encaixado na aba`)
-4. **Abra dois contatos e me diga se o painel acertou:** um que voce ja atendeu no mobiliza.app
-   (tem cidade no cadastro) e um que chegou agora. O primeiro tem de cair como RETORNO, o segundo
-   como primeira vez
-5. **Classifique UM contato e me diga o que a barra escreveu** — a gravacao no contato continua
-   sem confirmacao
+3. Confira **3.243.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Apague o texto que ficou no campo deste atendimento e siga a rodada. No proximo contato
+   com cidade de municipio na ficha, as boas-vindas saem sem pedir nome e cidade
+
+### O QUE MUDOU
+
+A troca para o texto "ja temos o cadastro" escolhia outro modelo. O que esta salvo no
+navegador e a redacao sua: se ela ainda pede nome e cidade, trocar o modelo nao muda a frase.
+Na rodada, com a cidade da ficha sendo um municipio, essa frase sai antes de o texto ir para
+o campo. A saudacao e o "em que podemos ajudar" ficam. Fora da rodada, o clique no cartao
+continua mandando o texto que voce escolheu. Importacao continua nao contando como retorno:
+a apresentacao sai, o pedido de dados e que nao.
+
+### O QUE NAO MUDOU
+
+Modo Normal, regua 0,9, concordancia do tratamento, conferencia do canal desligada.
+
+## 2026-10-31 - v3.242.0 - modo Campanha ou Normal, e o dossie de orgaos
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.242.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.242.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Na aba Config, o primeiro cartao depois do candidato e **Modo: Campanha / Normal**.
+   O padrao e Normal. Campanha volta o texto e o fluxo de anuncio de antes de 25/10
+
+### O QUE MUDOU
+
+Voce pediu o modo campanha e o modo normal, e o caminho certo quando o assunto e de outro
+orgao. Em Normal a rodada nao trata clique de anuncio como chegada de campanha, "Dia 25" sai
+da tira do Facebook, e "quer trabalhar na campanha" some da lista (o texto guardado continua
+no editor). Pedido de telefone do governador, do prefeito ou de secretario vai para a IA, com
+o contato oficial do orgao quando a conversa pede — so o que foi conferido na pagina do orgao.
+O Gabinete do Governador de hoje e o do Eduardo Leite; Zucco assume em 06/01/2027.
+
+A frase de repasse, quando o assunto e nosso, e "passo para o responsavel pela agenda" com o
+nome do perfil. "nossa equipe" e trocada por essa frase. Prometer que chega ao deputado, falar
+de urgencia, ou misturar o contato do orgao com um repasse para o nosso lado, barra o envio
+sozinho. No modo Eu mando o texto continua no campo para voce ler.
+
+O resultado da Presidencia nao foi escrito em lugar nenhum. A IA nao afirma.
+
+### O QUE NAO MUDOU
+
+A regua continua em 0,9. O nome do cadastro continua concordando o tratamento, sem ser escrito.
+Helena nao conta como prova de retorno. A conferencia do canal continua desligada.
+
+## 2026-10-30 - v3.241.0 - o nome concorda o tratamento
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.241.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.241.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Abra de novo um contato cujo primeiro nome e de mulher. A boas-vindas tem de sair
+   "bem-vinda" e "atende-la". O nome dela nao entra na mensagem
+
+### O NOME DECIDE O GENERO, E NAO E ESCRITO
+
+Voce: *"a plataforma tem o nome da pessoa e a resposta veio como bem-vindo, genero errado"*.
+
+A regra de 06/09 mandava a IA ignorar o nome do cadastro para o genero. Ela obedeceu, e o
+texto de fabrica das boas-vindas e masculino. Agora o primeiro nome, quando da para saber,
+troca "bem-vindo" e "atende-lo" na hora em que o texto e montado — na resposta pronta e no
+rascunho da IA. Sem certeza, o texto fica como esta. "todo mundo e bem-vindo" nao muda.
+
+**A prova:** tirando a troca de dentro do `render`, caem 2 assercoes.
+
+### HISTORICO DESTA DATA — v3.240.0, a eleicao acabou e o rascunho tem corte
+
+1. As teclas 1, 2, 3 da conferencia continuam no ar. **1** e a mensagem do momento
+2. A cidade ja grava. O cartao da plataforma so mostra o valor depois de fechar e abrir o contato
+
+### O QUE MUDOU
+
+A regra 19 ainda dizia que o 2o turno de 25/10 estava acontecendo. Ele ja foi. O rascunho nao
+pede mais voto, nao trata oferta de evento como "o dia 25" e nao e barrado por dizer que a
+eleicao acabou. A trava antiga continua valendo so para uma data anterior a 26/10, que e o que
+os testes da print de 15/10 ainda exercitam.
+
+O esquema do rascunho ja prometia "abaixo de 0,9 alguem le antes" e ninguem cobrava. Agora
+cobra, no envio sozinho. O numero e 0,9, o mesmo da frase do esquema. Confianca que nao veio
+tambem fica para leitura. No modo **Eu mando** isso nao muda a espera: o texto continua no
+campo ate o Enter. Trava dura (promessa, marcador, afirmar que ja fizemos) continua barrando
+os dois modos.
+
+Quem ja recebeu mensagem nossa volta a ser tratado como conhecido mesmo se a conversa se
+perder de novo. A chave e o telefone, daqui para a frente — nao recupera o historico de antes
+da migracao. Etiqueta **Sem Retorno** e **Sem Interesse** tambem contam. Helena nao conta
+(513 de 600, nao medido como atendimento). Importante nao conta. Importacao nunca conta.
+
+### HISTORICO DESTA DATA — v3.239.0, a cidade voltou a gravar
+
+Voce confirmou: a cidade estava gravada; o cartao da plataforma so atualizou depois de fechar
+e abrir o contato. Nao use esse cartao para verificar.
+
+### A CIDADE ERA RECONHECIDA E NAO ERA GRAVADA
+
+Voce pediu: *"preciso que a funcao de identificar cidade e preencher volte a funcionar"*.
+
+O reconhecimento nao tinha parado. Quem parou foi a **porta da gravacao**: o preenchimento
+automatico, o botao Salvar e a propria escrita exigiam o contrato aprendido na plataforma
+velha. Aqui nao ha contrato para aprender — a cidade e a coluna `cidade`, e a escrita ja
+desviava para ela. Com a porta fechada, o palpite nascia e nada era perguntado nem gravado.
+
+Agora as tres portas leem a mesma funcao. Na plataforma nova a gravacao esta liberada. Na
+velha, o contrato continua obrigatorio. A regra de sempre fica: cidade de palpite **nao grava
+sem a caixa** (ou sem a IA, quando ela esta ligada para isso).
+
+**A prova:** tirando o desvio da plataforma nova, cai 1 assercao.
+
+Voce confirmou no mesmo dia: a cidade gravou, e o cartao da plataforma so mostrou depois de
+fechar e abrir o contato.
+
+### AS TECLAS TROCAM O TEXTO E ENVIAM — e o resto nao mexe na rodada
+
+Voce pediu: *"no modo automatizado onde ele para para eu conferir o texto crie uma popup que
+tenha o numero 1, 2, 3 e a opcao de adicionar mais"*, e *"a opcao 1 deve ser a mensagem do
+momento"*. No mesmo pedido: remover etiqueta e corrigir o contato **nao termina a rodada nem
+faz acao nenhuma** ate o clique em enviar ou o Enter.
+
+A tecla 1 le a mensagem do momento na hora (com a variacao que sairia na tecla 5). As outras
+ficam em `atalhosDaConferencia`. Numero apertado **dentro de um campo do cadastro** e so um
+numero. No campo de mensagem, o numero troca o rascunho e envia.
+
+O clique deixou de ser "qualquer botao perto do campo". Etiqueta e salvar contato moram no
+mesmo bloco da conversa, e a conta antiga de seis ancestrais tratava o X da etiqueta como o
+aviao. Agora so conta botao na **altura do campo e a direita do texto**. Clique que nao
+esvazia o campo nao pula nem conclui. O Enter continua sendo o outro gatilho.
+
+**A prova:** reintroduzindo o clique por ancestral, cai a assercao da etiqueta. Reintroduzindo
+o pulo quando o clique nao esvazia o campo, cai a outra. Uma cada.
+
+### QUEM E CONTATO NOVO — ainda esperando a sua conferencia (v3.237.0)
 
 ### "NAO ESTA RECONHECENDO QUEM E CONTATO NOVO" — eram tres pernas, e duas estavam cegas
 
