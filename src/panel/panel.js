@@ -1853,9 +1853,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **AS FILAS MUDARAM DE NOME, E O BOTAO TEM DE DIZER O NOME QUE ELE VE NA TELA** (28/10/2026,
    * pedido dele: *"agora mudou o nome, tem que trocar para o atual (todas, minhas etc)"*).
    *
-   * Medido na pagina dele: a plataforma nova mostra **Todas / Minhas / Nao lidas**, com
-   * **Pessoas / Grupos** embaixo — nada de "Novos", "Meus" ou "Outros". Botao que chama a fila
-   * por um nome que nao existe na tela e botao que ele tem de traduzir toda vez.
+   * Medido na pagina dele em 28/10: **Todas / Minhas / Nao lidas**. Em 31/10 a tela voltou a
+   * ter **Novos / Minhas / Todas** (Novos 76, Minhas 82, Todas 154). O botao diz o nome da aba
+   * que ele ve. "Nao atendidas" apontava para a fila certa e para a aba errada.
    *
    * **O rotulo inteiro vai no mapa, e nao so a palavra:** "pelos Meus" vira "pelas Minhas", e
    * trocar so o substantivo deixaria *"Comecar pelos Minhas"* na tela dele. Concordancia e metade
@@ -1866,7 +1866,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * trinta lugares para nao mudar nada do que ele ve.
    */
   const BOTAO_DA_FILA = {
-    Novos: 'Começar pelas não atendidas',
+    Novos: 'Começar pelos Novos',
     Meus: 'Começar pelas Minhas',
     Outros: 'Começar pelas de outro atendente',
   };
@@ -3965,8 +3965,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * e nada mudaria.
            */
           (naPlataformaNova()
-            ? 'A fila vem da consulta, não do filtro que estiver na tela: "não atendidas" são as ' +
-                'abertas que ninguém assumiu, e "Minhas" são as que você assumiu.'
+            ? 'A fila vem da consulta, não do filtro que estiver na tela: "Novos" são as ' +
+                'abertas que ninguém assumiu, e "Minhas" são as que você assumiu. A rodada abre a aba Novos.'
             : 'Elas andam pela fila da esquerda do jeito que ela está filtrada agora na ' +
                 'plataforma, de cima para baixo.'))
     );
@@ -5084,10 +5084,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * sao abas que nao existem no mobiliza.me. Rotulo e titulo discordando sobre a mesma fila e
        * ele traduzindo na cabeca a cada leitura.
        */
-      h('h4', {}, naPlataformaNova() ? 'Não atendidas: começar a conversa' : 'Novos: começar a conversa'),
+      h('h4', {}, 'Novos: começar a conversa'),
       h('div', { class: 'wf-preview' },
         (naPlataformaNova()
-          ? 'Percorre as conversas abertas que ninguém assumiu, assume o atendimento (é o que '
+          ? 'Percorre a aba Novos (as abertas que ninguém assumiu), assume o atendimento (é o que '
           : 'Percorre a aba "Novos", assume o atendimento (é o que ') +
           'libera o campo de mensagem) e ' +
           (naPlataformaNova()

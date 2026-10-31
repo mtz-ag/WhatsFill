@@ -8,8 +8,8 @@
 > `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
-> for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.248.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> for `0.x`.** Conferido em 31/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
+> `WhatsFill+IA` **3.249.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -705,6 +705,11 @@ mudaram as maos, nao a cabeca.
   "para eu atender melhor". O horario fica na saudacao. "todo mundo e bem-vindo" nao entra.
   O texto gravado e reescrito no envio. `saudacaoNeutra` devolvendo o texto intacto derruba
   6 assercoes.
+  **A RODADA DOS NOVOS ABRE A ABA NOVOS (31/10, v3.249).** Em 28/10 a tela era Todas / Minhas
+  e o mapa mandava a fila `aberto` para Todas. A tela ganhou a aba Novos e a rodada continuava
+  indo para Todas. O botao do painel diz "Comecar pelos Novos" e o primeiro da fila clica essa
+  aba antes de abrir. Minhas e a fila dele. O filtro da consulta nao mudou (`status=aberto`).
+  Devolver `Novos: 'Todas'` no mapa derruba 1 assercao.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

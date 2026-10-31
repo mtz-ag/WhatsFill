@@ -186,11 +186,12 @@ export function abrirConversa(id, { nome = '', raiz = document } = {}) {
 }
 
 /**
- * **A aba da lista, pelo rotulo que a TELA escreve** (`Todas 728`, `Minhas 1`).
+ * **A aba da lista, pelo rotulo que a TELA escreve** (`Novos 76`, `Minhas 82`, `Todas 154`).
  *
- * A rodada dos Novos pede `status=aberto`. Essas pessoas estao em **Todas**. Com **Minhas**
- * selecionada a lista so desenha quem ele ja assumiu, e a rodada para dizendo que a conversa
- * nao esta renderizada — rolar nao as faz aparecer, porque o filtro as tirou.
+ * A rodada dos Novos pede `status=aberto` e clica a aba **Novos** (31/10/2026). Em 28/10 essa
+ * gente so aparecia em Todas, e o mapa velho levava a rodada para la. Com **Minhas** selecionada
+ * a lista so desenha quem ele ja assumiu, e a rodada para dizendo que a conversa nao esta
+ * renderizada — rolar nao as faz aparecer, porque o filtro as tirou.
  *
  * O texto tem de ser o rotulo e SO o numero. Uma linha de conversa carrega nome, hora e previa,
  * entao nao casa nesta forma, e um empate nao clica.

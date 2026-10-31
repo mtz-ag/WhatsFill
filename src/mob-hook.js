@@ -109,7 +109,7 @@
   }
 
   /**
-   * Clica a aba da lista (`Todas 728`, `Minhas 1`). Copia de `dom-mob.clicarAbaDaFila`.
+   * Clica a aba da lista (`Novos 76`, `Minhas 82`, `Todas 154`). Copia de `dom-mob.clicarAbaDaFila`.
    * O texto tem de ser o rotulo e so o numero — linha de conversa nao casa, empate nao clica.
    */
   function clicarAbaDaFila(rotulo) {

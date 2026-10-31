@@ -1,8 +1,35 @@
-## 2026-10-31 - v3.248.0 - ESTADO DE AGORA - boas-vindas em tom neutro
+## 2026-10-31 - v3.249.0 - ESTADO DE AGORA - a rodada dos novos abre a aba Novos
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.248.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.249.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.249.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Na aba Automatizado o botao agora e **Comecar pelos Novos**. A rodada clica a aba Novos
+   da plataforma antes do primeiro contato. Nao aperte Comecar por ele
+5. Se o campo deste atendimento ainda tiver o "Seja bem-vindo" antigo, apague. Nao de Enter
+
+### O QUE MUDOU
+
+A tela da plataforma voltou a ter a aba Novos (ao lado de Minhas e Todas). O botao do painel
+ainda dizia "nao atendidas" e a rodada abria Todas, porque o mapa de 28/10 mandava a fila
+aberta para la. Agora o botao diz Novos e o primeiro da fila troca a lista para essa aba
+antes de abrir. A consulta continua sendo as conversas abertas que ninguem assumiu.
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Conferencia do canal desligada. Importacao continua nao
+contando como retorno. Envio automatico continua desligado. Fecho por cortesia
+continua ligado. Boas-vindas continuam em tom neutro. Minhas continua sendo a fila
+que ele ja assumiu. A ordem dos cartoes nao mudou.
+
+Prova: o mapa `Novos: 'Todas'` de volta derruba 1 assercao (`pediu a aba Novos ao gancho (Todas)`).
+
+## 2026-10-31 - v3.248.0 - boas-vindas em tom neutro
 
 ### O QUE VOCE PRECISA FAZER
 

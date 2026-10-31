@@ -1157,11 +1157,12 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
   check(pulou.ok === true && pulou.sessionId === 'c-2', 'a primeira fora da tela nao encerra a rodada: abre a seguinte');
 
   /**
-   * **Minhas so desenha quem ja foi assumido** (28/10/2026). A rodada dos Novos pede aberto,
-   * ninguem da janela esta na tela, e parar mandando "role a fila" nao resolve: o filtro tirou
-   * essa gente. Trocar para Todas e tentar de novo.
+   * **A aba da tela dos Novos** (31/10/2026). A rodada pede aberto. Em 28/10 essa gente so
+   * aparecia em Todas, e o mapa levava a rodada para la. A tela agora tem a aba Novos, e e
+   * ela que a rodada abre antes do primeiro contato.
    */
   const tipos = [];
+  const rotulos = [];
   let trocou = false;
   const janelaNaAbaErrada = (() => {
     const ouvintes = [];
@@ -1170,7 +1171,10 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
       removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
       postMessage(msg) {
         tipos.push(msg.type);
-        if (msg.type === 'aba') trocou = true;
+        if (msg.type === 'aba') {
+          trocou = true;
+          rotulos.push(msg.payload.rotulo);
+        }
         const ok = msg.type === 'aba' || msg.type === 'topo' || (msg.type === 'abrir' && trocou && msg.payload.id === 'c-1');
         const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: msg.type === 'abrir' ? 'abriu' : msg.type,
           payload: { pedido: msg.payload.pedido, ok, motivo: ok ? '' : 'nao-esta-na-tela', por: 'id' } } };
@@ -1180,8 +1184,8 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
     return j;
   })();
   const depoisDaAba = await openQueueSession(0, { aba: 'Novos', fila, janela: janelaNaAbaErrada });
-  check(depoisDaAba.ok === true && depoisDaAba.sessionId === 'c-1', 'lista na aba errada: troca para Todas e abre a primeira');
-  check(tipos.includes('aba'), 'e pediu a aba da tela ao gancho');
+  check(depoisDaAba.ok === true && depoisDaAba.sessionId === 'c-1', 'lista na aba errada: troca para Novos e abre a primeira');
+  check(tipos.includes('aba') && rotulos[0] === 'Novos', `pediu a aba Novos ao gancho (${rotulos.join(',')})`);
 
   const r = await openQueueSession(1, { fila, janela });
   check(r.ok === true && r.sessionId === 'c-2', 'a posicao 1 abre a SEGUNDA conversa');
@@ -1694,7 +1698,8 @@ grupo('A ABA AUTOMATIZADO: um interruptor, um lugar, e a ordem do trabalho');
    */
   check(/A fila vem da consulta, não do filtro/.test(painel), 'a tela diz de onde a fila vem nesta plataforma');
   check(/A fila sai da consulta à plataforma, por aba/.test(painel), 'e o cartao da fila tambem');
-  check(/Não atendidas: começar a conversa/.test(painel), 'o TITULO do cartao fala a lingua da plataforma');
+  check(/Novos: começar a conversa/.test(painel), 'o TITULO do cartao fala a lingua da plataforma');
+  check(/Começar pelos Novos/.test(painel), 'o botao diz Novos, a aba que a rodada abre');
   check(/Minhas: conferir e responder/.test(painel), 'e o da outra fila tambem');
 }
 

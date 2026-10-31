@@ -586,12 +586,15 @@ export async function openQueueSession(index = 0, opcoes = {}) {
   }[r.motivo] || `Nao consegui abrir a conversa (${r.motivo || 'sem motivo'}).`);
 
   /**
-   * **O rotulo da TELA, nao o nome interno da rodada.** Novos e `status=aberto`, e essa gente
-   * esta em **Todas**. Com **Minhas** selecionada a lista so desenha quem ja foi assumido
-   * (28/10/2026: a rodada parou em "nao esta renderizada" com Minhas 1 na tela e 728 em Todas).
-   * Rolar a Minhas nao as faz aparecer: o filtro as tirou.
+   * **O rotulo da TELA, nao o nome interno da rodada.**
+   *
+   * Em 28/10 a tela era Todas / Minhas, e quem ninguem assumiu (`status=aberto`) so aparecia
+   * em Todas. Em 31/10 a tela ganhou a aba **Novos** (print: Novos 76, Minhas 82, Todas 154)
+   * e a rodada, com o mapa velho, ia para Todas. Ele: *"troque para comecar pelos novos, pois
+   * ele foi para a aba todas"*. Com Minhas selecionada a lista so desenha quem ja foi assumido
+   * — rolar nao traz os Novos, o filtro os tirou.
    */
-  const ABA_NA_TELA = { Novos: 'Todas', Meus: 'Minhas', Outros: 'Todas' };
+  const ABA_NA_TELA = { Novos: 'Novos', Meus: 'Minhas', Outros: 'Todas' };
 
   const abrirAlguma = async () => {
     let ultima = null;
@@ -634,8 +637,19 @@ export async function openQueueSession(index = 0, opcoes = {}) {
     return comTotal({ ok: false, foraDaTela: true, reason: porqueDe(ultima || { motivo: 'nao-esta-na-tela' }) });
   };
 
-  let aberto = await abrirAlguma();
   const rotulo = ABA_NA_TELA[aba];
+  // No primeiro da fila, a aba certa antes de abrir. Sem isto, a pessoa visivel em Todas
+  // era aberta la, e a rodada dos Novos ficava na aba que ele acabou de pedir para sair.
+  if (n === 0 && rotulo) {
+    const noComeco = await perguntarAoGancho('aba', { rotulo }, resto);
+    if (noComeco?.payload?.ok) {
+      await new Promise((r) => setTimeout(r, 400));
+      await perguntarAoGancho('topo', {}, resto);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  let aberto = await abrirAlguma();
   if (!aberto.ok && aberto.foraDaTela && rotulo) {
     const troca = await perguntarAoGancho('aba', { rotulo }, resto);
     if (troca?.payload?.ok) {
