@@ -44,6 +44,7 @@ export async function list({ perfil } = {}) {
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
     await migrarBoasVindasPrimeiraPessoa();
+    await migrarBoasVindasNeutras();
   }
   return doPerfil(perfil);
 }
@@ -219,6 +220,33 @@ export function boasVindasNaPrimeiraPessoa(texto) {
   return saida.replace(/[ \t]+\n/g, '\n').replace(/(bem-vind[oa]s?)\.(?=\s*(?:\n|$))/giu, '$1!');
 }
 
+/**
+ * **Tom neutro nas boas-vindas** (31/10/2026). Ele: *"troque para Olá, que bom ter você aqui!
+ * ou algo do tipo; já havia falado para corrigir isso e uma mensagem em tom neutro resolve"*.
+ *
+ * A concordância pelo nome (30/10) só troca quando tem certeza. Nome que não termina em a/o e
+ * não está na lista deixa o masculino de fábrica — e saiu "Seja bem-vindo" / "atendê-lo". O
+ * horário continua na {{saudacao}} ("Boa noite"): pôr "Olá" no lugar dela empilharia duas
+ * saudações. "todo mundo é bem-vindo" não é tratamento e não entra.
+ */
+function comMaiusculaSePrecisa(frase, amostra) {
+  const c = String(amostra || '').trim()[0];
+  if (c && c !== c.toLowerCase()) return frase[0].toUpperCase() + frase.slice(1);
+  return frase;
+}
+
+export function saudacaoNeutra(texto) {
+  let s = String(texto || '');
+  s = s.replace(/bem-vind[oa],\s*que bom ter você por aqui[.!]*/giu, (m) => comMaiusculaSePrecisa('que bom ter você aqui!', m));
+  s = s.replace(/seja\s+bem-vind[oa]s?[.!]*/giu, (m) => comMaiusculaSePrecisa('que bom ter você aqui!', m));
+  s = s.replace(/(^|[.!\n]\s*)bem-vind[oa]s?[.!](?=\s*(?:\n|$))/giu, (m, pre) => {
+    const palavra = m.slice(pre.length);
+    return pre + comMaiusculaSePrecisa('que bom ter você aqui!', palavra);
+  });
+  s = s.replace(/para(?:\s+eu)?\s+melhor\s+atend(?:ê|e)-l[oa]/giu, 'para eu atender melhor');
+  return s;
+}
+
 export function falaComoEquipe(texto) {
   const t = String(texto || '');
   return (
@@ -243,6 +271,29 @@ export async function migrarBoasVindasPrimeiraPessoa() {
   });
   if (mudadas.length) await store.set('templates', novos);
   await store.set('migracoes', { ...migracoes, boasVindasPrimeiraPessoa: true });
+  return mudadas;
+}
+
+/**
+ * **O texto gravado ainda diz "bem-vindo"** (31/10/2026). A fábrica nova não alcança quem já
+ * tem a lista salva — a mesma armadilha de 04/09. Flag própria: reaproveitar a da primeira
+ * pessoa não reescreveria o que ele já recebeu naquela passada.
+ */
+export async function migrarBoasVindasNeutras() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.boasVindasNeutras) return [];
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map((t) => {
+    if (!IDS_DAS_BOAS_VINDAS.includes(t.id)) return t;
+    const text = saudacaoNeutra(t.text);
+    const variantes = (t.variantes || []).map((v) => saudacaoNeutra(v));
+    const mudou = text !== t.text || variantes.some((v, i) => v !== (t.variantes || [])[i]);
+    if (mudou) mudadas.push(t.name || t.id);
+    return mudou ? { ...t, text, variantes } : t;
+  });
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, boasVindasNeutras: true });
   return mudadas;
 }
 

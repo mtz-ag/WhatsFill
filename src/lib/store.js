@@ -421,19 +421,23 @@ export const DEFAULT_TEMPLATES = [
      *
      * **Primeira pessoa** (31/10/2026): o contato acha que fala com o capitão. "equipe" e "podemos"
      * saíram da fábrica; o texto já gravado no navegador é reescrito na migração e de novo no envio.
+     *
+     * **Tom neutro** (31/10/2026): "Seja bem-vindo" e "atendê-lo" saíram no masculino quando o
+     * nome não decidia o gênero. Ele pediu "Olá, que bom ter você aqui!" — o horário fica na
+     * saudação, para não empilhar duas. O texto gravado é reescrito no envio.
      */
     id: 'boas-vindas',
     name: 'Boas-vindas (chegou sem anúncio)',
     text:
-      '{{saudacao}}! Seja bem-vindo!\n\n' +
+      '{{saudacao}}! Que bom ter você aqui!\n\n' +
       'Em que posso ajudar?\n\n' +
-      'E, se puder, me informe para eu melhor atendê-lo:\n\n' +
+      'E, se puder, me informe para eu atender melhor:\n\n' +
       'Nome , Cidade\n\n' +
       '(exemplo: Pedro Silva , Porto Alegre)',
     variantes: [
-      '{{saudacao}}! Bem-vindo, que bom ter você por aqui.\n\n' +
+      '{{saudacao}}! Que bom ter você por aqui!\n\n' +
         'Em que posso ajudar?\n\n' +
-        'E, se puder, me informe para eu melhor atendê-lo:\n\n' +
+        'E, se puder, me informe para eu atender melhor:\n\n' +
         'Nome , Cidade\n\n' +
         '(exemplo: Pedro Silva , Porto Alegre)',
     ],
@@ -457,10 +461,10 @@ export const DEFAULT_TEMPLATES = [
     id: 'boas-vindas-tem-dados',
     name: 'Boas-vindas (já temos o cadastro)',
     text:
-      '{{saudacao}}! Seja bem-vindo!\n\n' +
+      '{{saudacao}}! Que bom ter você aqui!\n\n' +
       'Em que posso ajudar?',
     variantes: [
-      '{{saudacao}}! Bem-vindo, que bom ter você por aqui.\n\n' +
+      '{{saudacao}}! Que bom ter você por aqui!\n\n' +
         'Em que posso ajudar?',
     ],
   },

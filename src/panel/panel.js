@@ -3200,10 +3200,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (limpo && !templatesLib.ehPedidoDeDados(limpo)) text = limpo;
     }
 
-    // A frase gravada ainda diz "equipe" (migracao de 07/09). As duas boas-vindas saem na primeira
-    // pessoa, na rodada e no clique, porque o texto salvo no navegador nao acompanha a fabrica.
+    // A frase gravada ainda diz "equipe" (migracao de 07/09) e "bem-vindo" (31/10). As duas
+    // boas-vindas saem na primeira pessoa e em tom neutro, na rodada e no clique, porque o
+    // texto salvo no navegador nao acompanha a fabrica.
     if (templatesLib.IDS_DAS_BOAS_VINDAS.includes(template?.id)) {
-      text = templatesLib.boasVindasNaPrimeiraPessoa(text);
+      text = templatesLib.saudacaoNeutra(templatesLib.boasVindasNaPrimeiraPessoa(text));
     }
 
     if (missing.length) {

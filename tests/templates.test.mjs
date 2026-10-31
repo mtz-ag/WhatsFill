@@ -955,4 +955,45 @@ Nome , Cidade`),
   check(!templates.ehAgradecimentoDeApoio('Bom dia! Em que podemos ajudar?'), 'e texto sem agradecimento nenhum nao e');
 }
 
+grupo('boas-vindas em tom neutro (31/10/2026)');
+{
+  const { readFileSync } = await import('node:fs');
+  const raiz = new URL('../', import.meta.url);
+  const painel = readFileSync(new URL('src/panel/panel.js', raiz), 'utf8');
+  const src = readFileSync(new URL('src/lib/templates.js', raiz), 'utf8');
+  const dela =
+    'Boa noite! Seja bem-vindo!\n\n' +
+    'Em que posso ajudar?\n\n' +
+    'E, se puder, me informe para eu melhor atendê-lo:\n\n' +
+    'Nome , Cidade';
+  const neutra = templates.saudacaoNeutra(dela);
+  check(neutra.startsWith('Boa noite! Que bom ter você aqui!'), `saudacao: ${JSON.stringify(neutra.split('\n')[0])}`);
+  check(!/bem-vind/i.test(neutra), 'sem bem-vindo');
+  check(/para eu atender melhor/.test(neutra) && !/atendê-l/.test(neutra), 'o pedido ficou sem gênero');
+  check(/Nome , Cidade/.test(neutra), 'o formulário continua');
+  check(templates.saudacaoNeutra('Boa tarde! Seja bem-vinda!').startsWith('Boa tarde! Que bom ter você aqui!'), 'bem-vinda também sai');
+  check(
+    templates.saudacaoNeutra('{{saudacao}}! Bem-vindo, que bom ter você por aqui.') === '{{saudacao}}! Que bom ter você aqui!',
+    'a variante antiga não duplica a frase'
+  );
+  check(
+    templates.saudacaoNeutra('{{saudacao}}! Bem-vindo!\n\nEm que posso ajudar?') === '{{saudacao}}! Que bom ter você aqui!\n\nEm que posso ajudar?',
+    'bem-vindo solto depois da saudação'
+  );
+  const mundo = 'Aqui todo mundo é bem-vindo.';
+  check(templates.saudacaoNeutra(mundo) === mundo, '"todo mundo é bem-vindo" fica');
+  check(templates.saudacaoNeutra(neutra) === neutra, 'idempotente');
+  for (const id of templates.IDS_DAS_BOAS_VINDAS) {
+    const t = store.DEFAULT_TEMPLATES.find((x) => x.id === id);
+    for (const texto of [t.text, ...(t.variantes || [])]) {
+      check(!/bem-vind|atendê-l/i.test(texto), `fábrica "${id}" neutra`);
+      check(/Que bom ter você/.test(texto), `fábrica "${id}" no tom pedido`);
+    }
+  }
+  check(templates.ehPedidoDeDados(store.DEFAULT_TEMPLATES.find((t) => t.id === 'boas-vindas').text), 'a com cadastro continua sendo pedido');
+  check(!templates.ehPedidoDeDados(store.DEFAULT_TEMPLATES.find((t) => t.id === 'boas-vindas-tem-dados').text), 'a sem cadastro continua sem pedido');
+  check(/saudacaoNeutra\(templatesLib\.boasVindasNaPrimeiraPessoa\(text\)\)/.test(painel), 'o envio reescreve o texto gravado');
+  check(src.indexOf('await migrarBoasVindasNeutras()') > src.indexOf('await migrarBoasVindasPrimeiraPessoa()'), 'a migração roda depois da primeira pessoa');
+}
+
 fim();

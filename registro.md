@@ -1,4 +1,34 @@
-## 2026-10-31 - v3.247.0 - ESTADO DE AGORA - momento de outro dia e desilusao
+## 2026-10-31 - v3.248.0 - ESTADO DE AGORA - boas-vindas em tom neutro
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.248.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.248.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Apague o texto que ja esta no campo deste atendimento. E o "Seja bem-vindo" antigo.
+   Nao de Enter por cima dele
+
+### O QUE MUDOU
+
+As boas-vindas saiam "Seja bem-vindo" e "atende-lo" quando o nome nao decidia o genero.
+Agora a saudacao e "Que bom ter voce aqui!" e o pedido e "para eu atender melhor".
+"Boa noite" continua na frente. O formulario Nome, Cidade continua para quem ainda nao
+tem cadastro. O texto que ja estava gravado no navegador e reescrito na hora de enviar.
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Conferencia do canal desligada. Importacao continua nao
+contando como retorno. Envio automatico continua desligado. Fecho por cortesia
+continua ligado. Mensagem do momento de outro dia continua travada. "todo mundo e
+bem-vindo" em outras respostas nao muda.
+
+Prova: `saudacaoNeutra` devolvendo o texto intacto derruba 6 assercoes.
+
+## 2026-10-31 - v3.247.0 - momento de outro dia e desilusao
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.247.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
