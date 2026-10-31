@@ -19,6 +19,7 @@ import {
   montarContatoRascunho,
   montarRequisicaoRascunho,
   validarRascunho,
+  jaAgradecemosADenuncia,
   telefonesDoTexto,
   tokensAproximados,
   ANTERIOR_MAX_FALAS,
@@ -169,6 +170,14 @@ export const PROVEDORES = {
       const m = dados.choices?.[0]?.message;
       if (!m || m.refusal) return null;
       return m.content ?? null;
+    },
+    /**
+     * **A recusa tem nome** (31/10/2026). Antes ela virava `null` e, no rascunho, a tela dizia
+     * "a IA não devolveu rascunho" — o sintoma no lugar da causa. `atender` lê isto primeiro.
+     */
+    recusa: (dados) => {
+      const r = dados.choices?.[0]?.message?.refusal;
+      return r ? String(r) : '';
     },
     /**
      * **`prompt_tokens` INCLUI o que veio do cache; `input_tokens` da Anthropic NÃO.**
@@ -376,6 +385,8 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       ...validarRascunho(r.decisao, agora, {
         jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho,
         nossaUltima, jaFalamosHoje, candidato, nome: campos?.Nome || '', fase,
+        /** Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes. */
+        jaAgradecemosADenuncia: jaAgradecemosADenuncia(mensagens),
         /**
          * Lista nula deixa a trava de telefone calada. Lista (mesmo vazia) soma o que já está na
          * conversa, no dossiê, nas regras e nas respostas prontas — número que ela mesma escreveu
@@ -615,6 +626,11 @@ export async function atender(pedido, chave) {
    */
   if (casa.truncou(dados)) {
     return { ok: false, motivo: 'a resposta foi truncada no teto de saída — nada dela pôde ser usado', custo };
+  }
+
+  const recusa = casa.recusa ? casa.recusa(dados) : '';
+  if (recusa) {
+    return { ok: false, motivo: `o modelo se recusou a responder: ${recusa.slice(0, 200)}`, custo };
   }
 
   return { ok: true, decisao: casa.texto(dados), custo };

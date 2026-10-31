@@ -2688,6 +2688,30 @@ export function marcaDeMidia(m) {
   return nome ? `(ela mandou ${nome} — o conteúdo não aparece aqui)` : '';
 }
 
+/**
+ * **O "agradeço as informações / estamos atentos" JÁ SAIU depois da denúncia?** — print da
+ * Print de 31/10/2026: *"fica mandando essa mesma mensagem"*.
+ *
+ * A linha DENÚNCIA do bloco do contato lê a conversa INTEIRA (de propósito, desde 23/09: quem trouxe
+ * a acusação ontem segue nela hoje) e manda *"agradeça as informações e diga que estamos atentos"*.
+ * Sem saber que isso já foi dito, ela manda dizer DE NOVO a cada corrente nova — é a lição de 15/10
+ * escrita no `NÃO REPITA`: **toda regra que obriga um CONTEÚDO é uma hipótese de repetição**, e
+ * esta ganhava da regra anti-repetição por ser mais específica e estar mais perto do fim.
+ *
+ * Casa o agradecimento pela FORMA, nas variações que a própria IA usou nas prints (15/10 e 31/10).
+ */
+export const AGRADECEU_A_DENUNCIA =
+  /(estamos|seguimos|sigo|estou|fico|ficamos|vamos\s+seguir)\s+(atent[oa]s?|acompanhando)|acompanhando\s+(o\s+assunto|a\s+situa|as\s+informa|de\s+perto|situa)|agrade[cç]\p{L}*\s+(as|pelas|a|pela|por)\s+(informa|compartilh|trazer|avisar|essa\s+informa)|obrigad[oa]\s+(pelas?|por)\s+(informa|compartilh|trazer|avisar)/iu;
+
+export function jaAgradecemosADenuncia(mensagens = []) {
+  const lista = (mensagens || [])
+    .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
+    .filter((m) => String(m?.texto || '').trim());
+  const i = lista.findIndex((m) => m.de !== 'nos' && !m.anuncio && trouxeDenuncia(m.texto));
+  if (i < 0) return false;
+  return lista.slice(i + 1).some((m) => m.de === 'nos' && AGRADECEU_A_DENUNCIA.test(String(m.texto)));
+}
+
 /** O bloco do atendimento anterior — vazio quando não há nada a mostrar. */
 function blocoDoAtendimentoAnterior(anterior, agora) {
   const falas = (anterior || [])
@@ -3177,7 +3201,17 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * **Fica FORA de quem trouxe um problema pessoal**, como a regra da pauta: quem foi roubada ou
      * teve o benefício fraudado não recebe "obrigado, estamos atentos" — a regra 11 é quem atende.
      */
-    denuncia && !trouxeProblema
+    // Já agradecemos? Então NÃO se manda agradecer de novo — ver `jaAgradecemosADenuncia` (31/10/2026).
+    denuncia && !trouxeProblema && jaAgradecemosADenuncia(lista)
+      ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — JÁ AGRADECEMOS: nas falas NÓS acima já agradecemos as ' +
+        'informações e dissemos que estamos atentos. NÃO agradeça de novo e NÃO diga outra vez que ' +
+        'estamos atentos ou acompanhando, nem com outras palavras — isso é a repetição. Continue sem ' +
+        'entrar no mérito: nada de opinião, de prometer levar adiante ou de pedir detalhes. Se ela não ' +
+        'trouxe nada além de mais acusação, mais texto encaminhado ou só cobrou resposta ("E aí?"), ' +
+        'marque o campo naoHaOQueResponder — e MESMO ASSIM o campo texto NUNCA fica vazio: escreva uma ' +
+        'frase curta e neutra, sem agradecer e sem repetir, por exemplo "Seguimos por aqui. Se ' +
+        'precisar de alguma coisa, é só escrever."'
+      : denuncia && !trouxeProblema
       ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — NÃO ENTRE NO MÉRITO: nós não temos como verificar essas ' +
         'informações, então NÃO diga se é grave, se é séria, o que precisa ser apurado, nem dê aula ' +
         'sobre fatos, provas, responsabilidade ou direitos. Agradeça as informações em UMA frase e ' +
@@ -3410,6 +3444,12 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * **As travas do ESCOPO** (31/10/2026) — regras 20 e 21. Barram o envio sozinho.
    */
   falouDeUrgencia: 'fala de urgência, prioridade ou de avaliar o pedido — isso não se diz ao contato',
+  /**
+   * **O mesmo "agradeço as informações, estamos atentos" pela segunda vez** — print de
+   * 31/10/2026. A metade mecânica de `jaAgradecemosADenuncia`: o prompt já manda não
+   * repetir, e esta trava garante que, se repetir, não sai sozinho.
+   */
+  repetiuOAgradecimento: 'agradece a denúncia de novo ("estamos atentos") — isso já foi dito nesta conversa',
   prometeuChegarAEle: 'promete que o recado chega ao deputado ou que ele vai ler — quem lê é a equipe',
   prometeuOrgao: 'promete encaminhar o pedido ao governador ou a outro órgão — o certo é dar o contato oficial',
   telefoneForaDoDossie: 'tem um telefone que não está no dossiê de órgãos nem na conversa — confira o número',
@@ -3873,6 +3913,10 @@ function mesmoTelefone(a, b) {
 export function travasDoEscopo(texto, contexto = {}) {
   const t = String(texto || '');
   const avisos = [];
+  // Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes na mesma conversa.
+  if (contexto?.jaAgradecemosADenuncia && AGRADECEU_A_DENUNCIA.test(t)) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.repetiuOAgradecimento);
+  }
   const L = String.raw`(^|[^\p{L}])`;
 
   const URGENCIA = [
@@ -4483,6 +4527,22 @@ function umaLinha(texto, limite = 400) {
  *
  * @returns {{texto:string, confianca:number, motivo:string, avisos:string[], precisaDeRevisao:boolean}}
  */
+/**
+ * O que o cartão "Chamar a IA" deve mostrar, ou `null` — só o rascunho DESTE contato (31/10/2026).
+ * O cartão é remontado a cada `renderAll()`; sem guardar, a cópia do texto sumia na hora.
+ */
+export function rascunhoDoCartaoAtual(guardado, contatoId) {
+  if (!guardado || typeof guardado !== 'object') return null;
+  if (contatoId == null || guardado.contatoId !== contatoId) return null;
+  return { texto: String(guardado.texto || ''), avisos: Array.isArray(guardado.avisos) ? guardado.avisos.map(String) : [] };
+}
+
+/** A IA marcou `naoHaOQueResponder` e deixou `texto` em branco — ver `validarRascunho`. */
+export const AVISO_ABSTENCAO_SEM_TEXTO =
+  'a IA marcou "não há o que responder" e deixou o texto em branco (nada foi descartado por trava)';
+/** O JSON chegou, mas o campo `texto` veio vazio sem a abstenção marcada. */
+export const AVISO_TEXTO_EM_BRANCO = 'a IA devolveu o JSON com o campo texto em branco';
+
 export function validarRascunho(bruto, agora, contexto = {}) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true, naoHaOQueResponder: false, naoCabePedirOCadastro: false };
 
@@ -4498,7 +4558,9 @@ export function validarRascunho(bruto, agora, contexto = {}) {
       return { texto: cru.texto, confianca: 0, motivo: '', avisos: cru.avisos, precisaDeRevisao: true, naoHaOQueResponder: false, naoCabePedirOCadastro: false };
     }
   }
-  if (!d || typeof d !== 'object') return vazio;
+  // `null` aqui é a API respondendo sem `content` (a recusa já sai antes, no `atender`). Dizer
+  // isso, e não "não devolveu rascunho", é o que separa este caso do texto em branco abaixo.
+  if (!d || typeof d !== 'object') return { ...vazio, avisos: ['a API respondeu sem conteúdo nenhum (content vazio ou nulo)'] };
 
   /**
    * **Cada opção é revisada por conta própria** — as travas (a chapa trocada, a promessa, a
@@ -4548,7 +4610,33 @@ export function validarRascunho(bruto, agora, contexto = {}) {
     })
     .slice(0, 1);
 
-  if (!opcoes.length) return vazio;
+  /**
+   * **Texto vazio NÃO é "a IA não devolveu rascunho"** — o caso do gpt-5.6-luna (31/10/2026): a
+   * corrente já agradecida, ela cobrou "E aí?", e a linha JÁ AGRADECEMOS proibiu agradecer, repetir
+   * e pedir detalhes. Sem o formulário para escrever, o modelo devolveu `texto: ""` com
+   * `naoHaOQueResponder: true` (4 de 5 chamadas, medido). Este filtro descartava a opção vazia e
+   * devolvia o `vazio` de fábrica — **com `naoHaOQueResponder: false`**, então o painel nem via a
+   * abstenção e dizia só "não devolveu rascunho".
+   *
+   * Agora os sinalizadores da IA sobrevivem, e o aviso diz o que aconteceu de verdade.
+   */
+  if (!opcoes.length) {
+    const primeira = brutas.find((o) => o && typeof o === 'object') || {};
+    const abstencao = primeira.naoHaOQueResponder === true;
+    return {
+      ...vazio,
+      motivo: String(primeira.motivo || '').trim().slice(0, 300),
+      naoHaOQueResponder: abstencao,
+      naoCabePedirOCadastro: primeira.naoCabePedirOCadastro === true,
+      avisos: [
+        (abstencao ? AVISO_ABSTENCAO_SEM_TEXTO : AVISO_TEXTO_EM_BRANCO) +
+          // Diz QUAL regra do prompt calou a IA, quando foi ela: é a pergunta que ele faz na print.
+          (contexto?.jaAgradecemosADenuncia
+            ? ' — a regra "JÁ AGRADECEMOS" (denúncia/corrente já agradecida) a proibiu de agradecer de novo, e ela não achou outra frase'
+            : ''),
+      ],
+    };
+  }
 
   // `texto`, `avisos` e companhia continuam sendo os da PRIMEIRA: quem só sabia ler um rascunho
   // (o cartão da aba Respostas, o log, as travas de envio) continua funcionando sem mudar nada.

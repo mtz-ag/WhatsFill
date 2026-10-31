@@ -1,4 +1,45 @@
-## 2026-10-31 - v3.243.0 - ESTADO DE AGORA - boas-vindas pedindo o que o cadastro ja tem
+## 2026-10-31 - v3.244.0 - ESTADO DE AGORA - corrente, rascunho vazio e a chave do modelo
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.244.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.244.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Com so a chave da OpenAI e o rascunho no gpt-5.6-luna, "Chamar a IA" tem de estar ligado.
+   O aviso, se a chave faltar, diz qual casa e qual modelo
+5. Corrente ou denuncia repassada: a tecla 1 some. A tecla `c` agradece uma vez, sem pedir
+   dados e sem concluir. A rodada nao aperta a `c` sozinha
+6. Depois de "Chamar a IA", o texto fica na caixa do cartao. "Por no campo de novo" usa essa copia
+
+### O QUE MUDOU
+
+Cinco falhas da 3.243.0, a lista da v9:
+
+- Corrente ja agradecida e um "E ai?" de novo: o modelo devolvia texto vazio com
+  "nao ha o que responder", e a tela dizia so "a IA nao devolveu rascunho". A abstencao
+  agora chega, e a regra pede uma frase neutra em vez de deixar o campo vazio
+- Recusa do modelo aparece com o texto da recusa, nao com a frase generica
+- "Chamar a IA", a tecla 8 e o rascunho usam a chave do modelo do rascunho. Cidade e
+  etiquetas continuam na chave das conferencias
+- A copia do rascunho no painel sobrevive ao redesenho
+- Sem a IA, a corrente nao cai na tecla 1 (agradecimento com nome, modelo de conteudo e
+  concluir). O formulario do rascunho tambem nao fecha corrente nem denuncia
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Concordancia do tratamento. Conferencia do canal desligada.
+Importacao continua nao contando como retorno. Boas-vindas com cidade na ficha continua
+sem pedir o cadastro. Nao religuei envio automatico.
+
+Tres achados da lista ficaram de fora, de proposito: horario igual da rajada e da nossa
+resposta, o botao manual jogar fora o texto quando a IA se abstem sem pergunta pendente,
+e o botao manual nunca pedir o cadastro fora da rodada.
+
+## 2026-10-31 - v3.243.0 - boas-vindas pedindo o que o cadastro ja tem
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.243.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

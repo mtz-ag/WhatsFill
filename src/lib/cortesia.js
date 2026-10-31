@@ -3065,6 +3065,54 @@ export function trouxeDenuncia(texto) {
 }
 
 /**
+ * **CORRENTE ENCAMINHADA** — print de 31/10/2026: *"veja na print porque fica
+ * mandando essa mesma mensagem"*. Ela mandou o textão político que circula nos grupos (*"3ª FASE
+ * ... Em andamento"*, *"E você, vai ajudar a Organização Criminosa..."*), e o rascunho saiu
+ * *"Agradeço as informações. Estamos atentos e acompanhando o assunto."* com o formulário de
+ * Nome e Cidade colado no fim.
+ *
+ * **A plataforma não diz que um TEXTO foi encaminhado** (o `api.js` só lê `type`, `text` e a
+ * transcrição), então o reconhecimento é pela FORMA, e exige texto longo E duas marcas de corrente:
+ * negrito de WhatsApp repetido, muitas linhas em lista, ou o chamado para passar adiante / a
+ * pergunta retórica final. Uma marca só não basta: quem escreve um desabafo longo para nós usa
+ * negrito ou muitas linhas às vezes, e a corrente usa quase sempre as três.
+ *
+ * Serve a UMA coisa: o rascunho não fecha uma corrente pedindo cadastro — ver
+ * `sugestao.rascunhoSemCadastro`. Não muda a regra do quadro que decide o caso.
+ */
+const CORRENTE_MINIMO = 400;
+const CHAMADO_DE_CORRENTE =
+  /(^|[^\p{L}])(repasse[mn]?|repassar|compartilhe[mn]?|compartilhar|encaminhe[mn]?|divulgue[mn]?|espalhe[mn]?|mande\s+para\s+todos|passe\s+adiante|e\s+voce,?\s+vai|acorda,?\s+brasil|nao\s+deixe\s+de\s+(ler|repassar|compartilhar))([^\p{L}]|$)/iu;
+
+export function pareceCorrente(texto) {
+  const bruto = String(texto || '');
+  if (bruto.trim().length < CORRENTE_MINIMO) return null;
+  const negritos = (bruto.match(/\*[^*\n]{2,}\*/g) || []).length;
+  const linhas = bruto.split('\n').map((l) => l.trim()).filter(Boolean);
+  const emLista = linhas.filter((l) => /^([-•*▪►✅❌➡️]|\d+[).ºª°-])|\s-\s+\*?[\p{L}]/u.test(l)).length;
+  const marcas = [
+    negritos >= 3,
+    linhas.length >= 8 || emLista >= 4,
+    CHAMADO_DE_CORRENTE.test(semAcentos(bruto)),
+  ].filter(Boolean).length;
+  return marcas >= 2 ? { motivo: 'mandou um texto com cara de corrente encaminhada' } : null;
+}
+
+/**
+ * **A rajada traz denúncia política ou corrente?** — o sinal que cala o formulário no rascunho.
+ * Lê só o que ela escreveu desde a nossa última fala: o que já foi respondido não pede nada.
+ */
+export function denunciaOuCorrente(entrantes, nossaUltimaAt) {
+  for (const msg of desdeNossaUltima(entrantes, nossaUltimaAt)) {
+    if (msg?.sistema) continue;
+    const t = msg?.texto || '';
+    const achado = pareceCorrente(t) || trouxeDenuncia(t);
+    if (achado) return achado;
+  }
+  return null;
+}
+
+/**
  * **Ela se oferece para fazer algo PELA campanha e quer que a gente entre com alguma coisa** — caso dele
  * (17/09/2026): *"a pessoa quer apoiar a campanha fazendo uma janta e quer que participemos com comida"*,
  * e a IA mandou o CRAS três vezes.

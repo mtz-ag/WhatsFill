@@ -113,6 +113,40 @@ export const pedirDadosNaoCabe = (c) =>
 // ou dinheiro não faz sentido perguntar os dados, a pessoa não vai dar"*.
 export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego || c?.semInteresse);
 
+/**
+ * **O rascunho fecha pedindo o cadastro?** — `casoDeNegativa` mais a DENÚNCIA e a CORRENTE
+ * (31/10/2026, print da corrente encaminhada). A regra dele para denúncia é *"só agradecemos as
+ * informações e desconversamos"*; o formulário de Nome e Cidade colado no fim do "estamos atentos"
+ * não é desconversar, e para quem só repassou uma corrente ele soa como resposta de máquina — o
+ * mesmo motivo do Odone (31/08), que repassava vídeo e recebia o formulário.
+ *
+ * Separada de `casoDeNegativa` porque aquela tem nome e testes de NEGATIVA, e denúncia não é um
+ * "não". Só o rascunho da IA lê esta; o formulário da rodada segue com `pedirDadosNaoCabe`.
+ */
+export const rascunhoSemCadastro = (c) => casoDeNegativa(c) || !!c?.denunciaOuCorrente;
+
+/**
+ * **Corrente ou denúncia repassada SEM a IA** (31/10/2026). O texto encaminhado casa palavras de
+ * conteúdo e a tecla 1 mandava o agradecimento (com o nome) + o modelo de conteúdo e CONCLUÍA —
+ * respondendo a um pedido que ela não fez. O desfecho seguro é o da regra dele para denúncia:
+ * agradecer as informações UMA vez, sem formulário, sem concluir.
+ *
+ * `modeloNaoCabe` trava a tecla 1 (o motivo aparece na caixa); `cabeAgradecerCorrente` oferece a
+ * tecla `c` com o texto fixo abaixo — sem saudação, sem nome, sem repetir o que ela escreveu, sem
+ * prometer nada. Nenhuma regra RECOMENDA a `c`: é escolha dele, como a tecla 8.
+ */
+export const TEXTO_AGRADECER_CORRENTE = 'Agradeço as informações. Estamos atentos e acompanhando o assunto.';
+
+export function modeloNaoCabe(c) {
+  return c?.denunciaOuCorrente
+    ? 'é corrente ou denúncia repassada — o conteúdo é do texto encaminhado, não um pedido dela'
+    : '';
+}
+
+export function cabeAgradecerCorrente(c, jaAgradecemos) {
+  return !!c?.denunciaOuCorrente && !jaAgradecemos;
+}
+
 export const REGRAS = [
   {
     id: 'sem-interesse',
@@ -739,6 +773,7 @@ export const REGRAS = [
      */
     quando: (c) =>
       c.podeEnviar &&
+      !c.denunciaOuCorrente &&
       !c.enviadoHoje &&
       !c.modeloJaNaConversa &&
       !c.temEtiquetaDeCidade &&
@@ -1206,6 +1241,8 @@ export const REGRAS = [
      */
     quando: (c) =>
       c.podeEnviar &&
+      // Corrente/denúncia repassada não é pedido de conteúdo — ver `modeloNaoCabe` (31/10/2026).
+      !c.denunciaOuCorrente &&
       !c.enviadoHoje &&
       !c.modeloJaNaConversa &&
       (!c.respondidoHoje || !!c.anuncioReconhecido || !!c.materialPendente),

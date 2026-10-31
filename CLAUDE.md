@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.243.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.244.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -671,6 +671,13 @@ mudaram as maos, nao a cabeca.
   cidade com a cidade da ficha na tela. `tirarPedidoDeCadastro` tira a frase no `sendTemplate`,
   antes dos dois ramos que escrevem no campo, so na rodada e so com municipio (`exata`) ou
   com `pedirDadosNaoCabe`. Devolver o texto intacto derruba 3 assercoes.
+  **CORRENTE, RASCUNHO VAZIO E A CHAVE DO MODELO (31/10, v3.244).** Texto longo com cara de
+  corrente ou denuncia nao cai na tecla 1 (agradecimento com nome + modelo + conclui). A tecla
+  `c` agradece uma vez, sem cadastro e sem concluir, e nenhuma regra a recomenda. Se o
+  agradecimento ja saiu, o prompt pede uma frase neutra e o texto vazio com
+  `naoHaOQueResponder` deixa de virar "a IA nao devolveu rascunho". A recusa do modelo tem o
+  texto dela. "Chamar a IA" olha a chave do modelo do rascunho, nao a das conferencias. O
+  cartao guarda o texto em `state.rascunhoDoCartao` porque o `withBusy` redesenha no finally.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

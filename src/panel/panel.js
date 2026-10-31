@@ -38,7 +38,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -353,6 +353,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * ajuda em nada: cada uma é recusada pela outra API.
      */
     iaChaves: { anthropic: false, openai: false },
+    /**
+     * **Há chave para o modelo do RASCUNHO?** (31/10/2026). `iaTemChave` é a das CONFERÊNCIAS
+     * (`ia.modelo`); o rascunho usa `ia.modeloRascunho`, que pode ser de outra casa. Com só a chave
+     * da OpenAI e o rascunho no gpt-5.6-luna, o botão "Chamar a IA" ficava desligado porque o
+     * modelo das conferências era Claude. Quem chama o RASCUNHO pergunta esta.
+     */
+    iaTemChaveRascunho: false,
+    /** O que o cartão "Chamar a IA" mostra — sobrevive ao `renderAll()` do `withBusy`. */
+    rascunhoDoCartao: null,
     /** As imagens que vão junto da mensagem, lidas do armazenamento — ver `campoDeImagem`. */
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
     /** O ponteiro de revezamento dos pares do lote — ver `lote.parDaVez`. */
@@ -662,6 +671,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.canalDoAtendimento = { estado: 'quieto', dono: null };
     state.numeroDoCanal = '';
     state.lidoPelaIA = null;
+    // O rascunho do cartão é DESTE contato; `rascunhoDoCartaoAtual` ainda confere o id.
+    state.rascunhoDoCartao = null;
     state.materialPelaRegra = null;
     state.anuncioSemResposta = null;
     // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
@@ -1713,6 +1724,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       openrouter: !!(await store.get('iaChaveOpenrouter')),
     };
     state.iaTemChave = !!state.iaChaves[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
+    // A do RASCUNHO é outra conta: o modelo pode ser de outra casa — ver `iaTemChaveRascunho`.
+    state.iaTemChaveRascunho = !!state.iaChaves[iaLib.provedorDoModelo(modeloDoRascunho())];
   }
 
   function fieldNamed(name) {
@@ -2424,6 +2437,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const botao = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Chamar a IA');
     const saida = h('textarea', { rows: '8', placeholder: 'O texto que foi para o campo de mensagem aparece aqui.' });
     const avisos = h('div', {});
+    /**
+     * **O texto sobrevive ao redesenho** (31/10/2026). `withBusy` chama `renderAll()` no `finally`,
+     * que monta este cartão de novo com uma `textarea` vazia: o texto ia para o campo de mensagem,
+     * e a cópia daqui sumia no mesmo instante. Guardado em `state.rascunhoDoCartao`, por contato.
+     */
+    const guardado = iaLib.rascunhoDoCartaoAtual(state.rascunhoDoCartao, state.contact?.id);
+    if (guardado) {
+      saida.value = guardado.texto;
+      for (const a of guardado.avisos) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
+    }
+    saida.addEventListener('input', () => {
+      if (state.rascunhoDoCartao && state.rascunhoDoCartao.contatoId === state.contact?.id) {
+        state.rascunhoDoCartao = { ...state.rascunhoDoCartao, texto: saida.value };
+      }
+    });
 
     botao.addEventListener('click', () =>
       withBusy(async () => {
@@ -2433,6 +2461,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (!r.ok) return setStatus(`Não saiu rascunho: ${r.motivo}`, 'err');
 
         saida.value = r.texto || '';
+        state.rascunhoDoCartao = { contatoId: state.contact?.id, texto: saida.value, avisos: [...(r.avisos || [])] };
         // Os avisos ficam ao lado do texto, e não numa barra de status que a próxima ação apaga:
         // são o que ele precisa reler ANTES de mandar, não enquanto o rascunho chega.
         for (const a of r.avisos || []) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
@@ -2463,9 +2492,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       avisos
     );
 
-    if (!state.iaTemChave) {
+    if (!state.iaTemChaveRascunho) {
       botao.disabled = true;
-      card.append(h('div', { class: 'wf-block' }, 'Sem chave da API cadastrada (aba Config) não há o que chamar.'));
+      // Diz QUAL chave falta: é a do modelo do RASCUNHO, não a das conferências.
+      const casa = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
+      card.append(h('div', { class: 'wf-block' },
+        `Sem a chave da ${casa} (o modelo do rascunho é ${modeloDoRascunho()}) — cadastre na aba Config.`));
     } else if (state.session?.expired) {
       botao.disabled = true;
       card.append(h('div', { class: 'wf-block' }, 'Janela de 24h vencida: texto livre não chega neste contato. Só modelo aprovado.'));
@@ -4346,14 +4378,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     // Caixa marcada que não faz nada é a armadilha que este painel já pagou: sem chave, a IA não
     // roda, e a rodada segue só com as regras.
+    /**
+     * **Duas chaves, dois avisos** (31/10/2026): o RASCUNHO (`modeloRascunho`) e as CONFERÊNCIAS
+     * (`modelo`) podem ser de casas diferentes. Sem a das conferências o rascunho continua
+     * funcionando — cidade e etiquetas só voltam a ser decididas sem a IA, como antes dela existir.
+     */
+    if (state.ia?.ligada && !state.iaTemChaveRascunho) {
+      const prov = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
+      card.append(
+        h('div', { class: 'wf-block' },
+          `A IA está ligada mas não há chave da ${prov} salva — o modelo do rascunho é dessa casa. ` +
+            'Cadastre na aba Config, senão ela não escreve nada.')
+      );
+    }
     if (state.ia?.ligada && !state.iaTemChave) {
       // Diz o PROVEDOR: com dois, "não há chave salva" manda procurar no campo errado — e o campo
       // do outro pode estar cheio, o que faz o aviso parecer defeito do painel.
       const prov = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
       card.append(
         h('div', { class: 'wf-block' },
-          `A IA está ligada mas não há chave da ${prov} salva — o modelo escolhido é dessa casa. ` +
-            'Cadastre na aba Config, senão ela não escreve nada.')
+          `Sem a chave da ${prov}, o modelo das CONFERÊNCIAS (cidade e etiquetas) não roda — elas ` +
+            'seguem sem a IA, como antes. O rascunho não depende desta chave.')
       );
     }
     return card;
@@ -10283,6 +10328,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         const { missing, reasons } = vars.render(agradecimento.text, contexto);
         modeloTravado = vars.explainMissing(missing, reasons);
       }
+      // Corrente/denúncia repassada: a tecla 1 some, com o motivo — ver `sugestao.modeloNaoCabe`.
+      const correnteNaRajada = denunciaOuCorrente(state.entrantes, state.nossaUltimaAt);
+      if (modelo && !modeloTravado) modeloTravado = sugestaoLib.modeloNaoCabe({ denunciaOuCorrente: correnteNaRajada });
       const podeEnviar = !!modelo && !modeloTravado;
 
       // A porta humana. O texto carrega o que foi classificado para conferência — o painel não
@@ -10849,6 +10897,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
         rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Denúncia política ou corrente encaminhada na rajada** (31/10/2026, print da corrente).
+         * Só cala o formulário no fim do rascunho da IA — ver `sugestao.rascunhoSemCadastro`.
+         */
+        denunciaOuCorrente: denunciaOuCorrente(state.entrantes, state.nossaUltimaAt),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
@@ -11585,7 +11638,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * de propósito, olhando aquela conversa. O que a tecla precisa é de chave cadastrada, e é
        * isso que ela pergunta. Sem chave, a opção não aparece e o 8 fica livre.
        */
-      if (state.iaTemChave) {
+      if (state.iaTemChaveRascunho) {
         opcoes.push({
           tecla: '8',
           valor: 'rascunhar',
@@ -11620,6 +11673,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       if (!perguntarAjudaTrava) {
         opcoes.push({ tecla: '9', valor: 'perguntarajuda', rotulo: 'Perguntar em que pode ajudar (deixa aberto)' });
+      }
+      // Tecla `c`: agradecer a corrente/denúncia UMA vez, sem formulário e sem concluir (31/10/2026).
+      if (sugestaoLib.cabeAgradecerCorrente({ denunciaOuCorrente: correnteNaRajada }, iaLib.jaAgradecemosADenuncia(conversaParaIA()))) {
+        opcoes.push({ tecla: 'c', valor: 'agradecercorrente', rotulo: 'Agradecer as informações uma vez (sem pedir dados, deixa aberto)' });
       }
 
       // Um lugar só decide o destaque. Antes eram três expressões independentes, e duas podiam
@@ -11937,6 +11994,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * Todas as outras teclas que enviam texto concluem. Esta não: o caso só se resolve com a
        * resposta dela, e concluir tiraria o contato da fila exatamente antes disso.
        */
+      if (escolha === 'agradecercorrente') {
+        // Grava a classificação SEM data de conclusão: o atendimento fica aberto, como pede a regra.
+        await saveClassification({ quiet: true });
+        const agradecer = { id: 'agradecer-corrente', name: 'Agradecer a corrente', text: sugestaoLib.TEXTO_AGRADECER_CORRENTE };
+        if (!(await sendTemplate(agradecer, { send: true, jaConfirmado: true }))) {
+          return pulouPorqueNaoSaiu(nome, agradecer.name);
+        }
+        return { nome, resultado: 'enviado', motivo: 'agradeci as informações da corrente uma vez — sem pedir dados, atendimento aberto' };
+      }
+
       if (escolha === 'perguntarajuda') {
         await saveClassification({ withCompletionDate: true, quiet: true });
         if (!(await sendTemplate(perguntarAjuda, { send: true, jaConfirmado: true }))) {
@@ -16031,7 +16098,10 @@ const CONTATOS_POR_PAGINA = 200;
   async function rascunharParaEle() {
     // `iaTemChave` e não `ia.ligada`: a caixa da rodada governa o gasto AUTOMÁTICO; um rascunho
     // pedido na tecla `i` é escolha dele, contato a contato. Sem chave não há o que chamar.
-    if (!state.iaTemChave) return { ok: false, enviado: false, motivo: 'não há chave da API cadastrada na aba Config' };
+    if (!state.iaTemChaveRascunho) {
+      const casa = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
+      return { ok: false, enviado: false, motivo: `não há chave da ${casa} (modelo do rascunho: ${modeloDoRascunho()}) na aba Config` };
+    }
     const dela = mensagensParaIA();
     if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
@@ -16052,7 +16122,8 @@ const CONTATOS_POR_PAGINA = 200;
     const pedirDadosNoRascunho =
       !!state.sinais &&
       !sugestaoLib.pedirDadosNaoCabe(state.sinais) &&
-      !sugestaoLib.casoDeNegativa(state.sinais);
+      // `rascunhoSemCadastro` = `casoDeNegativa` + denúncia/corrente (31/10/2026, a corrente).
+      !sugestaoLib.rascunhoSemCadastro(state.sinais);
 
     /**
      * **O ATENDIMENTO ANTERIOR vai para a IA** — pedido dele (16/09/2026): *"creio que o fluxo está
@@ -16271,7 +16342,9 @@ const CONTATOS_POR_PAGINA = 200;
       registrarNaRodada(
         state.contact?.name || 'contato',
         'aviso',
-        'a IA disse que não há o que responder, mas há PERGUNTA PENDENTE na conversa — mantive o rascunho'
+        String(rascunho?.texto || '').trim()
+          ? 'a IA disse que não há o que responder, mas há PERGUNTA PENDENTE na conversa — mantive o rascunho'
+          : 'a IA disse que não há o que responder e não escreveu texto, mas há PERGUNTA PENDENTE na conversa — responda à mão'
       );
     }
 
@@ -16549,6 +16622,8 @@ const CONTATOS_POR_PAGINA = 200;
     selRascunho.addEventListener('change', () =>
       withBusy(async () => {
         await salvarIA({ modeloRascunho: selRascunho.value });
+        // `iaTemChaveRascunho` é por PROVEDOR do modelo do rascunho: trocar de casa muda o botão.
+        await lerChavesDaIA();
         renderAll();
       })
     );

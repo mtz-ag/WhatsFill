@@ -1563,7 +1563,8 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
    * rodada passam pela mesma funcao.
    */
   const pulos = (painel.match(/return pulouPorqueNaoSaiu\(/g) || []).length;
-  check(pulos === 5, `os cinco "nao saiu" da rodada pulam e seguem (achei ${pulos})`);
+  // Seis desde 31/10/2026: a tecla `c` (agradecer a corrente uma vez) passa pela mesma funcao.
+  check(pulos === 6, `os seis "nao saiu" da rodada pulam e seguem (achei ${pulos})`);
   const ramo = painel.slice(painel.indexOf("escolha.startsWith('arvore:')"), painel.indexOf("escolha.startsWith('arvore:')") + 1800);
   const ramoExec = ramo.split('\n').filter((l) => {
     const t = l.trim();
