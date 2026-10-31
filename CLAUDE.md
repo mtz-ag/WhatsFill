@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.246.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.247.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -693,6 +693,13 @@ mudaram as maos, nao a cabeca.
   emoji de volta mandava a do momento. A guarda fica depois da decisao do fluxo e antes da IA.
   Nasce ligada (`concluirCortesiaSozinho`). Sem mensagem nossa antes, nao fecha. Devolver `null`
   em `cortesiaDeFechamento` derruba 18 assercoes.
+  **MOMENTO DE OUTRO DIA E DESILUSAO (31/10, v3.247).** Texto da tecla 5 que fala de outro dia da
+  semana ou de uma data passada (quinta-feira, 29 de outubro, num sabado) nao sai: a tecla some,
+  a Config avisa, e o comeco da rodada registra. Convite futuro ("2 de novembro", "domingo tem
+  encontro") segue. Desanimo com a politica vira desabafo: tecla 6, tom caloroso, sem formulario
+  e sem "estamos atentos". Abster-se num desabafo nao manda a mensagem do momento. Se ja falamos
+  hoje e ela respondeu com conteudo, o momento nao sai de novo. `datasForaDeHoje` devolvendo null
+  derruba 10 assercoes; desligar o ramo politico derruba 13.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

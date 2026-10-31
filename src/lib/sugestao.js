@@ -156,6 +156,30 @@ export function fecharPorCortesia(c, decisao, { ligado = true } = {}) {
 }
 
 /**
+ * **A mensagem do momento NÃO sai de novo no mesmo dia em cima de uma resposta dela** (31/10/2026).
+ * Às 14:04 já tinha saído um texto nosso de sábado; às 17:09 ela respondeu com desânimo, a IA se
+ * absteve e a rodada mandou a mensagem do momento — a segunda mensagem "do dia" na cara de quem
+ * tinha acabado de falar.
+ *
+ * **Qualquer fala nossa de hoje conta** (`respondidoHoje`, a hora da NOSSA última mensagem na
+ * conversa), e não só `momentoHoje`: este olha o id do texto ATUAL da Config, e o das 14:04 era
+ * outro texto (variação, Disparo ou mandado à mão). Pergunta-se à conversa, não ao registro.
+ *
+ * **"Respondeu com conteúdo"** é qualquer sinal de fala dela depois da nossa: pedido de resposta
+ * pessoal, pergunta, desabafo, denúncia. Reação, "obrigado" e despedida não contam — esses o
+ * fecho por cortesia conclui sem mandar nada.
+ */
+export function momentoDeNovoNaoCabe(c) {
+  if (!c || c.ultimaEhNossa) return null;
+  if (!c.respondidoHoje && !c.momentoHoje) return null;
+  const conteudo =
+    c.pedeRespostaPessoal || c.perguntaAberta || c.perguntaPendente || c.desabafoPessoal || c.denunciaOuCorrente ||
+    c.reclamaSemResposta || c.pedeAlgoIndefinido;
+  if (!conteudo) return null;
+  return { motivo: 'já falamos com ela hoje e ela respondeu com conteúdo depois — a mensagem do momento seria a segunda do dia' };
+}
+
+/**
  * **O rascunho fecha pedindo o cadastro?** — `casoDeNegativa` mais a DENÚNCIA e a CORRENTE
  * (31/10/2026, print da corrente encaminhada). A regra dele para denúncia é *"só agradecemos as
  * informações e desconversamos"*; o formulário de Nome e Cidade colado no fim do "estamos atentos"

@@ -3196,7 +3196,7 @@ export function pareceCorrente(texto) {
  * Exige forma de vida pessoal, não opinião: a raiva simples ("que raiva desse governo") só conta
  * com a família no meio; a ameaça ("vontade de matar", "vou matar") e a agressão contam sozinhas.
  *
- * @returns {{motivo:string, familia:boolean, conflito:boolean, raiva:boolean, agressao:boolean, sofrimento:boolean}|null}
+ * @returns {{motivo:string, familia:boolean, conflito:boolean, raiva:boolean, agressao:boolean, sofrimento:boolean, politico:boolean}|null}
  */
 const DESABAFO_FAMILIA =
   /(^|[^a-z])((minha|meu|minhas|meus)\s+(familia|parentes?|irma|irmao|irmas|irmaos|mae|pai|marido|esposa|mulher|filh[oa]s?|cunhad[oa]s?|sogr[oa]s?|tias?|tios?|prim[oa]s?|sobrinh[oa]s?|genro|nora|vizinh[oa]s?)|parentes|familiares|(na|da|com a|com minha)\s+familia)([^a-z]|$)/;
@@ -3210,6 +3210,24 @@ const DESABAFO_AGRESSAO =
 const DESABAFO_SOFRIMENTO =
   /(^|[^a-z])(estou|to|tou|ando|fiquei|me\s+sinto|sinto)\s+(muito\s+|tao\s+|bem\s+)?(triste|mal|arrasad[oa]|magoad[oa]|deprimid[oa]|sozinh[oa]|humilhad[oa]|destruid[oa]|abalad[oa])|(^|[^a-z])chor(ei|ando)([^a-z]|$)|nao\s+aguento\s+mais|(^|[^a-z])sofrendo([^a-z]|$)|doi\s+muito/;
 
+/**
+ * **Desilusão com a POLÍTICA também é desabafo** (31/10/2026): *"Eu não acredito mais no Brasil.
+ * Não adianta trabalhar e votar nas pessoas certas se elas mesmo, entregam o poder para a
+ * oposição."* Nenhum dos ramos acima casava (não há família nem briga), o caso subia à tecla 6
+ * como "falou algo próprio", `denunciaOuCorrente` lia "máfia do PT" como acusação, e a IA
+ * respondia frio (*"estamos atentos e acompanhando o assunto"*) ou se abstinha — e a abstenção
+ * mandava a mensagem do momento.
+ *
+ * Casa com DOIS sinais juntos: um de DESÂNIMO (não acredito mais, não adianta votar, perdi a
+ * esperança, desisti, cansei, decepcionada…) e um de POLÍTICA (Brasil, eleição, voto, políticos,
+ * oposição, direita, PT…). Só a raiva com o adversário, sem o desânimo, segue sendo o que era —
+ * quem xinga o PT está do nosso lado e não está desistindo.
+ */
+const DESABAFO_DESILUSAO =
+  /nao\s+(acredito|confio)\s+mais|perdi\s+(a|toda\s+a|minha)\s+(esperanca|fe|confianca|vontade)|sem\s+esperanca|nao\s+(adianta|vale\s+a\s+pena|tem\s+(mais\s+)?jeito)|(^|[^a-z])(desist(i|o|imos|ir|indo)|vou\s+desistir|cansei|cansad[oa]s?\s+de|desanimad[oa]s?|desanimo|desiludid[oa]s?|decepcionad[oa]s?|decepcao|desgosto|desesperanc)([^a-z]|$)|(acabou|perdemos)\s+o\s+(brasil|pais)|o\s+(brasil|pais)\s+(acabou|nao\s+tem\s+(mais\s+)?jeito|esta\s+perdido)|(^|[^a-z])(tristeza|vergonha)\s+(de|do|da|desse|deste)\s+(pais|brasil|politica)/;
+const DESABAFO_POLITICA =
+  /(^|[^a-z])(brasil|(o|nosso|este|esse|neste|nesse|do|no)\s+pais|politic[ao]s?|eleic(ao|oes)|eleitor|vot(ar|o|ei|amos|aram)|urna|oposicao|direita|esquerda|pt|lula|governo|congresso|stf|senado|deputad[oa]s?|presidente|o\s+poder|democracia|ladr(ao|oes)|mafia|corrupc\w*|covardes?|frouxos?)([^a-z]|$)/;
+
 export function desabafoPessoal(entrantes, nossaUltimaAt) {
   const t = desdeNossaUltima(entrantes, nossaUltimaAt)
     .filter((m) => !m?.sistema && !m?.anuncio)
@@ -3222,15 +3240,21 @@ export function desabafoPessoal(entrantes, nossaUltimaAt) {
   const raiva = ameaca || (familia && DESABAFO_RAIVA.test(t));
   const agressao = DESABAFO_AGRESSAO.test(t);
   const sofrimento = DESABAFO_SOFRIMENTO.test(t);
-  const casa = agressao || ameaca || (familia && (conflito || raiva || sofrimento)) || (sofrimento && conflito);
-  if (!casa) return null;
+  const politico = DESABAFO_DESILUSAO.test(t) && DESABAFO_POLITICA.test(t);
+  const pessoal = agressao || ameaca || (familia && (conflito || raiva || sofrimento)) || (sofrimento && conflito);
+  if (!pessoal && !politico) return null;
+  // Só a desilusão política, sem o drama de casa: o ramo próprio de `ia.linhaDoDesabafo`.
+  if (!pessoal) {
+    return { motivo: 'desabafo pessoal (desilusão com a política)', familia, conflito, raiva, agressao, sofrimento, politico: true };
+  }
   const partes = [
     familia && conflito ? 'briga na família' : familia ? 'assunto de família' : conflito ? 'briga' : '',
     sofrimento ? 'sofrimento' : '',
     raiva ? 'raiva/vontade de fazer mal' : '',
     agressao ? 'agressão' : '',
+    politico ? 'desilusão com a política' : '',
   ].filter(Boolean);
-  return { motivo: `desabafo pessoal (${partes.join(', ')})`, familia, conflito, raiva, agressao, sofrimento };
+  return { motivo: `desabafo pessoal (${partes.join(', ')})`, familia, conflito, raiva, agressao, sofrimento, politico: false };
 }
 
 /**

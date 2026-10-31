@@ -380,6 +380,10 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       !!quandoFalamos &&
       !Number.isNaN(new Date(quandoFalamos).getTime()) &&
       new Date(quandoFalamos).toDateString() === new Date(agora || Date.now()).toDateString();
+    const desabafoDela = desabafoPessoal(
+      lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).map((m) => ({ texto: m.texto, at: m.at })),
+      null
+    );
     return {
       /**
        * `chapa` liga a conferência de cargo e número — ver `ia.conferirChapa`. Ela **não depende
@@ -392,10 +396,9 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
         /** Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes. */
         jaAgradecemosADenuncia: jaAgradecemosADenuncia(mensagens),
         /** Desabafo e pergunta de cargo (31/10/2026) — as travas de `travasDoEscopo`. */
-        desabafo: !!desabafoPessoal(
-          lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).map((m) => ({ texto: m.texto, at: m.at })),
-          null
-        ),
+        desabafo: !!desabafoDela,
+        /** Desilusão com a política (31/10/2026) — ver `ia.linhaDaDesilusao`. */
+        desabafoPolitico: !!desabafoDela?.politico,
         perguntouSoOCargo:
           perguntouOCargo(lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).map((m) => m.texto)) &&
           !perguntouDaTransicao(lista.filter((m) => m.de !== 'nos').map((m) => m.texto)),

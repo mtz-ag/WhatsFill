@@ -1,4 +1,43 @@
-## 2026-10-31 - v3.246.0 - ESTADO DE AGORA - quem so agradeceu depois da nossa e concluido
+## 2026-10-31 - v3.247.0 - ESTADO DE AGORA - momento de outro dia e desilusao
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.247.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.247.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Abra a aba Automatizado. Se a mensagem do momento ainda fala de quinta-feira ou de 29 de
+   outubro, o cartao avisa em vermelho. Atualize o texto. Enquanto estiver vencido, a rodada
+   nao manda a tecla 5
+5. Apague o texto que ja estiver no campo deste atendimento. Nao de Enter por cima dele
+
+### O QUE MUDOU
+
+Num sabado a rodada colocou no campo o texto salvo de quinta-feira, 29 de outubro. A tecla 5
+so olhava variavel faltando. Agora um dia da semana em tom de saudacao, ou uma data que ja
+passou, trava a tecla, avisa na Config e no comeco da rodada. Convite futuro ("2 de novembro",
+"domingo tem encontro") continua valendo.
+
+Quem escreveu que nao acredita mais no Brasil caia como denuncia: "estamos atentos", ou a IA
+se abstinha e o fallback mandava a mensagem do momento — a segunda do dia, depois de um texto
+nosso das 14:04. Agora e desabafo: tecla 6, resposta calorosa, sem formulario e sem abstencao.
+Se ja falamos hoje e ela respondeu com conteudo, a mensagem do momento nao sai de novo.
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Concordancia do tratamento. Conferencia do canal desligada.
+Importacao continua nao contando como retorno. Envio automatico continua desligado.
+Fecho por cortesia continua ligado. Emoji na primeira visita continua na mensagem do
+momento, se o texto dela for de hoje. "Boa tarde" na primeira visita continua nas
+boas-vindas. A rodada continua sendo uma passada.
+
+Prova: `datasForaDeHoje` devolvendo null derruba 10 assercoes. Desligar o ramo politico
+derruba 13.
+
+## 2026-10-31 - v3.246.0 - quem so agradeceu depois da nossa e concluido
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.246.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

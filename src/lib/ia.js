@@ -2749,7 +2749,42 @@ export const TOM_DO_DESABAFO =
   'porque você é muito importante. Cuide desse machucado na cabeça e, se voltarem a te agredir, ligue ' +
   'para o 190. / Estou com você. Se cuide!';
 
+/**
+ * **O tom aprovado da DESILUSÃO POLÍTICA** (31/10/2026): *"Eu não acredito mais no Brasil…"*.
+ * A IA respondia como a denúncia (*"agradeço as informações; estamos atentos e acompanhando o
+ * assunto"*) ou se abstinha, e a abstenção mandava a mensagem do momento. Pedido dele: resposta
+ * CALOROSA, curta, emotiva, na primeira pessoa como o Capitão Martim, deputado estadual — acolhe
+ * o sentimento sem recontar, encoraja a não desistir, sem prometer e sem ataque.
+ */
+export const TOM_DA_DESILUSAO =
+  'Sei o quanto dói ver tanta coisa errada e sentir que o nosso esforço não vale a pena. Esse cansaço é ' +
+  'de quem se importa de verdade com o Brasil. / Mas não desista. Gente como você, que trabalha e vota ' +
+  'com consciência, é quem faz a diferença, e eu sigo firme, todos os dias, com a sua força junto. / ' +
+  'Conte comigo. Não desista do Brasil!';
+
+export function linhaDaDesilusao({ cargoPerguntado = false, candidato = null } = {}) {
+  return [
+    'DESABAFO DE DESILUSÃO COM A POLÍTICA: ela não pediu nada — ela está DESANIMADA. Responda com CALOR e ',
+    'emoção, como quem sente junto, na primeira pessoa, como o próprio Capitão Martim, em 2 ou 3 parágrafos ',
+    'CURTOS. ',
+    cargoPerguntado ? `Abra respondendo a pergunta do cargo em UMA frase ("Sou ${cargoDe(candidato)}."). ` : '',
+    'Acolha o sentimento SEM recontar o que ela escreveu (nada de "entendo a sua frustração com…", "você ',
+    'disse que…", "Respeito a sua frustração"). Encoraje a não desistir: a voz e o voto dela importam, e ',
+    'você segue firme na luta. Agradeça de coração por seguir do nosso lado. Feche com apoio ("Conte ',
+    'comigo. Não desista!"). ',
+    'Esta fala PEDE resposta: NÃO marque naoHaOQueResponder e NÃO responda como denúncia — nada de ',
+    '"agradeço as informações", "estamos atentos", "acompanhando o assunto". ',
+    'PROIBIDO aqui: QUALQUER pergunta; prometer resultado (mudar o país, resolver, reverter, "vamos ',
+    'vencer"); atacar ou xingar pessoa ou partido, e repetir as acusações dela (máfia, ladrão, roubo, ',
+    'fraude, covardes); explicação política (secretaria, 2027, governador, Zucco, eleição) que ela não ',
+    'pediu; pedir nome, cidade ou cadastro; falar de urgência ou prioridade; prometer levar o assunto a ',
+    'alguém; "nossa equipe"/"aqui é a equipe"; nota interna; chamar pelo nome. ',
+    `TOM aprovado (adapte; tire o que não couber; "/" é troca de parágrafo): "${TOM_DA_DESILUSAO}"`,
+  ].join('');
+}
+
 export function linhaDoDesabafo(d, { cargoPerguntado = false, candidato = null } = {}) {
+  if (d?.politico) return linhaDaDesilusao({ cargoPerguntado, candidato });
   return [
     `DESABAFO PESSOAL (${String(d?.motivo || '').replace(/^desabafo pessoal \(|\)$/g, '')}): responda com CALOR, como quem se importa de verdade — `,
     'na primeira pessoa, como o próprio deputado, em 3 ou 4 parágrafos curtos. ',
@@ -3202,8 +3237,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       'máquina, e a segunda vez não acrescenta nada. Se a resposta certa já foi dada e ela insiste, ' +
       'responda o que há de NOVO na fala dela. **Não havendo nada novo, NÃO escreva outro ' +
       'agradecimento nem outro "estamos acompanhando" com outras palavras** — isso é a repetição, ' +
-      'só que disfarçada. Marque o campo naoHaOQueResponder e o atendimento manda a mensagem do dia ' +
-      'no seu lugar.',
+      'só que disfarçada. ' +
+      // Desabafo (31/10/2026): "marque e a mensagem do dia vai no lugar" mandava a mensagem do
+      // momento a quem estava desanimada. Desabafo sempre tem o que responder.
+      (desabafo
+        ? 'Num DESABAFO isto não vale: ela sempre tem o que ouvir. NÃO marque naoHaOQueResponder — ' +
+          'acolha o que há de novo no sentimento dela, sem repetir a nossa última fala.'
+        : 'Marque o campo naoHaOQueResponder e o atendimento manda a mensagem do dia no seu lugar.'),
     /**
      * **A regra do anúncio, colada no pedido, e só quando há clique na conversa** — print da Leonir
      * (12/09/2026): o rascunho agradeceu *"o seu apoio ao Flávio, ao Zucco e ao Capitão Martim"* a
@@ -3527,6 +3567,11 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
   falouDeUrgencia: 'fala de urgência, prioridade ou de avaliar o pedido — isso não se diz ao contato',
   /** Desabafo (31/10/2026): pergunta convida a mais desabafo; o formulário soa como máquina. */
   perguntouNoDesabafo: 'faz pergunta a quem está desabafando — a resposta de desabafo acolhe e não pergunta nada',
+  /** Desabafo (31/10/2026): a abstenção mandava a mensagem do momento. */
+  absteveNoDesabafo: 'a IA disse que não há o que responder a um desabafo — desabafo pede resposta calorosa, responda você',
+  /** Desilusão política (31/10/2026): não é denúncia nem palanque. */
+  frioNaDesilusao: 'respondeu a desilusão como denúncia ("agradeço as informações"/"estamos atentos") — ela pede acolhimento',
+  atacouNaDesilusao: 'repetiu acusação ou atacou alguém (máfia, ladrão, roubo, fraude) na resposta à desilusão política',
   cadastroNoDesabafo: 'pede nome e cidade a quem está desabafando — o formulário não cabe aqui',
   /** Perguntou só o cargo e o rascunho explicou a secretaria / 2027 / Zucco (31/10/2026). */
   explicouATransicao: 'explica secretaria, 2027 ou o governo do Zucco a quem só perguntou o cargo — responda só o cargo de hoje',
@@ -3998,6 +4043,16 @@ export function travasDoEscopo(texto, contexto = {}) {
   if (contexto?.desabafo) {
     if (/\?/.test(t)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.perguntouNoDesabafo);
     if (/Nome\s*,\s*Cidade/.test(t)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.cadastroNoDesabafo);
+  }
+  // Desilusão política (31/10/2026): nem o tom da denúncia, nem o palanque.
+  if (contexto?.desabafoPolitico) {
+    const sa = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (/agrade\w*\s+(pel[ao]s?\s+|as\s+)?informac|estamos\s+atentos|acompanhando\s+o\s+assunto/.test(sa)) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.frioNaDesilusao);
+    }
+    if (/(^|[^a-z])(mafia|ladr(ao|oes|a)|roub\w*|fraud\w*|bandid\w*|covard\w*|frouxo\w*)([^a-z]|$)/.test(sa)) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.atacouNaDesilusao);
+    }
   }
   // Perguntou só o cargo (31/10/2026): a transição não entra — ver `perguntouOCargo`.
   if (contexto?.perguntouSoOCargo && /secretar|defesa\s+civil|2027|\bposse\b|zucco/i.test(t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
@@ -4633,7 +4688,26 @@ export const AVISO_ABSTENCAO_SEM_TEXTO =
 /** O JSON chegou, mas o campo `texto` veio vazio sem a abstenção marcada. */
 export const AVISO_TEXTO_EM_BRANCO = 'a IA devolveu o JSON com o campo texto em branco';
 
+/**
+ * **Desabafo não admite abstenção** (31/10/2026): `naoHaOQueResponder` faz a rodada automática
+ * mandar a mensagem do momento, e foi assim que a desilusão recebeu o texto da quinta-feira.
+ * Com desabafo no contexto a abstenção vira aviso que impede o envio: o caso volta a ser de quem
+ * atende, nunca o momento.
+ */
 export function validarRascunho(bruto, agora, contexto = {}) {
+  const r = validarRascunhoCru(bruto, agora, contexto);
+  if (!contexto?.desabafo || !r?.naoHaOQueResponder) return r;
+  const avisos = [...(r.avisos || []), AVISOS_QUE_IMPEDEM_ENVIO.absteveNoDesabafo];
+  return {
+    ...r,
+    naoHaOQueResponder: false,
+    precisaDeRevisao: true,
+    avisos,
+    ...(r.opcoes ? { opcoes: r.opcoes.map((o, i) => (i === 0 ? { ...o, naoHaOQueResponder: false, precisaDeRevisao: true, avisos } : o)) } : {}),
+  };
+}
+
+function validarRascunhoCru(bruto, agora, contexto = {}) {
   const vazio = { texto: '', confianca: 0, motivo: '', avisos: ['a IA não devolveu rascunho'], precisaDeRevisao: true, naoHaOQueResponder: false, naoCabePedirOCadastro: false };
 
   let d = bruto;

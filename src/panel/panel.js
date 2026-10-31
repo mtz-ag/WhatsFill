@@ -42,6 +42,7 @@ import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, c
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
+import { momentoDesatualizado, avisoMomentoDesatualizado } from '../lib/data-do-texto.js';
 
 const GROUP_TEMPLATE_ID = 'link-grupo';
 const THANKS_TEMPLATE_ID = 'agradecimento';
@@ -3158,6 +3159,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const reasons = renderizado.reasons;
 
     /**
+     * **A mensagem do momento que fala de OUTRO dia não sai, por nenhum caminho** (31/10/2026:
+     * num sábado saiu para o campo o texto de quinta-feira, 29 de outubro). Esta é a última porta
+     * de todo envio da mensagem do momento — a tecla 5 da rodada, o fluxo, o fallback da IA que
+     * se absteve; a trava da rodada (`momentoTrava`) já tira a tecla antes.
+     */
+    if (String(template?.id || '').startsWith('momento:')) {
+      const vencido = momentoDesatualizado(template);
+      if (vencido) {
+        const aviso = avisoMomentoDesatualizado(vencido);
+        setStatus(aviso, 'err');
+        return anotarEnvioQueNaoSaiu(aviso);
+      }
+    }
+
+    /**
      * **A cidade ja esta no cadastro e a boas-vindas ainda pede nome e cidade** (31/10/2026,
      * print dele: o cabecalho mostra a cidade vinda do cadastro, a origem e importacao, e o
      * campo pede nome e cidade do mesmo jeito).
@@ -4665,7 +4681,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     area.value = cfg.mensagemMomento || '';
     area.addEventListener('change', () => salvarAuto({ mensagemMomento: area.value }).then(renderAll));
     card.append(area);
-
+    // 31/10/2026: o texto salvo falava de quinta-feira/29 de outubro num sábado.
+    const vencidoNaConfig = momentoDesatualizado({ text: cfg.mensagemMomento, variantes: cfg.mensagemMomentoVariantes });
+    if (vencidoNaConfig) {
+      card.append(h('div', { class: 'wf-hint wf-err' },
+        `⚠ ${avisoMomentoDesatualizado(vencidoNaConfig)}. Enquanto isso a rodada não manda a mensagem do momento ` +
+          '(nem as variações) — pula a tecla 5 e deixa o caso com você.'));
+    }
 
     if (cfg.mensagemMomento) {
       card.append(h('div', { class: 'wf-hint' }, 'Variáveis: ' + vars.KNOWN_VARS.map(([v]) => v).join(' ')));
@@ -7111,6 +7133,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           text: base,
           variantes: state.auto.cfg.mensagemMomentoVariantes,
         };
+        // 31/10/2026: texto de quinta-feira num sábado não sai nem pela tecla.
+        const vencido = momentoDesatualizado(templateMomento);
+        if (vencido) return { ok: false, motivo: avisoMomentoDesatualizado(vencido) };
         bruto = String((await templatesLib.varianteAtual(templateMomento)) || '').trim();
       } else {
         bruto = String(item.texto || '').trim();
@@ -8289,6 +8314,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * **Avisa e SEGUE**: a rodada ainda conclui, reabre e etiqueta sem mandar nada, e barrar aqui
      * transformaria um campo em branco em rodada travada. É a mesma escolha da barreira do canal.
      */
+    /**
+     * **A mensagem do momento fala de outro dia?** (31/10/2026.) Dito no começo da rodada, em
+     * qualquer perfil: a rodada segue, mas sem a tecla 5 — e quem lê o Andamento sabe por quê
+     * antes do primeiro contato.
+     */
+    {
+      const vencido = momentoDesatualizado({
+        text: state.auto.cfg.mensagemMomento,
+        variantes: state.auto.cfg.mensagemMomentoVariantes,
+      });
+      if (vencido) {
+        registrarNaRodada('rodada', 'aviso', `${avisoMomentoDesatualizado(vencido)} — a rodada não vai mandar a mensagem do momento`);
+        setStatus(avisoMomentoDesatualizado(vencido), 'err');
+      }
+    }
     if (!percorrer && perfilAtivo() !== perfisLib.PERFIL_PADRAO) {
       const faltando = [];
       if (!String(state.auto.cfg.mensagemMomento || '').trim()) faltando.push('a mensagem do momento');
@@ -10086,6 +10126,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // `let`: o texto pode ganhar o pedido de dados mais abaixo, e a trava por variável tem
       // que valer para o texto que REALMENTE vai sair.
       let momentoTrava = momento ? vars.render(momento.text, contexto).missing.length > 0 : true;
+      /**
+       * **Texto de outro dia trava a tecla 5** (31/10/2026: o texto salvo de "quinta-feira, 29 de
+       * outubro" foi para o campo num sábado). Mesma disciplina da variável faltando: a tecla SOME,
+       * o fluxo vê `podeMandarMomento` falso e o motivo vai para o log.
+       */
+      const momentoVencido = momento ? momentoDesatualizado(momento) : null;
+      if (momentoVencido) momentoTrava = true;
 
       // A pergunta de interesse (tecla 7): só faz sentido para quem NÃO tem etiqueta de
       // conteúdo. Quem já pediu conteúdo tem modelo para receber, não pergunta.
@@ -10331,7 +10378,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         momento.name = 'Mensagem do momento + pedir nome e cidade';
         momento.text = `${momento.text}\n\n${pedidoJunto}`;
         momento.variantes = (momento.variantes || []).map((v) => `${String(v || '').trim()}\n\n${pedidoJunto}`);
-        momentoTrava = vars.render(momento.text, contexto).missing.length > 0;
+        momentoTrava = vars.render(momento.text, contexto).missing.length > 0 || !!momentoVencido;
       }
 
       // Nome errado — o apelido automático do anúncio ("[NOVO] (51) 9…") ou qualquer cadastro
@@ -11793,7 +11840,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           // A regra recomendou uma tecla que não está na lista (travada por variável faltando,
           // por exemplo). Cai na caixa, com o motivo no log — silêncio aqui viraria "a rodada
           // ignorou a regra" sem ninguém conseguir dizer por quê.
-          registrarNaRodada(nome, 'aviso', `o fluxo pediu ${sugestao.resposta ? `a resposta "${sugestao.resposta}"` : `a tecla ${sugestaoLib.mostrarTecla(sugestao.tecla)}`} ("${sugestao.id}"), que não está disponível agora — decida você`);
+          registrarNaRodada(nome, 'aviso', `o fluxo pediu ${sugestao.resposta ? `a resposta "${sugestao.resposta}"` : `a tecla ${sugestaoLib.mostrarTecla(sugestao.tecla)}`} ("${sugestao.id}"), que não está disponível agora${sugestao.tecla === '5' && momentoVencido ? ` (${avisoMomentoDesatualizado(momentoVencido)})` : ''} — decida você`);
         } else if (sugestao.tecla === '6') {
           registrarNaRodada(nome, 'aviso', `regra "${sugestao.id}": ${sugestao.motivo} — precisa de você`);
         } else {
@@ -11829,9 +11876,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **Sem a mensagem do momento disponível** (travada por variável, ou já enviada hoje) o caso
        * volta a ser dele, com o motivo no log — inventar outro desfecho aqui seria a caixa muda.
        */
-      if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica()) {
+      /**
+       * **Segunda mensagem do momento no mesmo dia, em cima de uma resposta dela: nunca sozinha**
+       * (31/10/2026). Às 14:04 já tinha saído um texto nosso (outro texto, por isso `momentoHoje`,
+       * que olha só o id do texto ATUAL, era falso); às 17:09 ela respondeu com conteúdo, a IA se
+       * absteve e este fallback mandou o momento de novo. Qualquer fala nossa de hoje conta, venha
+       * de onde vier — ver `sugestao.momentoDeNovoNaoCabe`.
+       */
+      const momentoNaoCabe = sugestaoLib.momentoDeNovoNaoCabe(sinaisDoContato);
+      if (escolhaAutomatica === 'momento' && momentoNaoCabe) {
+        registrarNaRodada(nome, 'aviso', `não mandei a mensagem do momento: ${momentoNaoCabe.motivo} — decida você`);
+        escolhaAutomatica = null;
+      }
+      if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica() && momentoNaoCabe) {
+        registrarNaRodada(nome, 'aviso', `a IA não achou o que responder, mas ${momentoNaoCabe.motivo} — não mando a mensagem do momento; decida você`);
+      } else if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica()) {
         const alvoMomento = opcoes.find((o) => o.valor === 'momento');
-        if (alvoMomento) {
+        if (momentoVencido) {
+          registrarNaRodada(nome, 'aviso', `a IA não achou o que responder — ${avisoMomentoDesatualizado(momentoVencido)}; decida você`);
+        } else if (alvoMomento) {
           registrarNaRodada(nome, 'aviso', `a IA não achou o que responder — mandando ${alvoMomento.rotulo}`);
           escolhaAutomatica = alvoMomento.valor;
         } else {
