@@ -38,7 +38,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -4502,6 +4502,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'concluído em silêncio, e as protecões que não enviam nada — sem interesse, assessor, ' +
           'presença confirmada, endereço informado e a etiqueta que dispensa da fila. Na CHEGADA ' +
           'pelo anúncio, o recibo ainda vence o tempo: essa posição é do seu quadro.')
+    );
+    card.append(
+      checkbox(
+        'Concluir sozinho quem só agradeceu ou retribuiu depois da nossa resposta (sem mandar nada)',
+        state.auto.cfg.concluirCortesiaSozinho !== false,
+        (v) => salvarAuto({ concluirCortesiaSozinho: v }).then(renderAll)
+      ),
+      h('div', { class: 'wf-origin' },
+        'Nasce marcado. Não envia nada: assume, resolve e tira da fila quem só cumprimentou, ' +
+          'agradeceu ou retribuiu depois da nossa, dentro do limite de horas acima. Desmarcado, ' +
+          'o fluxo decide — e no dia seguinte, com mensagem do momento nova, manda de novo.')
     );
     card.append(
       h('div', { class: 'wf-origin' },
@@ -10914,6 +10925,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * tecla 6, nunca para uma resposta pronta.
          */
         desabafoPessoal: desabafoPessoal(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Só agradeceu ou retribuiu depois da nossa** (31/10/2026) — ver `sugestao.fecharPorCortesia`.
+         * A janela é a mesma do contexto perdido (nasce em 48; 0 vira 48 aqui, porque fechar sem
+         * janela concluiria conversa antiga).
+         */
+        cortesiaDeFechamento: cortesiaDeFechamento(state.entrantes, state.nossaUltimaAt, {
+          janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,
+        }),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
@@ -11228,6 +11247,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * opinião ali não muda o resultado — foi o excesso oposto, o que mandou mensagem para quem
        * só disse "Amém".
        */
+      /**
+       * **Só agradeceu ou retribuiu depois da nossa resposta: conclui, sem mandar nada** (31/10/2026).
+       * A conta e as guardas moram em `sugestao.fecharPorCortesia`. A caixa da Config
+       * (`concluirCortesiaSozinho`, nasce LIGADA) desliga. Na rodada perguntada vira a recomendação;
+       * na automática a tecla 3 sai sozinha, e por isso esta troca fica ANTES de a IA ser chamada.
+       */
+      const fechoDeCortesia = sugestaoLib.fecharPorCortesia(sinaisDoContato, sugestao, {
+        ligado: state.auto.cfg.concluirCortesiaSozinho !== false,
+      });
+      if (fechoDeCortesia) {
+        if (fechoDeCortesia.id !== sugestao?.id) registrarNaRodada(nome, 'info', fechoDeCortesia.motivo);
+        sugestao = fechoDeCortesia;
+      }
+
       const regraPedeGente = sugestao?.tecla === '6';
 
       /**
@@ -12160,7 +12193,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         await saveClassification({ withCompletionDate: true, quiet: true });
         const fechou = await concluirPeloPainel();
         if (!fechou.ok) {
-          return { nome, resultado: 'pulado', motivo: `você mandou concluir, mas ${fechou.reason}` };
+          // `resolver` sem `reason` imprimia "você mandou concluir, mas undefined" (31/10/2026).
+          const porque = fechou.reason || (fechou.estado ? `a plataforma ficou em "${fechou.estado}"` : 'não consegui confirmar que resolveu');
+          return { nome, resultado: 'pulado', motivo: `${escolhaAutomatica != null ? 'o fluxo mandou concluir' : 'você mandou concluir'}, mas ${porque}` };
         }
         if (fechou.dialogOpen) {
           return {
@@ -12170,7 +12205,13 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             motivo: 'a plataforma pediu um motivo de conclusão — responda o diálogo',
           };
         }
-        return { nome, resultado: 'concluido', motivo: 'concluído sem enviar, a seu pedido' };
+        return {
+          nome,
+          resultado: 'concluido',
+          motivo: escolhaAutomatica != null
+            ? `concluído sem enviar pelo fluxo ("${sugestao?.id || 'sem regra'}"): ${sugestao?.motivo || ''}`
+            : 'concluído sem enviar, a seu pedido',
+        };
       }
 
       if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {

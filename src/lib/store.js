@@ -1108,6 +1108,14 @@ const DEFAULTS = {
     horasContextoPerdido: 48,
 
     /**
+     * **Concluir sozinho quem só agradeceu ou retribuiu depois da nossa resposta** (31/10/2026).
+     * Não envia nada: assume, resolve e tira da fila. Nasce LIGADA por isso. Desmarcada, o fluxo
+     * volta a decidir — e no dia seguinte, com mensagem do momento nova, manda de novo.
+     * A janela é a mesma de `horasContextoPerdido`. Ver `sugestao.fecharPorCortesia`.
+     */
+    concluirCortesiaSozinho: true,
+
+    /**
      * **A rodada dos NOVOS anda sozinha** — pedido dele (03/09/2026): *"nos novos as mensagens
      * raramente saem do contexto, faça um botão para mandar mensagem automática nos novos, um box
      * de marcar automático ligado"*.

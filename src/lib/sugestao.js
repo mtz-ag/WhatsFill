@@ -114,6 +114,48 @@ export const pedirDadosNaoCabe = (c) =>
 export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego || c?.semInteresse);
 
 /**
+ * **A conversa fechou por cortesia: conclui sem mandar nada** (31/10/2026). Recebeu a mensagem
+ * do momento, respondeu "Boa tarde obrigado igualmente" e ficou em "Aguardando atendente".
+ * Pedido dele: *"preciso que resolva caso já tenha sido respondido ou o fluxo assumir que pode
+ * ser resolvido (concluído)"*.
+ *
+ * O fluxo já concluía esse caso por acaso (`ja-respondemos-antes`, quando já respondemos hoje).
+ * No dia seguinte, com mensagem do momento nova, mandava a tecla 5. "Valeu capitão, tmj" levava
+ * o agradecimento (tecla `i`). Um 🙏 de volta levava a mensagem do momento.
+ *
+ * Devolve a decisão "tecla 3 — conclui sem enviar" ou `null`. Nunca troca tecla 6, ramo da IA,
+ * tecla 2, sem interesse, nem nada com pendência. A caixa da Config (`ligado: false`) desliga.
+ */
+const TECLAS_QUE_NAO_SE_TROCAM = new Set(['6', '2', 's']);
+
+export function fecharPorCortesia(c, decisao, { ligado = true } = {}) {
+  if (!ligado || !c?.cortesiaDeFechamento) return null;
+  if (c.ultimaEhNossa === true || c.ultimaEhNossa === 'vazia') return null;
+  if (decisao && (decisao.ia || TECLAS_QUE_NAO_SE_TROCAM.has(decisao.tecla))) return null;
+  const pendente = [
+    'perguntaAberta', 'perguntaPendente', 'pedeRespostaPessoal', 'desabafoPessoal', 'denunciaOuCorrente',
+    'pedeAlgoIndefinido', 'pedeAjudaFinanceira', 'pedeEmprego', 'pedeLigacao', 'pedeFalarComDeputado',
+    'materialPendente', 'reclamaSemResposta', 'naoPodeFalarAgora', 'semInteresse', 'respondeuOsDados',
+    'respondeuComoAjudar', 'confirmouPresenca', 'informouEndereco', 'rajadaDeAnuncios', 'voltouPorOutroAnuncio',
+    'conteudoPedido',
+  ].find((k) => !!c[k]);
+  if (pendente) return null;
+  if (decisao?.tecla === '3' && !decisao.resposta) {
+    return { ...decisao, motivo: `${c.cortesiaDeFechamento.motivo} — ${decisao.motivo || 'conclui sem enviar'}` };
+  }
+  return {
+    id: 'fechou-por-cortesia',
+    tecla: '3',
+    resposta: null,
+    ia: false,
+    motivo: `${c.cortesiaDeFechamento.motivo}, e não há nada pendente — concluo sem enviar` +
+      (decisao ? ` (o fluxo ia: ${decisao.resposta ? `mandar "${decisao.resposta}"` : `tecla ${decisao.tecla}`})` : ''),
+    caminho: [...(decisao?.caminho || []), 'fechou-por-cortesia'],
+    empate: [],
+  };
+}
+
+/**
  * **O rascunho fecha pedindo o cadastro?** — `casoDeNegativa` mais a DENÚNCIA e a CORRENTE
  * (31/10/2026, print da corrente encaminhada). A regra dele para denúncia é *"só agradecemos as
  * informações e desconversamos"*; o formulário de Nome e Cidade colado no fim do "estamos atentos"

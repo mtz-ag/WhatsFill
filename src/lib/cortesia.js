@@ -559,6 +559,86 @@ export function desdeNossaUltima(entrantes, nossaUltimaAt) {
   });
 }
 
+/**
+ * **Ela só AGRADECEU ou RETRIBUIU depois da nossa resposta — a conversa fechou** (31/10/2026).
+ * Recebeu a mensagem do momento, respondeu "Boa tarde obrigado igualmente" e ficou em
+ * "Aguardando atendente". Pedido dele: *"preciso que resolva caso já tenha sido respondido ou o
+ * fluxo assumir que pode ser resolvido"*.
+ *
+ * `ehDespedida` e `soCortesia` deixavam "igualmente" e "gratidão" sobrando como conteúdo. Esta
+ * conta é mais estreita:
+ *
+ *  - exige uma mensagem NOSSA antes (é resposta ao que mandamos, nunca a chegada — emoji na
+ *    primeira visita continua com a mensagem do momento);
+ *  - a primeira dela depois da nossa vem dentro de `janelaHoras` (passado disso, é conversa nova);
+ *  - TODAS as mensagens dela desde a nossa são só cumprimento, agradecimento, retribuição, bênção,
+ *    despedida, emoji, figura ou figurinha — sem "?", sem link, sem áudio/arquivo, e curtas.
+ *    Sobrando qualquer palavra fora desse vocabulário, devolve `null`.
+ *
+ * Cumprimento sozinho ("Boa tarde") entra de propósito: é o que a lista chama de cumprimento
+ * depois da nossa, e é o que permite "Boa tarde obrigado igualmente" não sobrar palavra.
+ */
+const FECHO_DE_CORTESIA = new RegExp(
+  '(?<![\\p{L}\\p{N}])(?:' + [
+    String.raw`bo[am]\s*(dia|tarde|noite|madrugada)s?`,
+    String.raw`(muito\s+)?(obrigad[oa]s?|obg|brigad[oa]|grat[oa]s?|gratid(ã|a)o|agrade(ç|c)o|agradecid[oa])`,
+    String.raw`(igualmente|idem|tamb(é|e)m|tb|tbm)`,
+    String.raw`(pra|para|p\/|a|pro)\s+(voc(ê|e)|vc|o\s+senhor|senhor|tu|ti)`,
+    String.raw`(voc(ê|e)|vc|o\s+senhor)`,
+    String.raw`am(é|e)m`,
+    String.raw`(que\s+)?deus\s+(te\s+|lhe\s+|o\s+|nos\s+)?(aben(ç|c)o(e|a)|proteja|guarde|ilumine|abencoe)`,
+    String.raw`(fica|fique)\s+com\s+deus`,
+    String.raw`deus\s+(no\s+comando|(é|e)\s+fiel)`,
+    String.raw`(valeu|vlw|tmj|tamo\s+junto|tamos\s+juntos|estamos\s+juntos|(é|e)\s+n(ó|o)is|(é|e)\s+n(ó|o)s)`,
+    String.raw`(abra(ç|c)os?|beijos?|bjs?|bj(o|ão)s?)`,
+    String.raw`(ok|okay|blz|beleza|show|top|perfeito|certo|combinado|entendi|t(á|a)\s+bom|tudo\s+bem|tudo\s+certo)`,
+    String.raw`(bom|[óo]timo|feliz|abençoado|abencoado)\s+(s(á|a)bado|domingo|fim\s+de\s+semana|final\s+de\s+semana|fds|semana|dia|feriado)`,
+    String.raw`(capit(ã|a)o|martim|deputado|amigo|amiga|irm(ã|ao))`,
+    String.raw`((a\s+)?(sua|tua)\s+fam(í|i)lia|voc(ê|e)s|vcs)`,
+    String.raw`(e|pra|para|de|da|do|um|uma|muito|mt|mto|sempre|tudo|a\s+todos|todos|todas|s(ó|o))`,
+  ].join('|') + ')(?![\\p{L}\\p{N}])',
+  'giu'
+);
+const PEDIDO_NO_FECHO = /\?|(?<![\p{L}\p{N}])(quero|queria|preciso|precisava|pode|podem|poderia|gostaria|me\s+(manda|envia|passa|liga)|como\s+fa(ç|c)o|quando|onde|qual|quanto)(?![\p{L}\p{N}])/iu;
+
+function mensagemDeFecho(msg) {
+  if (msg?.sistema) return true;
+  const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
+  const texto = String(msg?.texto || '');
+  if (TIPOS_QUE_PEDEM_VOCE.has(tipo)) return false;
+  if (LINK.test(texto)) return false;
+  if (TIPOS_COMPARTILHADOS.has(tipo) && !texto.trim()) return true;
+  if (!texto.trim()) return false;
+  if (texto.length > 160) return false;
+  if (PEDIDO_NO_FECHO.test(texto)) return false;
+  const resto = texto
+    .replace(FECHO_DE_CORTESIA, ' ')
+    .replace(/[\p{P}\p{S}\p{Emoji_Presentation}\p{Extended_Pictographic}\u200d\ufe0f\d]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return !resto;
+}
+
+export function cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras = 48 } = {}) {
+  if (!nossaUltimaAt) return null;
+  const nossa = new Date(nossaUltimaAt).getTime();
+  if (!Number.isFinite(nossa)) return null;
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt).filter((m) => !m?.sistema);
+  if (!dela.length) return null;
+  const primeira = dela.find((m) => m?.at);
+  if (!primeira) return null;
+  const horas = (new Date(primeira.at).getTime() - nossa) / 3600000;
+  const janela = Number(janelaHoras) > 0 ? Number(janelaHoras) : 48;
+  if (!(horas >= 0) || horas > janela) return null;
+  if (!dela.every(mensagemDeFecho)) return null;
+  const temTexto = dela.some((m) => String(m?.texto || '').trim());
+  return {
+    motivo: temTexto
+      ? 'ela só agradeceu ou retribuiu o cumprimento depois da nossa resposta'
+      : 'ela só reagiu (emoji ou figura) depois da nossa resposta',
+  };
+}
+
 export function rajadaFinal(entrantes, nossaUltimaAt) {
   const lista = Array.isArray(entrantes) ? entrantes : [];
   if (!lista.length) return [];

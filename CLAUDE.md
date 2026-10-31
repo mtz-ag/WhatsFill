@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.245.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.246.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -687,6 +687,12 @@ mudaram as maos, nao a cabeca.
   As duas boas-vindas falam na primeira pessoa; o texto gravado e reescrito na migracao e de
   novo no envio. `interesse-conteudo` continua na voz da equipe. Devolver `null` em
   `momentoNoGesto` derruba 3 assercoes do quadro gravado.
+  **FECHO POR CORTESIA (31/10, v3.246).** Quem so agradeceu, retribuiu ou cumprimentou depois da
+  nossa, dentro da janela de horas do contexto, e concluido sem enviar. No dia seguinte, com
+  mensagem do momento nova, o fluxo mandava a tecla 5; "valeu, tmj" mandava o agradecimento; um
+  emoji de volta mandava a do momento. A guarda fica depois da decisao do fluxo e antes da IA.
+  Nasce ligada (`concluirCortesiaSozinho`). Sem mensagem nossa antes, nao fecha. Devolver `null`
+  em `cortesiaDeFechamento` derruba 18 assercoes.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

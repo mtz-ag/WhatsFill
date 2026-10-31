@@ -1,4 +1,40 @@
-## 2026-10-31 - v3.245.0 - ESTADO DE AGORA - desabafo e emoji na mensagem do momento
+## 2026-10-31 - v3.246.0 - ESTADO DE AGORA - quem so agradeceu depois da nossa e concluido
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.246.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.246.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Na aba Automatizado, a caixa nova nasce marcada: "Concluir sozinho quem so agradeceu ou
+   retribuiu depois da nossa resposta (sem mandar nada)"
+5. Na proxima rodada, "Gratidao", "Boa tarde obrigado igualmente", "valeu, tmj" e um emoji
+   de volta, depois da nossa e dentro do limite de horas, sao assumidos e resolvidos sem
+   mensagem. "Boa tarde" sozinho, no dia seguinte e ainda dentro dessa janela, tambem.
+   Na primeira visita, "Boa tarde" continua nas boas-vindas
+
+### O QUE MUDOU
+
+Quem so retribuiu depois da mensagem do momento ficava aberto. No mesmo dia a rodada as
+vezes concluia por acaso. No dia seguinte, com mensagem do momento nova, mandava de novo.
+A guarda troca essa decisao pela tecla 3, antes de chamar a IA. Pergunta, pedido, desabafo,
+audio e link nao fecham. A caixa desmarcada desliga.
+
+A falha ao resolver deixou de sair como "mas undefined".
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Concordancia do tratamento. Conferencia do canal desligada.
+Importacao continua nao contando como retorno. Envio automatico continua desligado.
+Emoji na primeira visita continua na mensagem do momento. Desabafo continua na tecla 6.
+A rodada continua sendo uma passada: quem responde depois dela fica para a proxima.
+
+Prova: `cortesiaDeFechamento` devolvendo null derruba 18 assercoes.
+
+## 2026-10-31 - v3.245.0 - desabafo e emoji na mensagem do momento
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.245.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
