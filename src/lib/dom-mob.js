@@ -195,11 +195,16 @@ export function abrirConversa(id, { nome = '', raiz = document } = {}) {
  *
  * O texto tem de ser o rotulo e SO o numero. Uma linha de conversa carrega nome, hora e previa,
  * entao nao casa nesta forma, e um empate nao clica.
+ *
+ * **O numero cola no rotulo** (31/10/2026, medido na tela dele: `Novos78`, `Minhas88`,
+ * `Todas166` — sem espaco). A forma antiga exigia o espaco, o clique voltava `aba-ausente` e a
+ * rodada seguia na aba que ja estava aberta. Ele: *"apertei em comecar pelos novos e abriu a
+ * aba todas"*.
  */
 export function clicarAbaDaFila(rotulo, raiz = document) {
   const alvo = textoDaLinha({ textContent: rotulo });
   if (!alvo) return { ok: false, motivo: 'sem-rotulo' };
-  const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d+$');
+  const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\d+$');
   const achados = [...raiz.querySelectorAll('button, [role="tab"], [role="button"]')].filter((no) => forma.test(textoDaLinha(no)));
   if (achados.length !== 1) return { ok: false, motivo: achados.length ? 'aba-ambigua' : 'aba-ausente' };
   achados[0].click();

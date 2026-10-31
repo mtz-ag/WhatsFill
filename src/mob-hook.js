@@ -111,11 +111,13 @@
   /**
    * Clica a aba da lista (`Novos 76`, `Minhas 82`, `Todas 154`). Copia de `dom-mob.clicarAbaDaFila`.
    * O texto tem de ser o rotulo e so o numero — linha de conversa nao casa, empate nao clica.
+   * O numero cola no rotulo (medido 31/10: "Novos78"). O espaco e opcional; exige-lo e a aba
+   * que nao clica, e a rodada segue em Todas.
    */
   function clicarAbaDaFila(rotulo) {
     const alvo = textoDaLinha({ textContent: rotulo });
     if (!alvo) return { ok: false, motivo: 'sem-rotulo' };
-    const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d+$');
+    const forma = new RegExp('^' + alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\d+$');
     const achados = [...document.querySelectorAll('button, [role="tab"], [role="button"]')].filter((no) => forma.test(textoDaLinha(no)));
     if (achados.length !== 1) return { ok: false, motivo: achados.length ? 'aba-ambigua' : 'aba-ausente' };
     achados[0].click();

@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 31/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.249.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.250.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -710,6 +710,10 @@ mudaram as maos, nao a cabeca.
   indo para Todas. O botao do painel diz "Comecar pelos Novos" e o primeiro da fila clica essa
   aba antes de abrir. Minhas e a fila dele. O filtro da consulta nao mudou (`status=aberto`).
   Devolver `Novos: 'Todas'` no mapa derruba 1 assercao.
+  **O NUMERO DA ABA COLA NO ROTULO (31/10, v3.250).** Medido na tela: o textContent e
+  `Novos78`, sem espaco. A forma exigia `Novos 78`, o clique voltava `aba-ausente` e a rodada
+  seguia na aba que ja estava aberta — Todas. Sem achar a aba, a rodada para em vez de abrir
+  quem estiver desenhado. Exigir o espaco de novo derruba 2 assercoes (dom-mob e o gancho).
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

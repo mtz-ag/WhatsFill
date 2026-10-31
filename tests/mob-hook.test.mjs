@@ -218,6 +218,13 @@ grupo('abrir CLICA E PARA AI');
   check(aba.payload.ok === true && peloModulo.ok === true, 'gancho e dom-mob concordam: clica na aba Todas');
   check(todas.cliques === 2 && minhas.cliques === 0 && pessoa.cliques === 0, 'so a aba Todas, nem a conversa cujo nome comeca igual');
 
+  const novosColado = { textContent: 'Novos78', cliques: 0, click() { this.cliques++; } };
+  const gColado = subirGancho([novosColado, pessoa]);
+  const [abaColada] = gColado.pedir('aba', { rotulo: 'Novos', pedido: 'p-novos' });
+  const peloModuloColado = clicarAbaDaFila('Novos', { querySelectorAll: () => [novosColado, pessoa] });
+  check(abaColada.payload.ok === true && peloModuloColado.ok === true && novosColado.cliques === 2,
+    'Novos78 sem espaco: o gancho e o dom-mob clicam a aba');
+
   const assumir = { textContent: 'Assumir', cliques: 0, click() { this.cliques++; } };
   const aviso = { textContent: 'Assuma para responder', cliques: 0, click() { this.cliques++; } };
   const gAssumir = subirGancho([assumir, aviso]);

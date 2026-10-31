@@ -1187,6 +1187,25 @@ grupo('A FILA CHEGA INTEIRA — o `.map` a mais a esvaziava em TODA rodada');
   check(depoisDaAba.ok === true && depoisDaAba.sessionId === 'c-1', 'lista na aba errada: troca para Novos e abre a primeira');
   check(tipos.includes('aba') && rotulos[0] === 'Novos', `pediu a aba Novos ao gancho (${rotulos.join(',')})`);
 
+  const abriuSemAba = [];
+  const janelaSemAba = (() => {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        if (msg.type === 'abrir') abriuSemAba.push(msg.payload.id);
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: msg.type === 'abrir' ? 'abriu' : msg.type,
+          payload: { pedido: msg.payload.pedido, ok: false, motivo: 'aba-ausente' } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  })();
+  const semAba = await openQueueSession(0, { aba: 'Novos', fila, janela: janelaSemAba });
+  check(semAba.ok === false && /Novos/.test(semAba.reason || ''), 'sem a aba Novos a rodada para, em vez de seguir na aba aberta');
+  check(abriuSemAba.length === 0, 'e nao abre ninguem da lista que estava na tela');
+
   const r = await openQueueSession(1, { fila, janela });
   check(r.ok === true && r.sessionId === 'c-2', 'a posicao 1 abre a SEGUNDA conversa');
   check(cliques[0] === 'c-2', 'e foi ela que o gancho recebeu para abrir');

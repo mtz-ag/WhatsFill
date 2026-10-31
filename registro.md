@@ -1,8 +1,33 @@
-## 2026-10-31 - v3.249.0 - ESTADO DE AGORA - a rodada dos novos abre a aba Novos
+## 2026-10-31 - v3.250.0 - ESTADO DE AGORA - o clique da aba Novos nao achava o botao
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.249.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.250.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me (o gancho da pagina so troca no F5)
+3. Confira **3.250.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Comecar pelos Novos deve deixar a aba **Novos** verde. Se nao achar o botao, a rodada
+   para e diz, em vez de seguir em Todas
+
+### O QUE MUDOU
+
+A 3.249 pedia a aba Novos, e o clique nao achava o botao. O texto medido na tela e
+`Novos78`, o numero colado no nome, e o codigo so aceitava `Novos 78` com espaco. O clique
+voltava que a aba nao existia, e a rodada abria quem ja estava desenhado em Todas. Agora o
+espaco e opcional. Se a aba nao for achada, a rodada para.
+
+### O QUE NAO MUDOU
+
+A consulta continua sendo as conversas abertas. Minhas continua sendo a fila que ele ja
+assumiu. Regua 0,9. Modo Normal. Conferencia do canal desligada. Envio automatico
+desligado. Boas-vindas em tom neutro.
+
+Prova: exigir o espaco de novo derruba 2 assercoes, uma no dom-mob e uma na copia do gancho.
+
+## 2026-10-31 - v3.249.0 - a rodada dos novos abre a aba Novos
 
 ### O QUE VOCE PRECISA FAZER
 

@@ -642,11 +642,17 @@ export async function openQueueSession(index = 0, opcoes = {}) {
   // era aberta la, e a rodada dos Novos ficava na aba que ele acabou de pedir para sair.
   if (n === 0 && rotulo) {
     const noComeco = await perguntarAoGancho('aba', { rotulo }, resto);
-    if (noComeco?.payload?.ok) {
-      await new Promise((r) => setTimeout(r, 400));
-      await perguntarAoGancho('topo', {}, resto);
-      await new Promise((r) => setTimeout(r, 250));
+    // Sem a aba, seguir abre quem estiver desenhado — e em 31/10 isso era a lista de Todas.
+    if (!noComeco?.payload?.ok) {
+      const motivo = noComeco?.payload?.motivo || (noComeco ? 'sem-ok' : 'gancho-mudo');
+      return comTotal({
+        ok: false,
+        reason: `Nao achei a aba "${rotulo}" na lista (${motivo}). A rodada nao continua na aba que estiver aberta.`,
+      });
     }
+    await new Promise((r) => setTimeout(r, 400));
+    await perguntarAoGancho('topo', {}, resto);
+    await new Promise((r) => setTimeout(r, 250));
   }
 
   let aberto = await abrirAlguma();

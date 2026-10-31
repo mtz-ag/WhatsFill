@@ -168,6 +168,12 @@ grupo('a aba da lista: Todas e Minhas, e a linha de conversa nao e aba');
 
   const sumiu = clicarAbaDaFila('Todas', raizCom([pessoa]));
   check(sumiu.ok === false && sumiu.motivo === 'aba-ausente', 'sem a aba na tela, diz que nao achou em vez de clicar numa conversa');
+
+  // Medido em 31/10/2026: o textContent da aba e "Novos78", o numero colado no rotulo.
+  const novos = botao('Novos78');
+  const colado = clicarAbaDaFila('Novos', raizCom([novos, pessoa]));
+  check(colado.ok === true && novos.cliques === 1, 'Novos78, sem espaco, e a aba');
+  check(pessoa.cliques === 0, 'e a conversa continua de fora');
 }
 
 grupo('Assumir e o botao, e o aviso "Assuma para responder" nao e');
