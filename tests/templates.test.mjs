@@ -521,7 +521,8 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
    * mandato se apresenta. Decisao dele: *"nao se refira mais a gabinete, se refira como assessoria
    * ou equipe"*. Travar a palavra antiga faria a regra dele voltar atras no proximo teste verde.
    */
-  check(/(equipe|assessoria) do Capit/i.test(bv.text), 'diz de quem e a equipe -- e o contexto que faltava');
+  check(!templates.falaComoEquipe(bv.text), 'fala na primeira pessoa — o contato acha que fala com o capitao');
+  check(!/(equipe|assessoria)/i.test(bv.text), 'e nao se apresenta como equipe nem assessoria');
   check(!/gabinete/i.test(bv.text), 'e nao diz "gabinete", que saiu do vocabulario');
   check(!/(cesta|rem[ée]dio|dinheiro|emprego|vaga|benef[ií]cio)/i.test(bv.text), 'nao promete beneficio nenhum');
 
@@ -573,9 +574,8 @@ grupo('"Confirmou presenca (so agradecer)": a metade que faltava (02/09/2026)');
   // As duas dizem a mesma coisa na abertura: e a mesma mensagem, sem o bloco do cadastro.
   // INVERTIDA em 07/09/2026 pelo mesmo motivo da de cima: a apresentacao continua obrigatoria, a
   // palavra e que mudou.
-  check(/(equipe|assessoria) do Capit/i.test(semPedido.text),
-    'a metade sem pedido continua se apresentando — hoje como equipe/assessoria');
-  check(semPedido.text.includes('Em que podemos ajudar?'), 'e continua perguntando em que pode ajudar');
+  check(!templates.falaComoEquipe(semPedido.text), 'a metade sem pedido tambem fala na primeira pessoa');
+  check(semPedido.text.includes('Em que posso ajudar?'), 'e pergunta em que posso ajudar');
 }
 
 {

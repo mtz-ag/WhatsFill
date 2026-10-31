@@ -20,6 +20,8 @@ import {
   montarRequisicaoRascunho,
   validarRascunho,
   jaAgradecemosADenuncia,
+  perguntouOCargo,
+  perguntouDaTransicao,
   telefonesDoTexto,
   tokensAproximados,
   ANTERIOR_MAX_FALAS,
@@ -53,6 +55,8 @@ import {
   provedorDoModelo,
   semSurrogateSolto,
 } from './ia.js';
+
+import { desabafoPessoal } from './cortesia.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
@@ -387,6 +391,14 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
         nossaUltima, jaFalamosHoje, candidato, nome: campos?.Nome || '', fase,
         /** Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes. */
         jaAgradecemosADenuncia: jaAgradecemosADenuncia(mensagens),
+        /** Desabafo e pergunta de cargo (31/10/2026) — as travas de `travasDoEscopo`. */
+        desabafo: !!desabafoPessoal(
+          lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).map((m) => ({ texto: m.texto, at: m.at })),
+          null
+        ),
+        perguntouSoOCargo:
+          perguntouOCargo(lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).map((m) => m.texto)) &&
+          !perguntouDaTransicao(lista.filter((m) => m.de !== 'nos').map((m) => m.texto)),
         /**
          * Lista nula deixa a trava de telefone calada. Lista (mesmo vazia) soma o que já está na
          * conversa, no dossiê, nas regras e nas respostas prontas — número que ela mesma escreveu

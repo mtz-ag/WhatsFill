@@ -38,7 +38,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -3182,6 +3182,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     ) {
       const limpo = templatesLib.tirarPedidoDeCadastro(text);
       if (limpo && !templatesLib.ehPedidoDeDados(limpo)) text = limpo;
+    }
+
+    // A frase gravada ainda diz "equipe" (migracao de 07/09). As duas boas-vindas saem na primeira
+    // pessoa, na rodada e no clique, porque o texto salvo no navegador nao acompanha a fabrica.
+    if (templatesLib.IDS_DAS_BOAS_VINDAS.includes(template?.id)) {
+      text = templatesLib.boasVindasNaPrimeiraPessoa(text);
     }
 
     if (missing.length) {
@@ -10902,6 +10908,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * Só cala o formulário no fim do rascunho da IA — ver `sugestao.rascunhoSemCadastro`.
          */
         denunciaOuCorrente: denunciaOuCorrente(state.entrantes, state.nossaUltimaAt),
+        /**
+         * **Desabafo pessoal** (31/10/2026) — briga na família, sofrimento, raiva, agressão. Cala o
+         * formulário no fim do rascunho (`sugestao.rascunhoSemCadastro`) e manda a conversa para a
+         * tecla 6, nunca para uma resposta pronta.
+         */
+        desabafoPessoal: desabafoPessoal(state.entrantes, state.nossaUltimaAt),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),

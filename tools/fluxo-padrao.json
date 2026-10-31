@@ -1,9 +1,9 @@
 {
   "formato": "whatsfill-fluxo",
   "versao": 1,
-  "extensao": "3.168.0",
-  "nome": "fluxo padrão 3.168.0",
-  "salvoEm": "2026-10-16T13:36:42.339Z",
+  "extensao": "3.245.0",
+  "nome": "fluxo padrão 3.245.0",
+  "salvoEm": "2026-10-31T19:24:01.284Z",
   "teclas": {},
   "arvore": [
     {
@@ -256,6 +256,12 @@
           "maisCondicoes": [
             {
               "sinal": "jaPediramDados",
+              "negar": true,
+              "palavras": [],
+              "onde": "ultima"
+            },
+            {
+              "sinal": "ultimaEhSoReacao",
               "negar": true,
               "palavras": [],
               "onde": "ultima"

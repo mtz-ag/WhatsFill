@@ -122,8 +122,9 @@ export const casoDeNegativa = (c) => !!(c?.pedeAjudaFinanceira || c?.pedeEmprego
  *
  * Separada de `casoDeNegativa` porque aquela tem nome e testes de NEGATIVA, e denúncia não é um
  * "não". Só o rascunho da IA lê esta; o formulário da rodada segue com `pedirDadosNaoCabe`.
+ * Desabafo entra pelo mesmo motivo: formulário no fim de um acolhimento soa como máquina.
  */
-export const rascunhoSemCadastro = (c) => casoDeNegativa(c) || !!c?.denunciaOuCorrente;
+export const rascunhoSemCadastro = (c) => casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal;
 
 /**
  * **Corrente ou denúncia repassada SEM a IA** (31/10/2026). O texto encaminhado casa palavras de

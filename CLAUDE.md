@@ -9,7 +9,7 @@
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
 > for `0.x`.** Conferido em 28/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.244.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> `WhatsFill+IA` **3.245.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -678,6 +678,15 @@ mudaram as maos, nao a cabeca.
   `naoHaOQueResponder` deixa de virar "a IA nao devolveu rascunho". A recusa do modelo tem o
   texto dela. "Chamar a IA" olha a chave do modelo do rascunho, nao a das conferencias. O
   cartao guarda o texto em `state.rascunhoDoCartao` porque o `withBusy` redesenha no finally.
+  **DESABAFO E EMOJI NA MENSAGEM DO MOMENTO (31/10, v3.245).** Briga na familia, sofrimento,
+  raiva ou agressao vai para a tecla 6: sem formulario, sem pergunta, sem explicar 2027 se ela
+  so perguntou o cargo, e o 190 so se houve agressao, no fim. Emoji, figura ou sticker na
+  primeira visita, com mensagem do momento configurada, recebe essa mensagem — no quadro
+  gravado tambem, porque a condicao nova do fluxo padrao nao chega nele sozinha. Sem a
+  mensagem do momento, as boas-vindas continuam. "Boa tarde" continua sendo boas-vindas.
+  As duas boas-vindas falam na primeira pessoa; o texto gravado e reescrito na migracao e de
+  novo no envio. `interesse-conteudo` continua na voz da equipe. Devolver `null` em
+  `momentoNoGesto` derruba 3 assercoes do quadro gravado.
   **O QUE ESTA MEDIDO E O QUE NAO ESTA, e a diferenca importa:** a LEITURA esta medida
   (`base_dados.tags` e array de texto, 87 rotulos em 439 contatos; as colunas sao
   `COLUNA_DO_CAMPO`); **o PATCH NAO** — a sonda de escrita foi **BARRADA**, e barrar escrita no

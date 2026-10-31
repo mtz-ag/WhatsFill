@@ -436,6 +436,8 @@ export function decidir(ctx, arvore, fluxo) {
   };
 
   const escolhida = andar(arvore, []);
+  const gesto = momentoNoGesto(escolhida, c);
+  if (gesto) return gesto;
   return escolhida ? { ...escolhida, empate: empatesDe(escolhida, arvore, c, fixadas) } : null;
 }
 
@@ -454,6 +456,37 @@ export function decidir(ctx, arvore, fluxo) {
  *
  * Só conta quem **envia**: duas caixas que concluem em silêncio não são um empate que custe nada.
  */
+/**
+ * **Emoji, figura ou sticker na chegada recebe a MENSAGEM DO MOMENTO, não as boas-vindas**
+ * (31/10/2026, modo Normal, rodada no automático): a única mensagem do dia era um emoji e o
+ * campo recebeu as boas-vindas na voz de "equipe". Ele: *"o erro persiste, a mensagem deveria
+ * ser a mensagem do momento"*.
+ *
+ * A caixa `chegada-boas-vindas` do quadro padrão ganhou a condição "escreveu alguma coisa", mas
+ * o quadro dele está GRAVADO e não recebe condição nova sozinho. Por isso a regra mora aqui
+ * também: vale para qualquer quadro.
+ *
+ * Só troca quando há mensagem do momento que possa sair (`podeMandarMomento`), quando ainda não
+ * respondemos hoje e quando não há pergunta aberta — as mesmas guardas de `ultima-e-so-reacao`.
+ * Sem mensagem do momento, as boas-vindas continuam. Cumprimento ("Boa tarde") não é reação.
+ */
+export const MOMENTO_NO_GESTO = 'momento-no-gesto';
+const RESPOSTAS_DE_BOAS_VINDAS = new Set(['boas-vindas', 'boas-vindas-tem-dados']);
+
+export function momentoNoGesto(escolhida, c) {
+  if (!escolhida || !RESPOSTAS_DE_BOAS_VINDAS.has(escolhida.resposta)) return null;
+  if (!c?.ultimaEhSoReacao || c.perguntaAberta || c.respondidoHoje || !c.podeMandarMomento) return null;
+  return {
+    id: MOMENTO_NO_GESTO,
+    tecla: '5',
+    resposta: null,
+    ia: false,
+    motivo: 'chegou só com figura, emoji ou sticker — a mensagem do momento responde ao gesto (no lugar das boas-vindas).',
+    caminho: [...(escolhida.caminho || []), MOMENTO_NO_GESTO],
+    empate: [],
+  };
+}
+
 function empatesDe(escolhida, arvore, ctx, fixadas) {
   const envia = (acao) => !!acao && (!!acao.resposta || (!!acao.tecla && TECLAS[acao.tecla]?.efeito === 'envia'));
   const daEscolhida = { tecla: escolhida.tecla, resposta: escolhida.resposta };
@@ -1201,7 +1234,16 @@ export function fluxoPadrao() {
     { ...noVazio('chegou sem anúncio: boas-vindas'),
       id: 'chegada-boas-vindas',
       condicao: { sinal: 'veioDeAnuncio', negar: true, palavras: [], onde: 'ultima' },
-      maisCondicoes: [{ sinal: 'jaPediramDados', negar: true, palavras: [], onde: 'ultima' }],
+      /**
+       * **Só emoji, figura ou sticker NÃO é chegada para boas-vindas** (31/10/2026): o gesto se
+       * responde com a mensagem do momento — é o que `ultima-e-so-reacao` (abaixo) já faz na volta.
+       * Esta caixa ficava ACIMA dela e engolia o caso. Quadro já gravado não recebe esta condição
+       * sozinho: a mesma regra vale no código, em `decidir` (`MOMENTO_NO_GESTO`).
+       */
+      maisCondicoes: [
+        { sinal: 'jaPediramDados', negar: true, palavras: [], onde: 'ultima' },
+        { sinal: 'ultimaEhSoReacao', negar: true, palavras: [], onde: 'ultima' },
+      ],
       acao: { tecla: null, resposta: 'boas-vindas' } },
 
     /**

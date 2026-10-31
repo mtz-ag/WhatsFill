@@ -43,6 +43,7 @@ export async function list({ perfil } = {}) {
     // Por ÚLTIMO de propósito: as de cima acrescentam respostas novas, e o texto de fábrica delas
     // já vem sem "gabinete" — mas as antigas, que ele editou, só são alcançadas por esta.
     await migrarGabineteParaEquipe();
+    await migrarBoasVindasPrimeiraPessoa();
   }
   return doPerfil(perfil);
 }
@@ -187,6 +188,61 @@ export async function migrarGabineteParaEquipe() {
 
   if (mudadas.length) await store.set('templates', novos);
   await store.set('migracoes', { ...migracoes, gabineteViraEquipe: true });
+  return mudadas;
+}
+
+/**
+ * **As boas-vindas na primeira pessoa** (31/10/2026). A migracao de 07/09 trocou "gabinete" por
+ * "equipe", e o contato acha que fala com o capitao. So as duas boas-vindas: o resto das respostas
+ * continua na voz da equipe de proposito.
+ *
+ * Flag propria. O envio tambem reescreve, porque ele pode editar o texto de volta para "equipe".
+ */
+const QUEM_FALA = String.raw`(?:equipe|assessoria|gabinete|time|pessoal)`;
+const RESTO = String.raw`[^.!?\n]*[.!?]?`;
+const TROCAS_DA_PRIMEIRA_PESSOA = [
+  [new RegExp(String.raw`(bem-vind[oa]s?)\s*[—–,-]\s*(?:aqui\s+(?:é|e)|falo\s+daqui)\s+(?:d?[ao]\s+)?${QUEM_FALA}\s+d[oa]\s+${RESTO}`, 'giu'), '$1!'],
+  [new RegExp(String.raw`\s*(?:Você|Voce)\s+(?:está|esta)\s+falando\s+com\s+(?:[ao]\s+)?${QUEM_FALA}\s+d[oa]\s+${RESTO}`, 'giu'), ''],
+  [new RegExp(String.raw`\s*Aqui\s+(?:é|e)\s+(?:d?[ao]\s+)?${QUEM_FALA}\s+d[oa]\s+${RESTO}`, 'gu'), ''],
+  [/\bpodemos\s+ajudar\b/giu, 'posso ajudar'],
+  [/\bpodemos\s+te\s+ajudar\b/giu, 'posso te ajudar'],
+  [/\bnos\s+(informe|forneça|forneca|diga|passe|mande|envie)\b/giu, 'me $1'],
+  [/\bpara\s+melhor\s+atend(ê|e)-l([oa])\b/giu, 'para eu melhor atend$1-l$2'],
+  [/\bnossa\s+equipe\b/giu, 'eu'],
+];
+
+export const IDS_DAS_BOAS_VINDAS = ['boas-vindas', 'boas-vindas-tem-dados'];
+
+export function boasVindasNaPrimeiraPessoa(texto) {
+  let saida = String(texto || '');
+  for (const [re, novo] of TROCAS_DA_PRIMEIRA_PESSOA) saida = saida.replace(re, novo);
+  return saida.replace(/[ \t]+\n/g, '\n').replace(/(bem-vind[oa]s?)\.(?=\s*(?:\n|$))/giu, '$1!');
+}
+
+export function falaComoEquipe(texto) {
+  const t = String(texto || '');
+  return (
+    /(?:aqui\s+(?:é|e)|falando\s+com|falo\s+daqui).{0,40}(?:equipe|assessoria|gabinete)/iu.test(t) ||
+    /\bnossa\s+equipe\b/iu.test(t) ||
+    /\bpodemos(?:\s+te)?\s+ajudar\b/iu.test(t)
+  );
+}
+
+export async function migrarBoasVindasPrimeiraPessoa() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.boasVindasPrimeiraPessoa) return [];
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map((t) => {
+    if (!IDS_DAS_BOAS_VINDAS.includes(t.id)) return t;
+    const text = boasVindasNaPrimeiraPessoa(t.text);
+    const variantes = (t.variantes || []).map((v) => boasVindasNaPrimeiraPessoa(v));
+    const mudou = text !== t.text || variantes.some((v, i) => v !== (t.variantes || [])[i]);
+    if (mudou) mudadas.push(t.name || t.id);
+    return mudou ? { ...t, text, variantes } : t;
+  });
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, boasVindasPrimeiraPessoa: true });
   return mudadas;
 }
 

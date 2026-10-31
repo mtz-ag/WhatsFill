@@ -2174,7 +2174,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   };
 
   const semAds = arv.decidir({ ...base, veioDeAnuncio: false }, fluxo, {});
-  check(semAds?.resposta === 'boas-vindas', 'sem anuncio, a chegada que so cumprimenta recebe boas-vindas');
+  check(semAds?.tecla === '5' && semAds?.resposta !== 'boas-vindas', 'sem anuncio, so video recebe a mensagem do momento (31/10/2026)');
 
   const comAds = arv.decidir({ ...base, veioDeAnuncio: true }, fluxo, {});
   check(comAds?.resposta !== 'boas-vindas', 'com anuncio, NAO recebe "chegou sem anuncio" -- era o defeito');
@@ -2211,7 +2211,7 @@ grupo('respondeu o nome e a cidade VENCE o modelo, nos dois lados (03/09/2026)')
   };
 
   const comoEra = arv.decidir({ ...base, jaRespondemosAntes: false }, fluxo, {});
-  check(comoEra?.resposta === 'boas-vindas', 'era isto o que ela recebia: as boas-vindas do gabinete');
+  check(comoEra?.tecla === '5' && comoEra?.resposta !== 'boas-vindas', 'figura na primeira visita recebe a mensagem do momento, nao as boas-vindas (31/10/2026)');
 
   const agora = arv.decidir({ ...base, jaRespondemosAntes: true }, fluxo, {});
   check(agora?.resposta !== 'boas-vindas', 'reconhecida como retorno, NAO recebe as boas-vindas de novo');

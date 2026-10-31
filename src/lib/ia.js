@@ -49,6 +49,7 @@ import {
   pedeAlgoIndefinido,
   reclamaSemResposta,
   ofereceEventoPelaCampanha,
+  desabafoPessoal,
 } from './cortesia.js';
 
 /**
@@ -2689,8 +2690,8 @@ export function marcaDeMidia(m) {
 }
 
 /**
- * **O "agradeço as informações / estamos atentos" JÁ SAIU depois da denúncia?** — print da
- * Print de 31/10/2026: *"fica mandando essa mesma mensagem"*.
+ * **O "agradeço as informações / estamos atentos" JÁ SAIU depois da denúncia?** — print de
+ * 31/10/2026: *"fica mandando essa mesma mensagem"*.
  *
  * A linha DENÚNCIA do bloco do contato lê a conversa INTEIRA (de propósito, desde 23/09: quem trouxe
  * a acusação ontem segue nela hoje) e manda *"agradeça as informações e diga que estamos atentos"*.
@@ -2710,6 +2711,69 @@ export function jaAgradecemosADenuncia(mensagens = []) {
   const i = lista.findIndex((m) => m.de !== 'nos' && !m.anuncio && trouxeDenuncia(m.texto));
   if (i < 0) return false;
   return lista.slice(i + 1).some((m) => m.de === 'nos' && AGRADECEU_A_DENUNCIA.test(String(m.texto)));
+}
+
+/**
+ * **Ela perguntou o CARGO?** (31/10/2026). Com o dossiê no prompt, o rascunho respondia com a
+ * secretaria e janeiro de 2027. Pergunta simples pede resposta simples: "Sou deputado estadual."
+ */
+const PERGUNTA_DE_CARGO =
+  /(voce|vc|o\s+senhor|tu|ele|o\s+capitao|o\s+martim)\s+(e|eh|ta|esta|seria)\s+(o\s+|um\s+)?(governador|deputad\w*|senador|vereador|prefeit\w*|secretari\w*)|(governador|deputad\w*|senador|vereador|prefeit\w*)\s+ou\s+(governador|deputad\w*|senador|vereador|prefeit\w*)|qual\s+(e\s+)?(o\s+)?(seu|teu|o)\s+cargo|(voce|vc|o\s+senhor)\s+e\s+o\s+que\s*\?/;
+/** Perguntou da TRANSIÇÃO: aí a secretaria e 2027 são a resposta. */
+const PERGUNTA_DE_TRANSICAO = /secretar|defesa\s+civil|2027|\bposse\b|vai\s+assumir|\bassum(e|ir)\b|nomead|transic/;
+
+function plano(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
+}
+export function perguntouOCargo(textos = []) {
+  return (textos || []).some((t) => PERGUNTA_DE_CARGO.test(plano(t)));
+}
+export function perguntouDaTransicao(textos = []) {
+  return (textos || []).some((t) => PERGUNTA_DE_TRANSICAO.test(plano(t)));
+}
+/** O cargo de HOJE do candidato desta conversa — o do perfil, ou o de fábrica. */
+export function cargoDe(candidato) {
+  return quemE(candidato).cargo || PERFIL_DE_FABRICA.cargo || 'deputado estadual';
+}
+
+/**
+ * **A linha do DESABAFO** (31/10/2026) — resposta emotiva e calorosa, com o texto que ele aprovou
+ * como TOM. As condicionais existem para o texto não falar de 190 a quem não contou agressão, nem
+ * de raiva a quem só está triste.
+ */
+export const TOM_DO_DESABAFO =
+  'Olá! Sou deputado estadual. / Sinto muito por tudo isso que você está passando. Briga dentro da ' +
+  'família dói muito, ainda mais quando é por causa de política. Sua força e sua lealdade são ' +
+  'admiráveis, e eu agradeço de coração por estar do nosso lado. / Mas nenhuma divergência vale a sua ' +
+  'saúde nem a paz da sua casa. Não deixe a raiva te levar a fazer algo de que possa se arrepender, ' +
+  'porque você é muito importante. Cuide desse machucado na cabeça e, se voltarem a te agredir, ligue ' +
+  'para o 190. / Estou com você. Se cuide!';
+
+export function linhaDoDesabafo(d, { cargoPerguntado = false, candidato = null } = {}) {
+  return [
+    `DESABAFO PESSOAL (${String(d?.motivo || '').replace(/^desabafo pessoal \(|\)$/g, '')}): responda com CALOR, como quem se importa de verdade — `,
+    'na primeira pessoa, como o próprio deputado, em 3 ou 4 parágrafos curtos. ',
+    cargoPerguntado ? `Abra respondendo a pergunta do cargo em UMA frase ("Sou ${cargoDe(candidato)}."). ` : '',
+    'Diga que sente muito pelo que ela está passando e que briga dentro da família dói, SEM recontar o que ela ',
+    'escreveu (nada de "entendo que você esteja machucada e revoltada", "você contou que…"). ',
+    'Se ela se mostrou do nosso lado, agradeça de coração a força e a lealdade dela. ',
+    d?.raiva
+      ? 'Ela falou em fazer mal a alguém: com carinho, diga que nenhuma divergência vale a saúde dela nem a paz ' +
+        'da casa, e peça que não deixe a raiva levá-la a fazer algo de que possa se arrepender — sem sermão e sem ' +
+        'tratar como caso de polícia. '
+      : '',
+    d?.agressao
+      ? 'Ela contou uma agressão que JÁ aconteceu: peça, em UMA frase, que cuide do machucado e diga que, se ' +
+        'voltarem a agredi-la, ligue para o 190 — perto do fim, como cuidado, nunca na primeira frase e sem 192, ' +
+        'SAMU, pronto-socorro ou lista de serviços. '
+      : 'NÃO cite 190, 192, polícia, SAMU nem emergência: ela não contou agressão. ',
+    'Feche com apoio ("Estou com você. Se cuide!"). ',
+    'PROIBIDO aqui: QUALQUER pergunta (nada de "você está em segurança?", "quer conversar?", "me conte mais") — ',
+    'pergunta convida a mais desabafo; tom clínico ou de protocolo; explicação política (secretaria, 2027, ',
+    'governador, Zucco, eleição) que ela não pediu; pedir nome, cidade ou cadastro; falar de urgência ou ',
+    'prioridade; prometer levar o caso a alguém; nota interna; chamar pelo nome. ',
+    `TOM aprovado para um caso parecido (adapte; tire o que não couber; "/" é troca de parágrafo): "${TOM_DO_DESABAFO}"`,
+  ].join('');
 }
 
 /** O bloco do atendimento anterior — vazio quando não há nada a mostrar. */
@@ -2875,6 +2939,15 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     !!pedeAlgoIndefinido(dela, desdeNossa) ||
     !!reclamaSemResposta(dela, desdeNossa) ||
       dela.some((m) => PROBLEMA_PESSOAL.test(String(m?.texto || ''))));
+  /**
+   * **Desabafo pessoal** (31/10/2026) — briga na família, sofrimento, raiva, agressão. Ver
+   * `cortesia.desabafoPessoal` e a linha DESABAFO abaixo. Cala o formulário, a linha da regra 11, a
+   * da denúncia e a do mandato: quem desabafa recebe carinho, não despacho nem aula.
+   */
+  const desabafo = desabafoPessoal(dela, desdeNossa);
+  if (desabafo) pedirDados = false;
+  const cargoPerguntado = perguntouOCargo(lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).map((m) => m.texto));
+  const perguntouOCargoSo = cargoPerguntado && !perguntouDaTransicao(dela.map((m) => m.texto));
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
   const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
@@ -3202,7 +3275,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * teve o benefício fraudado não recebe "obrigado, estamos atentos" — a regra 11 é quem atende.
      */
     // Já agradecemos? Então NÃO se manda agradecer de novo — ver `jaAgradecemosADenuncia` (31/10/2026).
-    denuncia && !trouxeProblema && jaAgradecemosADenuncia(lista)
+    denuncia && !trouxeProblema && !desabafo && jaAgradecemosADenuncia(lista)
       ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — JÁ AGRADECEMOS: nas falas NÓS acima já agradecemos as ' +
         'informações e dissemos que estamos atentos. NÃO agradeça de novo e NÃO diga outra vez que ' +
         'estamos atentos ou acompanhando, nem com outras palavras — isso é a repetição. Continue sem ' +
@@ -3211,7 +3284,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'marque o campo naoHaOQueResponder — e MESMO ASSIM o campo texto NUNCA fica vazio: escreva uma ' +
         'frase curta e neutra, sem agradecer e sem repetir, por exemplo "Seguimos por aqui. Se ' +
         'precisar de alguma coisa, é só escrever."'
-      : denuncia && !trouxeProblema
+      : denuncia && !trouxeProblema && !desabafo
       ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — NÃO ENTRE NO MÉRITO: nós não temos como verificar essas ' +
         'informações, então NÃO diga se é grave, se é séria, o que precisa ser apurado, nem dê aula ' +
         'sobre fatos, provas, responsabilidade ou direitos. Agradeça as informações em UMA frase e ' +
@@ -3254,7 +3327,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * há lista nova de formas de perguntar, e a conta já existia. E fica FORA de quem trouxe um
      * problema pessoal, senão esta linha e a regra 11 mandariam coisas opostas sobre perguntar.
      */
-    perguntaDoMandato && !trouxeProblema
+    perguntaDoMandato && !trouxeProblema && !desabafo && !perguntouOCargoSo
       ? 'PERGUNTOU DO MANDATO E FALTA O DADO: se você não tem o projeto, a lei, o número ou a agenda ' +
         'que ela pediu, a falta é UMA frase da mensagem — nunca a mensagem inteira. Antes dela, ' +
         'responda o TEMA que ela trouxe: por que aquilo importa para o Estado e o que precisa estar ' +
@@ -3262,12 +3335,20 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         `${EM_CAMPANHA ? 'campanha' : 'mandato'}, não é "me conte seu caso". Sem inventar projeto, lei, posição tomada nem ` +
         'promessa de resolver.'
       : '',
+    /** O cargo, em uma frase — ver `perguntouOCargo` (31/10/2026). */
+    perguntouOCargoSo
+      ? `PERGUNTOU O CARGO: responda em UMA frase curta, na primeira pessoa: "Sou ${cargoDe(candidato)}." ` +
+        'NÃO fale da secretaria, de janeiro de 2027, da posse, do Zucco nem do governo do Estado — ela ' +
+        'não perguntou disso. Só explique a transição se ela perguntar da secretaria, da posse ou de 2027.'
+      : '',
+    desabafo ? linhaDoDesabafo(desabafo, { cargoPerguntado, candidato }) : '',
     /**
      * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de
      * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
-     * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09).
+     * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09). Desabafo não
+     * entra: quem conta uma briga recebe carinho, não despacho.
      */
-    trouxeProblema
+    trouxeProblema && !desabafo
       ? 'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: ela trouxe um problema — acolha em uma frase, diga ' +
         'onde aquilo se resolve e agradeça a confiança, sem perguntas sobre o caso, sem pedir que ela ' +
         `conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando ${ELE_E.de}.`
@@ -3444,11 +3525,11 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
    * **As travas do ESCOPO** (31/10/2026) — regras 20 e 21. Barram o envio sozinho.
    */
   falouDeUrgencia: 'fala de urgência, prioridade ou de avaliar o pedido — isso não se diz ao contato',
-  /**
-   * **O mesmo "agradeço as informações, estamos atentos" pela segunda vez** — print de
-   * 31/10/2026. A metade mecânica de `jaAgradecemosADenuncia`: o prompt já manda não
-   * repetir, e esta trava garante que, se repetir, não sai sozinho.
-   */
+  /** Desabafo (31/10/2026): pergunta convida a mais desabafo; o formulário soa como máquina. */
+  perguntouNoDesabafo: 'faz pergunta a quem está desabafando — a resposta de desabafo acolhe e não pergunta nada',
+  cadastroNoDesabafo: 'pede nome e cidade a quem está desabafando — o formulário não cabe aqui',
+  /** Perguntou só o cargo e o rascunho explicou a secretaria / 2027 / Zucco (31/10/2026). */
+  explicouATransicao: 'explica secretaria, 2027 ou o governo do Zucco a quem só perguntou o cargo — responda só o cargo de hoje',
   repetiuOAgradecimento: 'agradece a denúncia de novo ("estamos atentos") — isso já foi dito nesta conversa',
   prometeuChegarAEle: 'promete que o recado chega ao deputado ou que ele vai ler — quem lê é a equipe',
   prometeuOrgao: 'promete encaminhar o pedido ao governador ou a outro órgão — o certo é dar o contato oficial',
@@ -3913,6 +3994,15 @@ function mesmoTelefone(a, b) {
 export function travasDoEscopo(texto, contexto = {}) {
   const t = String(texto || '');
   const avisos = [];
+  // Desabafo (31/10/2026): sem pergunta e sem formulário — ver `linhaDoDesabafo`.
+  if (contexto?.desabafo) {
+    if (/\?/.test(t)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.perguntouNoDesabafo);
+    if (/Nome\s*,\s*Cidade/.test(t)) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.cadastroNoDesabafo);
+  }
+  // Perguntou só o cargo (31/10/2026): a transição não entra — ver `perguntouOCargo`.
+  if (contexto?.perguntouSoOCargo && /secretar|defesa\s+civil|2027|\bposse\b|zucco/i.test(t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.explicouATransicao);
+  }
   // Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes na mesma conversa.
   if (contexto?.jaAgradecemosADenuncia && AGRADECEU_A_DENUNCIA.test(t)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.repetiuOAgradecimento);

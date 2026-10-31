@@ -49,12 +49,12 @@ estouraria no meio de uma rodada, na tela dele.
 válido e só estoura em runtime, no instante em que o painel desenha. Comentário dentro de um
 `css()` não leva crase — `checar-modulos` tem uma passada para isso.
 
-## As trinta e cinco suites
+## As trinta e sete suites
 
 Node puro, sem dependência, e **rodam offline**. Antes de dar tarefa por concluída, todas passando:
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs && node tests/page-mob.test.mjs && node tests/memoria.test.mjs && node tests/orgaos.test.mjs && node tests/modos.test.mjs && node tests/corrente.test.mjs && node tests/rascunho-vazio.test.mjs
+node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs && node tests/page-mob.test.mjs && node tests/memoria.test.mjs && node tests/orgaos.test.mjs && node tests/modos.test.mjs && node tests/corrente.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/desabafo.test.mjs && node tests/momento-no-gesto.test.mjs
 ```
 
 **`panel.js` não é importável** (precisa de `window`), então os testes dele leem o arquivo como

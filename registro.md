@@ -1,4 +1,45 @@
-## 2026-10-31 - v3.244.0 - ESTADO DE AGORA - corrente, rascunho vazio e a chave do modelo
+## 2026-10-31 - v3.245.0 - ESTADO DE AGORA - desabafo e emoji na mensagem do momento
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.245.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.245.0** na linha pequena do topo do painel (`encaixado na aba`)
+4. Apague o texto que ja estiver no campo deste atendimento. Nao de Enter por cima dele
+5. Primeira visita so com emoji, figura ou sticker, e com a mensagem do momento preenchida:
+   sai essa mensagem, nao as boas-vindas. "Boa tarde" continua recebendo as boas-vindas, agora
+   em primeira pessoa ("Em que posso ajudar?", sem "equipe")
+6. Briga na familia, sofrimento, raiva ou agressao vai para a tecla 6. Sem formulario, sem
+   pergunta, e sem aula de 2027 quando a pergunta foi so o cargo. O 190 so entra se houve
+   agressao, e no fim
+
+### O QUE MUDOU
+
+Dois casos da lista que a 3.244.0 nao cobria.
+
+- O desabafo pessoal caia na IA como problema ou denuncia. "governador ou deputado" puxava o
+  dossie e a resposta saia com secretaria, janeiro de 2027, a historia recontada e uma pergunta.
+  Agora a tecla 6 recebe a linha do desabafo: calor, primeira pessoa, cargo em uma frase se ela
+  perguntou, e o formulario fica de fora
+- So emoji na chegada casava as boas-vindas, porque essa caixa fica acima da reacao. O quadro
+  gravado nao recebe condicao nova sozinho, entao a mesma troca mora no codigo. Sem mensagem do
+  momento configurada, as boas-vindas continuam. O texto gravado que ainda diz "equipe" e
+  reescrito na migracao e de novo na hora de enviar
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Concordancia do tratamento. Conferencia do canal desligada.
+Importacao continua nao contando como retorno. Envio automatico continua desligado.
+`interesse-conteudo` continua na voz da equipe. Os tres achados que ficaram de fora na 3.244
+continuam de fora.
+
+Prova: `momentoNoGesto` devolvendo null derruba 3 assercoes, as do quadro gravado.
+
+## 2026-10-31 - v3.244.0 - corrente, rascunho vazio e a chave do modelo
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.244.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

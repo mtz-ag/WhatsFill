@@ -629,6 +629,14 @@ export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt, padroesDeA
     if (porTipo) return porTipo;
   }
 
+  /**
+   * **Desabafo pessoal pede gente (ou a IA), nunca resposta pronta nem formulário** (31/10/2026) —
+   * ver `desabafoPessoal`. Vale mesmo curto: "minha irmã me bateu por causa de política" tem 50
+   * caracteres e é o caso que mais pede uma resposta escrita para ela.
+   */
+  const desabafo = desabafoPessoal(entrantes, nossaUltimaAt);
+  if (desabafo) return { motivo: `${desabafo.motivo} — responda com acolhimento` };
+
   const total = rajada.reduce((n, m) => n + semLinks(m?.texto).length, 0);
   const proprias = rajada.filter((m) => temSubstancia(m, padroesDeAnuncio));
 
@@ -3096,6 +3104,53 @@ export function pareceCorrente(texto) {
     CHAMADO_DE_CORRENTE.test(semAcentos(bruto)),
   ].filter(Boolean).length;
   return marcas >= 2 ? { motivo: 'mandou um texto com cara de corrente encaminhada' } : null;
+}
+
+/**
+ * **DESABAFO PESSOAL: briga na família, sofrimento, raiva, agressão** (31/10/2026). Uma apoiadora
+ * contou briga com parentes por política, vontade de fazer mal, bloqueio e uma agressão, e
+ * perguntou o cargo. O rascunho saiu clínico (190, 192, pergunta de segurança), recontou a
+ * história e explicou janeiro de 2027. Ele quer, para desabafo, uma resposta emotiva e calorosa.
+ *
+ * Lê o que ela escreveu desde a nossa última fala, junto (a história vem em várias mensagens).
+ * Exige forma de vida pessoal, não opinião: a raiva simples ("que raiva desse governo") só conta
+ * com a família no meio; a ameaça ("vontade de matar", "vou matar") e a agressão contam sozinhas.
+ *
+ * @returns {{motivo:string, familia:boolean, conflito:boolean, raiva:boolean, agressao:boolean, sofrimento:boolean}|null}
+ */
+const DESABAFO_FAMILIA =
+  /(^|[^a-z])((minha|meu|minhas|meus)\s+(familia|parentes?|irma|irmao|irmas|irmaos|mae|pai|marido|esposa|mulher|filh[oa]s?|cunhad[oa]s?|sogr[oa]s?|tias?|tios?|prim[oa]s?|sobrinh[oa]s?|genro|nora|vizinh[oa]s?)|parentes|familiares|(na|da|com a|com minha)\s+familia)([^a-z]|$)/;
+const DESABAFO_CONFLITO =
+  /(^|[^a-z])(brig(a|as|amos|aram|ou|uei|ando)|discut(i|imos|iram|indo)|bloquei(ei|ou|amos|aram)|debocha\w*|humilha\w*|xinga\w*|zomba\w*|zoaram|me\s+expulsa\w*|cortei\s+relac\w*|nao\s+falo\s+mais\s+com)([^a-z]|$)/;
+const DESABAFO_AMEACA =
+  /vontade\s+de\s+(matar|bater|esganar|socar|enforcar)|(vou|quero|queria|ia)\s+(matar|esganar|enforcar)|matar\s+(1|um|uma)\s+por\s+(1|um|uma)/;
+const DESABAFO_RAIVA = /(^|[^a-z])(raiva|odio|revoltad[oa]|furios[oa]|sangue\s+nos\s+olhos)([^a-z]|$)/;
+const DESABAFO_AGRESSAO =
+  /(jog(ou|aram)|tac(ou|aram)|atir(ou|aram))\b[^.!?\n]{0,40}\b(na|em|contra)\s+(minha\s+|mim|meu\s+)?(cabeca|cara|rosto)|(^|[^a-z])(me|nos)\s+(bateu|bateram|agrediu|agrediram|empurrou|empurraram|socou|socaram|espancou|espancaram|machucou|machucaram|chutou|chutaram)([^a-z]|$)|(^|[^a-z])(agredid[oa]s?|apanhei|apanhando|espancad[oa])([^a-z]|$)/;
+const DESABAFO_SOFRIMENTO =
+  /(^|[^a-z])(estou|to|tou|ando|fiquei|me\s+sinto|sinto)\s+(muito\s+|tao\s+|bem\s+)?(triste|mal|arrasad[oa]|magoad[oa]|deprimid[oa]|sozinh[oa]|humilhad[oa]|destruid[oa]|abalad[oa])|(^|[^a-z])chor(ei|ando)([^a-z]|$)|nao\s+aguento\s+mais|(^|[^a-z])sofrendo([^a-z]|$)|doi\s+muito/;
+
+export function desabafoPessoal(entrantes, nossaUltimaAt) {
+  const t = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => !m?.sistema && !m?.anuncio)
+    .map((m) => semAcentos(m?.texto || '').toLowerCase())
+    .join('\n');
+  if (!t.trim()) return null;
+  const familia = DESABAFO_FAMILIA.test(t);
+  const conflito = DESABAFO_CONFLITO.test(t);
+  const ameaca = DESABAFO_AMEACA.test(t);
+  const raiva = ameaca || (familia && DESABAFO_RAIVA.test(t));
+  const agressao = DESABAFO_AGRESSAO.test(t);
+  const sofrimento = DESABAFO_SOFRIMENTO.test(t);
+  const casa = agressao || ameaca || (familia && (conflito || raiva || sofrimento)) || (sofrimento && conflito);
+  if (!casa) return null;
+  const partes = [
+    familia && conflito ? 'briga na família' : familia ? 'assunto de família' : conflito ? 'briga' : '',
+    sofrimento ? 'sofrimento' : '',
+    raiva ? 'raiva/vontade de fazer mal' : '',
+    agressao ? 'agressão' : '',
+  ].filter(Boolean);
+  return { motivo: `desabafo pessoal (${partes.join(', ')})`, familia, conflito, raiva, agressao, sofrimento };
 }
 
 /**
