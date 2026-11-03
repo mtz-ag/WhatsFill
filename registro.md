@@ -1,8 +1,76 @@
-## 2026-11-03 - v3.251.0 - ESTADO DE AGORA - o aviso da mensagem do momento estava escondido
+## 2026-11-03 - v3.252.0 - ESTADO DE AGORA - o veredito contava a IA como contato pulado
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.251.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.252.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. **Troque o texto da mensagem do momento.** O salvo e de **domingo, 01/11**. Enquanto ele
+   estiver ai a **tecla 5 nao sai para ninguem**. Medido numa rodada real das Minhas: **6 de 6
+   contatos** cairam em "concluir sem enviar", incluindo gente **sem cidade e sem etiqueta que
+   escreveu hoje**. O campo esta na aba **Automatizado**, cartao "Mensagem do momento (tecla 5)"
+2. `chrome://extensions` -> **recarregar** a extensao
+3. **F5** na aba do mobiliza.me
+4. Confira **3.252.0** na linha pequena do topo do painel (`encaixado na aba`)
+5. **Decida sobre a imagem junto da mensagem do momento.** As duas caixas estao ligadas e o
+   envio aprendido e da plataforma ANTIGA (`api.mobiliza.app`, 20/09): aqui
+   `page-mob.enviarImagem` recusa. Nao quebra a rodada (cai para texto), mas registra
+   "a imagem NAO saiu" a cada envio
+
+### O QUE MUDOU
+
+**O veredito da rodada contava linha de SERVICO como contato pulado.** Medido: *"0 enviado(s),
+**14** pulado(s)"* numa rodada com **cinco** contatos pulados no Andamento — e antes disso
+*"2 pulado(s)"* numa rodada de um contato so. Sempre o dobro.
+
+A causa e que `resultado: 'pulado'` virou o rotulo generico de linha informativa: o custo de
+cada chamada da IA, o aviso do keepalive, o status do canal, o "carreguei mais da fila" e o
+proprio botao Parar entram no log com ele, e `conta('pulado')` contava tudo como gente. Os
+cinco contatos mais nove linhas de servico davam exatamente 14.
+
+Isso importa porque o veredito e justamente a linha que deveria distinguir *"a rodada
+trabalhou"* de *"a rodada nao conseguiu fazer nada"* (25/09) — inflado, ele deixa de
+distinguir, e dobra sozinho em toda rodada que usa a IA.
+
+Agora ha `NOMES_DE_SERVICO` e o veredito conta so contato. **O teste e que impede a lista de
+envelhecer:** ele varre os nomes fixos de `registrarNaRodada` no proprio `panel.js` e exige
+que cada um esteja na lista — e ja achou tres que eu tinha perdido (`aba`, `rede`, `sonda`),
+dois deles contando como pulado.
+
+**E o comando de testes do CLAUDE.md listava 30 suites com 39 no diretorio.** As nove de fora
+(`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`, `momento-desatualizado`,
+`momento-no-gesto`, `orgaos`, `rascunho-vazio`) nunca rodavam por aquele comando. Agora sao as
+40, com o laco do Git Bash do lado para nao depender da lista.
+
+### O QUE EU MEDI NA SUA TELA (nao mexi em nada disso)
+
+- **O fluxo esta sendo decidido pelo momento vencido.** 6 de 6 na tecla 3. Quando
+  `podeMandarMomento` e falso, `contexto-de-outro-dia` e `ultima-e-so-reacao` caem em
+  "concluir sem enviar" — inclusive para quem nunca foi perguntado o nome. **Decisao sua:**
+  nesse caso o desfecho mais util seria a tecla 4 (pedir dados) para quem nao tem cadastro,
+  em vez do silencio
+- **O rascunho da IA num apoiador:** ela mandou uma mensagem longa e calorosa com sugestoes
+  sobre jovens e trabalho, e **convidou o Capitao para um cafe**. O rascunho (a) abriu
+  qualificando a ideia dela com ressalva legal ("qualquer medida precisa respeitar a idade
+  minima legal, as regras de protecao ao trabalho") — que e dar licao de moral em apoiador, o
+  caso de 25/09 por outra porta — e (b) **ignorou o convite**, que era a coisa mais humana da
+  mensagem. Nao ha regra cobrindo convite pessoal
+- **O rascunho custou US$ 0,0064 com entrada de 26.175 tokens e SEM CACHE.** O prompt era de
+  ~8.400 tokens em 25/09: triplicou. "SEM CACHE" numa chamada dessas e dinheiro recorrente
+- **O Parar e o Esc nao encerram a espera de "responda a mao"** quando a caixa ja fechou. O ■
+  exige clique de verdade (`isTrusted` + `detail !== 0`, guarda de 29/10) e funciona; o Esc do
+  controle flutuante nao pegou
+
+### O QUE NAO MUDOU
+
+Nenhuma trava afrouxou. Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu
+mando" ligado. Fecho por cortesia ligado. O quadro nao foi tocado. Nenhuma mensagem foi
+enviada, nenhum atendimento concluido ou assumido no teste.
+
+Prova: tirar o filtro do `conta` derruba 1 assercao; tirar "IA" da lista derruba 2.
+
+## 2026-11-03 - v3.251.0 - o aviso da mensagem do momento estava escondido
 
 ### O QUE VOCE PRECISA FAZER
 

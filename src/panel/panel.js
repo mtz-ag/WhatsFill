@@ -6765,6 +6765,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   const LINHA_DE_IA = /(^|[^\p{L}])IA([^\p{L}]|$)/u;
   const ehLinhaDeIA = (linha) => LINHA_DE_IA.test(`${linha?.nome || ''} ${linha?.motivo || ''}`);
 
+  /**
+   * **AS LINHAS DE SERVIÇO NÃO SÃO CONTATOS, E ESTAVAM NA CONTA DE PULADOS** (03/11/2026, medido
+   * numa rodada real: o veredito disse *"0 enviado(s), 14 pulado(s)"* com **cinco** contatos
+   * pulados no Andamento — o dobro, e antes disso "2 pulado(s)" para um contato só).
+   *
+   * A causa é que `resultado: 'pulado'` virou o rótulo genérico de linha informativa: o custo de
+   * cada chamada da IA, o aviso do keepalive, o status do canal, o "carreguei mais da fila" e o
+   * próprio botão Parar entram no log com ele. `conta('pulado')` contava tudo isso como gente.
+   *
+   * **Um veredito que infla o número de pulados é pior que nenhum**: ele é justamente a linha que
+   * deveria distinguir *"a rodada trabalhou"* de *"a rodada não conseguiu fazer nada"* (25/09), e
+   * com as linhas de serviço dentro ele dobra sozinho em toda rodada que usa a IA.
+   *
+   * O nome fixo é o que separa — nenhum contato se chama "rodada" ou "fila". **Quem impede a
+   * lista de envelhecer é o teste**, que varre os nomes fixos de `registrarNaRodada` no próprio
+   * `panel.js` e exige que cada um esteja aqui: linha de serviço nova com nome novo derruba ele.
+   */
+  const NOMES_DE_SERVICO = new Set([
+    'IA', 'rodada', 'fila', 'canal', 'aba', 'rede', 'sonda', 'agendamento', 'plataforma',
+    'remover etiquetas', '— a refinar —',
+  ]);
+  const ehLinhaDeServico = (linha) => NOMES_DE_SERVICO.has(String(linha?.nome || ''));
+
   function renderAutoLog() {
     if (!logNode || !logNode.isConnected) return;
     logNode.replaceChildren();
@@ -8424,7 +8447,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       else fecharControleDaRodada();
     }
 
-    const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo).length;
+    // Só contato conta: ver `NOMES_DE_SERVICO`. As linhas de serviço usam `pulado` como rótulo
+    // de linha informativa, e sem este filtro o veredito dobra em toda rodada que chama a IA.
+    const conta = (tipo) => state.auto.log.filter((l) => l.resultado === tipo && !ehLinhaDeServico(l)).length;
     const triados = conta('triado');
     const concluidos = conta('concluido');
     const reabertos = conta('reiniciado');
@@ -8455,7 +8480,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     const motivoDominante = (() => {
       if (conta('enviado') || conta('concluido')) return '';
-      const pulados = state.auto.log.filter((l) => l.resultado === 'pulado' && l.motivo);
+      const pulados = state.auto.log.filter((l) => l.resultado === 'pulado' && l.motivo && !ehLinhaDeServico(l));
       if (pulados.length < 2) return '';
       const porMotivo = new Map();
       for (const l of pulados) {

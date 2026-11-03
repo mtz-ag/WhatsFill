@@ -7306,10 +7306,16 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, as trinta suítes passando:
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 40 suítes** passando.
+
+> **Esta lista envelhece, e envelheceu:** em 03/11/2026 ela tinha 30 nomes e o diretório já tinha
+> 39 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
+> `momento-desatualizado`, `momento-no-gesto`, `orgaos`, `rascunho-vazio`) nunca rodavam por este
+> comando. **Suíte nova entra aqui no mesmo commit**, ou ela só roda no dia em que alguém procurar
+> por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/parser.test.mjs && node tests/contract.test.mjs && node tests/vars.test.mjs && node tests/tags.test.mjs && node tests/hsm.test.mjs && node tests/conversa.test.mjs && node tests/templates.test.mjs && node tests/categorizar.test.mjs && node tests/cortesia.test.mjs && node tests/sugestao.test.mjs && node tests/ia.test.mjs && node tests/gabinete.test.mjs && node tests/arvore.test.mjs && node tests/anuncios.test.mjs && node tests/observacoes.test.mjs && node tests/detalhes.test.mjs && node tests/rolagem.test.mjs && node tests/imagem.test.mjs && node tests/perfis.test.mjs && node tests/lote.test.mjs && node tests/atendimento-novo.test.mjs && node tests/facebook.test.mjs && node tests/dom-facebook.test.mjs && node tests/facebook-ia.test.mjs && node tests/ia-validadores.test.mjs && node tests/respostas-comentario.test.mjs && node tests/mob.test.mjs && node tests/dom-mob.test.mjs && node tests/mob-hook.test.mjs && node tests/page-mob.test.mjs
+node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
