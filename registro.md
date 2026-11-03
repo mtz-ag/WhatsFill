@@ -1,8 +1,73 @@
-## 2026-10-31 - v3.250.0 - ESTADO DE AGORA - o clique da aba Novos nao achava o botao
+## 2026-11-03 - v3.251.0 - ESTADO DE AGORA - o aviso da mensagem do momento estava escondido
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.250.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.251.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. **Troque o texto da mensagem do momento.** O que esta salvo e de **domingo, 01/11**
+   ("Que este domingo seja abencoado... Hoje comeca novembro"). Enquanto ele estiver ai, a
+   **tecla 5 nao sai para ninguem** e os casos caem em "concluir sem enviar". O campo esta na
+   aba **Automatizado**, cartao "Mensagem do momento (tecla 5)"
+2. `chrome://extensions` -> **recarregar** a extensao
+3. **F5** na aba do mobiliza.me
+4. Confira **3.251.0** na linha pequena do topo do painel (`encaixado na aba`)
+5. Confira a lista do cartao "Etiquetas que a rodada REMOVE": `1 TESTE DISPARO` e
+   `2 Sem Retorno` nao foram achadas no CRM. **Pode ser grafia, pode ser a amostra** (aqui o
+   catalogo de etiquetas e 1.000 contatos de ~108.000, entao ele nao prova que a etiqueta nao
+   existe). Nao mexi nisso
+6. O canal estava **desconectado** na plataforma no dia do teste
+
+### O QUE MUDOU
+
+Rodei a extensao na plataforma, sem mandar mensagem, e os erros que apareceram foram de TELA,
+nao de codigo: nenhum erro de JavaScript no console.
+
+**O aviso de que a mensagem do momento venceu estava escondido atras do "ⓘ detalhes".** Ele
+nasce como `.wf-hint`, e `encolherExplicacoes` recolhe toda explicacao de mais de uma linha
+que nao esteja marcada com `data-fica`. Medido nos dois sentidos: com o cartao fechado o texto
+nao aparece; clicando os detalhes, aparece. A regra de 10/09 ja dizia que DADO ou AVISO de
+estado marca `data-fica` — este nao marcava, e e o aviso mais caro do cartao, porque enquanto
+ele esta escondido a tecla 5 nao sai e a unica pista mora no Andamento, que so aparece depois
+de comecar uma rodada.
+
+**E ele mandava para a aba errada.** O texto dizia "atualize em Config", e `renderCartaoMomento`
+so e chamado por `renderAutomatizado`: a Config nao tem nem o campo nem o aviso. Agora ele
+nomeia o cartao, que existe num lugar so.
+
+**As travas citavam um controle que nao existe mais com aquele nome.** Na aba Respostas o botao
+da tecla 4 desabilitava dizendo *"Precisa do 'Enviar automatico' ligado (aba Config)"* — o
+controle hoje e o box **"Quem manda a mensagem"**, com "Eu mando" e "A extensao manda sozinha",
+e vive no topo do Automatizado e na Config. Sao sete textos de tela mais tres comentarios. A
+licao de 28/10 (ao trocar o nome de uma coisa na tela, grep pelo nome ANTIGO) vale tambem para
+as travas.
+
+### O QUE NAO MUDOU
+
+**Nenhuma trava afrouxou.** A da tecla 4 continua certa fora da rodada: ali `esperarVoceEnviar`
+nao espera (ele clicou em Inserir, o texto esta la), entao concluir fecharia sem a pergunta ter
+saido. O que mudou foi o NOME e o ENDERECO.
+
+Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu mando" ligado. Fecho por
+cortesia ligado. Boas-vindas em tom neutro. A ordem dos cartoes nao mudou. O quadro nao foi
+tocado.
+
+### O QUE FICOU EM ABERTO
+
+- **A imagem junto da mensagem do momento esta LIGADA e nao pode funcionar aqui.** O envio
+  aprendido e de `api.mobiliza.app` (20/09) e `page-mob.enviarImagem` recusa. Nao quebra a
+  rodada (cai para texto), mas registra "a imagem NAO saiu" a cada envio. Lido no codigo, nao
+  medido ao vivo — medir exigiria mandar imagem para alguem
+- **O veredito nao bate com o log:** "0 enviado(s), 2 pulado(s)" com uma linha de contato so.
+  Nao diagnosticado
+- **As rodadas dos Novos, Outros, Reabrir e do Disparo abrem `confirm()` nativo**, e por isso
+  nao da para roda-las daqui. A das Minhas nao tem confirm e foi a que rodou
+
+Prova: tirar o `data-fica` derruba 1 assercao; voltar "atualize em Config" derruba 3; voltar
+o nome velho da trava derruba 2.
+
+## 2026-10-31 - v3.250.0 - o clique da aba Novos nao achava o botao
 
 ### O QUE VOCE PRECISA FAZER
 

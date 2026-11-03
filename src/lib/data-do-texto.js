@@ -110,5 +110,17 @@ export function momentoDesatualizado(momento, agora = new Date()) {
   return unicos.length ? { motivo: `fala de ${unicos.join('/')}`, trechos: unicos } : null;
 }
 
+/**
+ * **O aviso diz ONDE se mexe, e "Config" era o lugar errado** (03/11/2026, medido na tela dele: o
+ * texto salvo falava de domingo/2 de novembro numa terca-feira, e a rodada registrou este aviso).
+ *
+ * O campo da mensagem do momento vive em `renderCartaoMomento`, chamado **so** por
+ * `renderAutomatizado` — a aba Config nao tem nem o campo nem o aviso. Mandar procurar la custa a
+ * mesma sessao de diagnostico do aviso que apontava para o interruptor na aba errada (06/09).
+ *
+ * O cartao e nomeado em vez da aba porque ele existe num lugar so: trocar de aba de novo nao
+ * envelhece esta frase.
+ */
 export const avisoMomentoDesatualizado = (r) =>
-  `Mensagem do momento desatualizada (${r?.motivo || 'fala de outro dia'}) — atualize em Config`;
+  `Mensagem do momento desatualizada (${r?.motivo || 'fala de outro dia'}) — atualize em `
+  + '"Mensagem do momento (tecla 5)", na aba Automatizado';

@@ -1665,6 +1665,23 @@ grupo('O BOX DO MODO DE ENVIO — uma chave so, mostrada em dois lugares');
   check(!/Enviar automático \(um clique manda a mensagem\)/.test(painel),
     'a caixa antiga da Config saiu — nao ha dois controles para a mesma chave');
 
+  /**
+   * **E O NOME VELHO NAO PODE SOBREVIVER NAS TRAVAS** (03/11/2026, medido na tela dele: o cartao da
+   * tecla 4 desabilitava o botao com *"Precisa do 'Enviar automatico' ligado (aba Config)"* — um
+   * controle que nao existe mais com esse nome, numa aba que nao e a dele).
+   *
+   * A trava em si continua CERTA fora da rodada (`esperarVoceEnviar` so espera com a rodada
+   * andando, entao ali o texto so seria inserido e concluir fecharia sem a pergunta ter saido). O
+   * que envelheceu foi o NOME e o ENDERECO — a licao de 28/10: *ao trocar o nome de uma coisa na
+   * tela, grep pelo nome ANTIGO; ele vive tambem nos titulos, nas descricoes e nos avisos.*
+   */
+  for (const velho of ['"Enviar automático" ligado', 'Envio automático está desligado']) {
+    check(!painel.includes(velho),
+      `nenhuma trava diz "${velho}" — o controle se chama "A extensao manda sozinha"`);
+  }
+  check(/A extensão manda sozinha", no box "Quem manda a mensagem"/.test(painel),
+    'as travas nomeiam o controle que esta na tela');
+
   /** O aviso mostra o preco do modo ESCOLHIDO, nao os dois ao mesmo tempo. */
   const box = painel.slice(painel.indexOf('function boxDoModoDeEnvio'), painel.indexOf('function boxDoModoDeEnvio') + 2600);
   check(/state\.settings\.autoSend\s*\n?\s*\?/.test(box) || box.includes('state.settings.autoSend'),
@@ -1747,7 +1764,7 @@ grupo('O MODO "EU MANDO" NAO PODE SER IMPEDIMENTO DE TELA');
   for (const cartao of ['renderCartaoNovos', 'renderCartaoRespondidos']) {
     const corpo = corte(cartao);
     check(corpo.length > 100, cartao + ': achei o cartao');
-    check(!/impedimentos\.push\('Precisa do "Enviar automático"/.test(corpo),
+    check(!/(impedimentos|trava)\.push\('Precisa d[eo] "(Enviar automático|A extensão manda sozinha)"/.test(corpo),
       cartao + ' nao trava mais pelo modo de envio');
   }
 

@@ -45,10 +45,44 @@ const nossaUltimaAt = at('14:04');
   const r = datas.datasForaDeHoje(MOMENTO_29, sabado);
   check(!!r, 'o texto salvo de 29/10 é barrado no sábado 31/10');
   check(r?.motivo === 'fala de quinta-feira/29 de outubro', `motivo exato (${r?.motivo})`);
-  check(datas.avisoMomentoDesatualizado(r) === 'Mensagem do momento desatualizada (fala de quinta-feira/29 de outubro) — atualize em Config', 'aviso da tela no texto pedido');
+  check(datas.avisoMomentoDesatualizado(r) === 'Mensagem do momento desatualizada (fala de quinta-feira/29 de outubro) — atualize em "Mensagem do momento (tecla 5)", na aba Automatizado', 'aviso da tela no texto pedido');
   check(datas.datasForaDeHoje(MOMENTO_29, quinta) === null, 'no próprio dia 29 (quinta) o mesmo texto passa');
   check(datas.datasForaDeHoje(MOMENTO_SABADO, sabado) === null, 'o texto de sábado passa no sábado');
   check(!!datas.datasForaDeHoje(MOMENTO_SABADO, quinta), 'o texto de sábado é barrado numa quinta');
+}
+
+{
+  /**
+   * **O aviso tem de ESTAR À VISTA e apontar para onde se mexe** (03/11/2026, medido na tela dele:
+   * o texto salvo falava de domingo/2 de novembro numa terça, a tecla 5 estava travada, e o cartão
+   * não mostrava nada — o aviso só aparecia depois de clicar os "ⓘ detalhes").
+   *
+   * As duas metades do defeito, e as duas caem se forem reintroduzidas: o `data-fica` (sem ele
+   * `encolherExplicacoes` recolhe todo `.wf-hint` de mais de uma linha) e a aba citada no texto,
+   * que era a Config — onde não há campo nem aviso, porque `renderCartaoMomento` só é chamado por
+   * `renderAutomatizado`.
+   */
+  grupo('o aviso do momento vencido fica à vista, e manda para a aba certa');
+
+  const cartao = painel.slice(
+    painel.indexOf('function renderCartaoMomento'),
+    painel.indexOf('function renderCartaoMomento') + 4000
+  );
+  check(cartao.length > 100, 'achei renderCartaoMomento');
+
+  const i = cartao.indexOf('vencidoNaConfig');
+  const bloco = cartao.slice(i, cartao.indexOf('avisoMomentoDesatualizado(vencidoNaConfig)', i) + 60);
+  check(/'data-fica': '1'/.test(bloco),
+    "o aviso do momento vencido leva data-fica — sem ele o 'ⓘ detalhes' o esconde");
+
+  check(!/atualize em Config/.test(datas.avisoMomentoDesatualizado(null)),
+    'o aviso não manda mais para a Config, que não tem o campo');
+  check(/aba Automatizado/.test(datas.avisoMomentoDesatualizado(null)),
+    'ele nomeia a aba onde o campo realmente está');
+
+  /** E o campo mora num lugar só: se alguém o duplicar na Config, esta asserção cai. */
+  const vezes = (painel.match(/renderCartaoMomento\(/g) || []).length;
+  check(vezes === 2, `renderCartaoMomento é declarado e chamado uma vez só (achei ${vezes})`);
 }
 
 {

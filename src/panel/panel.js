@@ -2562,7 +2562,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       pedir.disabled = true;
       cartaoPedir.append(
-        h('div', { class: 'wf-block' }, 'Precisa do "Enviar automático" ligado (aba Config): sem ele o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter saído.')
+        h('div', { class: 'wf-block' }, 'Precisa de "A extensão manda sozinha", no box "Quem manda a mensagem" (aba Automatizado): sem isso o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter saído.')
       );
     }
     body.append(cartaoPedir);
@@ -2820,7 +2820,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   /**
    * @param {object} opts
-   * @param {boolean} opts.send envia de verdade (respeitando o "Enviar automático")
+   * @param {boolean} opts.send envia de verdade (respeitando o box "Quem manda a mensagem")
    * @param {boolean} [opts.jaConfirmado] a duplicata já foi mostrada e aceita por quem chamou.
    *   É o caso da rodada: o aviso vira linha da pergunta, e o `confirm()` nativo aqui abriria
    *   um segundo diálogo, depois da decisão, travando o laço.
@@ -2876,7 +2876,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const marcaPalavra = await etiquetarPorPalavra(alvo, modelo.text || '');
       setStatus(
         (send && !state.settings.autoSend
-          ? 'Envio automático está desligado (aba Config): o diálogo ficou pronto, clique em "Enviar mensagem".'
+          ? 'Modo "Eu mando" (box "Quem manda a mensagem"): o diálogo ficou pronto, clique em "Enviar mensagem".'
           : `Diálogo pronto com "${modelo.name}". Confira e clique em "Enviar mensagem".`) + marcaPalavra,
         'ok'
       );
@@ -3003,7 +3003,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (!state.settings.autoSend) {
-        setStatus('Este fluxo manda duas mensagens seguidas, então precisa do "Enviar automático" ligado (aba Config).', 'err');
+        setStatus('Este fluxo manda duas mensagens seguidas, então precisa de "A extensão manda sozinha" no box "Quem manda a mensagem" (aba Automatizado).', 'err');
         return;
       }
 
@@ -3222,7 +3222,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        *
        * **Medido: o defeito não era a etiqueta, era o CAMINHO.** A marca ficava depois do envio de
        * verdade (`page.sendText`), e este ramo — "Inserir" na aba Respostas, e **toda** resposta
-       * pronta quando o "Enviar automático" está desligado — devolve `true` antes de chegar lá. Do
+       * pronta quando o modo é "Eu mando" — devolve `true` antes de chegar lá. Do
        * lado dele a mensagem saiu igual; do lado do painel, nunca houve envio para marcar.
        *
        * **O preço, dito na tela:** colar e NÃO mandar deixa a etiqueta aplicada. É o lado barato —
@@ -3255,7 +3255,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       setStatus(
         (send && !state.settings.autoSend
-          ? 'Envio automático está desligado (aba Config): texto inserido, envie você.'
+          ? 'Modo "Eu mando" (box "Quem manda a mensagem"): texto inserido, envie você.'
           : 'Texto inserido no campo de mensagem.') + marcaPalavra,
         'ok'
       );
@@ -3872,7 +3872,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Sem envio automático, sendTemplate apenas insere o texto — e concluir depois disso
       // fecharia o atendimento sem a pergunta ter saído.
       if (!state.settings.autoSend) {
-        setStatus('Este fluxo conclui logo após enviar, então precisa do "Enviar automático" ligado (aba Config).', 'err');
+        setStatus('Este fluxo conclui logo após enviar, então precisa de "A extensão manda sozinha" no box "Quem manda a mensagem" (aba Automatizado).', 'err');
         return;
       }
 
@@ -4685,7 +4685,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // 31/10/2026: o texto salvo falava de quinta-feira/29 de outubro num sábado.
     const vencidoNaConfig = momentoDesatualizado({ text: cfg.mensagemMomento, variantes: cfg.mensagemMomentoVariantes });
     if (vencidoNaConfig) {
-      card.append(h('div', { class: 'wf-hint wf-err' },
+      /**
+       * **`data-fica` é obrigatório aqui, e sem ele o aviso SOME** (03/11/2026, medido na tela
+       * dele nos dois sentidos: com o cartão fechado o texto não aparece; clicando os "ⓘ
+       * detalhes" do cartão, ele aparece).
+       *
+       * `encolherExplicacoes` recolhe todo `.wf-origin`/`.wf-hint` de mais de uma linha atrás do
+       * botão de detalhes, e este passa de uma linha com folga. A regra de 10/09 já dizia:
+       * **texto que é DADO ou AVISO de estado marca `data-fica`; só explicação se recolhe.**
+       *
+       * O preço de errar isto é o mais caro do cartão: enquanto o aviso está escondido, a tecla 5
+       * não sai para ninguém e a única pista mora no Andamento, que só aparece depois de ele
+       * começar uma rodada.
+       */
+      card.append(h('div', { class: 'wf-hint wf-err', 'data-fica': '1' },
         `⚠ ${avisoMomentoDesatualizado(vencidoNaConfig)}. Enquanto isso a rodada não manda a mensagem do momento ` +
           '(nem as variações) — pula a tecla 5 e deixa o caso com você.'));
     }
@@ -6116,7 +6129,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const trava = [];
     if (!modeloDaRodada()) trava.push('Escolha o modelo aprovado no cartão abaixo.');
-    if (!state.settings.autoSend) trava.push('Precisa do "Enviar automático" ligado (aba Config).');
+    if (!state.settings.autoSend) trava.push('Precisa de "A extensão manda sozinha" no box "Quem manda a mensagem" (aba Automatizado).');
     if (!cfg.etiquetaSemRetorno) {
       trava.push('Sem a etiqueta acima, a rodada não sabe quem é sem retorno dentro de "Meus".');
     }
@@ -6224,7 +6237,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (modelo?.params?.length) {
       impedimentos.push('O modelo escolhido pede parâmetro, e a tela de parâmetros ainda não foi aprendida.');
     }
-    if (!state.settings.autoSend) impedimentos.push('Precisa do "Enviar automático" ligado (acima).');
+    if (!state.settings.autoSend) impedimentos.push('Precisa de "A extensão manda sozinha" no box acima.');
 
     comecar.disabled = state.auto.rodando || impedimentos.length > 0;
     for (const motivo of impedimentos) card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, motivo));
@@ -8118,7 +8131,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **A rodada de só abrir, começando pela etiqueta.**
    *
    * As travas do lote de imagem que NÃO valem aqui: não precisa de par de imagem, não precisa do
-   * "Enviar automático" nem do contrato de envio de imagem — nada sai. As que valem são as duas que
+   * modo de envio nem do contrato de envio de imagem — nada sai. As que valem são as duas que
    * decidem a lista e o número.
    */
   async function runAtenderContatos({ sonda = false } = {}) {
