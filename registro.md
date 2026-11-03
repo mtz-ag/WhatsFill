@@ -1,8 +1,92 @@
-## 2026-11-03 - v3.253.0 - ESTADO DE AGORA - no modo "Eu mando" o rodizio nunca andava
+## 2026-11-03 - v3.254.0 - ESTADO DE AGORA - o Esc nao parava a rodada onde ele mais serve
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.253.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.254.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. **Troque o texto da mensagem do momento.** O salvo continua sendo o de **domingo, 01/11**, e
+   enquanto ele estiver ai a **tecla 5 nao sai para ninguem**. Cartao "Mensagem do momento
+   (tecla 5)", aba **Automatizado**
+2. `chrome://extensions` -> **recarregar** a extensao
+3. **F5** na aba do mobiliza.me
+4. Confira **3.254.0** na linha pequena do topo do painel
+5. **Decida sobre a imagem junto da mensagem do momento.** As duas caixas "mandar junto" estao
+   LIGADAS e aqui a arte **nao sai** — agora o cartao diz isso onde voce liga a caixa. Para o
+   Andamento parar de escrever "a imagem nao saiu" a cada envio, desmarque "mandar junto". Eu nao
+   desmarquei: ligar e desligar o que sai para eleitor e sua decisao
+
+### O QUE MUDOU
+
+**O Esc nao parava a rodada com o foco no campo da conversa** — a sua medicao de ontem
+(*"o Parar e o Esc nao encerram a espera de 'responda a mao'"*). O ■ exige ponteiro de verdade e
+funcionava; o Esc, nao.
+
+A causa era uma guarda minha, copiada de onde ela faz sentido para onde ela nao faz.
+`ehCampoDeTexto` existe para nao roubar tecla de quem esta **digitando** — e ela que impede o "2"
+digitado na conversa de virar a tecla Pular —, e os **dois** escutadores de Esc a consultavam antes
+de olhar a tecla. **O Escape nao digita nada**, entao ali ela nao protegia de nada.
+
+E o preco era o atalho morrer exatamente onde ele serve: nas duas esperas longas o painel sai da
+frente e **o foco vive no campo da conversa**, que e onde voce le e responde; a caixa da pergunta
+ja fechou, entao nao ha outro Esc escutando. O que sobrava era achar e clicar o ■.
+
+O recorte ja estava decidido neste projeto, no painel do Facebook (21/10): *"passam so as setas e o
+Escape; os DIGITOS continuam barrados"*. **Nada afrouxou** — `defaultPrevented`, `isTrusted` (a
+propria extensao dispara Esc em toda passada que envia) e "so enquanto a rodada anda" continuam. E
+parar sem querer custa um ▶: a janelinha fica dizendo PARADA, o log diz "pelo Esc" e quem ja foi
+tratado nao recebe duas vezes.
+
+**E o cartao da imagem ficava calado justo onde voce liga a caixa.** O aviso perguntava se falta
+contrato aprendido — e o contrato **esta** la, aprendido no mobiliza.app em 20/09 —, entao ele se
+calava, enquanto `page-mob.enviarImagem` recusa e a rodada escreve "a imagem nao saiu" a cada
+envio. **Contrato aprendido nao e contrato que serve aqui**, e a pergunta certa e a da plataforma,
+pelo mesmo mecanismo do aviso de modelo aprovado. Junto, a linha do "envio aprendido" parou de
+pedir *"me avise para eu ligar o envio automatico"*, que esta ligado desde 20/09.
+
+### O QUE EU MEDI E NAO MEXI
+
+**Por que o prompt triplicou: foi o DOSSIE.** Voce mediu 26.175 tokens de entrada; a conta fecha.
+```
+arquivo gabinete.md ............. 41.702 chars   (eram 13.184 em 07/09)
+o que de fato vai no prompt ..... 31.217 chars  ~8.671 tok
+sistema do rascunho SEM dossie .. 48.894 chars ~13.582 tok
+sistema do rascunho COM dossie .. 90.918 chars ~25.255 tok
+maior secao: "O que o mandato FEZ" 12.506 chars ~3.474 tok
+```
+Ou seja: **o dossie e um terco do prompt**, e ele so entra nas conversas que o puxam
+(`precisaDoDossie`). **Nao cortei nada**: e pesquisa sua, marcada linha a linha, e o que sair de la
+a IA deixa de saber. Se quiser cortar, a maior peca unica e a secao das emendas e projetos.
+
+**O "SEM CACHE" de uma chamada so NAO prova defeito**, e e honesto dizer isso: na OpenAI o cache e
+automatico e **o primeiro pedido de um prefixo novo nunca tem cache para ler**. O que provaria e
+duas chamadas seguidas, as duas com cache zero. O que eu achei de errado foi a **prosa**: tres
+comentarios do projeto ainda diziam que o prompt tem ~1.300 tokens (29/08) e que o Haiku nunca
+cacheia — com 13.582 sem dossie, ele passa dos 4.096 e "SEM CACHE em chamadas seguidas" voltou a
+ser alarme de verdade. Os numeros foram remedidos em `ia.js` e `gabinete.js`.
+
+### O QUE NAO MUDOU
+
+Nenhuma trava afrouxou. Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu mando"
+ligado. Fecho por cortesia ligado. O quadro nao foi tocado. Nenhuma mensagem foi enviada e nenhum
+atendimento concluido ou assumido.
+
+### O QUE CONTINUA ABERTO, E E SUA DECISAO
+
+- **as duas melhorias de fluxo/IA medidas e nao implementadas**, as mesmas de ontem: sem momento
+  disponivel, quem nao tem cadastro ir para a **tecla 4** em vez do silencio (medido: 6 de 6
+  cairam em "concluir sem enviar", inclusive gente sem cidade que escreveu no dia); e **convite
+  pessoal** ("tomar um cafe") nao tem detector nem resposta — a IA ignorou um;
+- `1 TESTE DISPARO` e `2 Sem Retorno` nao foram achadas no CRM na lista "Etiquetas que a rodada
+  REMOVE" — pode ser grafia, pode ser a amostra de 0,9% do catalogo;
+- cortar o dossie, com os numeros acima na mesa.
+
+Prova: reintroduzindo as duas guardas do Esc caem 2 assercoes em `tests/parar-rodada.test.mjs`
+(suite nova, a 41a); `imagemRecusadaAqui = false` ou a frase velha do envio aprendido derrubam 2
+em `tests/page-mob.test.mjs`.
+
+## 2026-11-03 - v3.253.0 - no modo "Eu mando" o rodizio nunca andava
 
 ### O QUE VOCE PRECISA FAZER
 

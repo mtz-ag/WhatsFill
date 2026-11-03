@@ -2107,4 +2107,48 @@ grupo('identificar a cidade e preencher — a porta do contrato nao existe aqui'
     'e quem escreve no contato tambem — senao o popup abre e a gravacao recusa');
 }
 
+grupo('a imagem: o cartao diz a verdade DESTA plataforma, e nao desliga nada sozinho');
+{
+  /**
+   * **Contrato aprendido nao e contrato que serve aqui** (03/11/2026). O envio de imagem foi
+   * aprendido em `api.mobiliza.app` (20/09) e no mobiliza.me `enviarImagem` recusa — a arte nao
+   * sai, a rodada cai para texto e escreve "a imagem nao saiu" no Andamento a cada envio.
+   *
+   * O aviso do cartao perguntava so `!state.contratoImagem`, e o contrato ESTA preenchido: com
+   * isso o cartao ficava calado no unico lugar em que ele liga a caixa "mandar junto". A pergunta
+   * certa e a da PLATAFORMA, pelo mecanismo de `avisoSemModeloAprovado` (28/10).
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const campo = painel.slice(
+    painel.indexOf('function campoDeImagem('),
+    painel.indexOf('function aprenderEnvioDeImagemUI()')
+  );
+
+  check(campo.includes('naPlataformaNova() && (ligada || semInterruptor) && guardada'),
+    'o aviso da imagem olha a PLATAFORMA, e nao so o contrato aprendido');
+  check(/nao sai|não sai/.test(campo), 'e diz que nesta plataforma a imagem nao sai');
+  check(/desmarque/.test(campo), 'com a saida ao alcance dele: desmarcar "mandar junto"');
+
+  /** O caso antigo nao foi apagado: na plataforma velha o contrato continua sendo a pergunta. */
+  check(campo.includes("guardada && !state.contratoImagem"),
+    'e na plataforma velha o aviso do contrato que falta continua de pe');
+
+  /**
+   * **O cartao nao desmarca a caixa por conta propria.** Ligar e desligar o que sai para eleitor e
+   * decisao dele; controle que se desmarca sozinho e o controle mentindo pelo outro lado (25/09).
+   */
+  check(!/imagemMomentoLigada: false/.test(painel),
+    'nada no painel desliga "mandar junto" sozinho');
+
+  /** E a linha do contrato aprendido deixou de prometer o que ja estava feito. */
+  const aprender = painel.slice(
+    painel.indexOf('function aprenderEnvioDeImagemUI()'),
+    painel.indexOf('function envioAprendidoEmTexto(')
+  );
+  check(!/Me avise para eu ligar o envio/.test(aprender),
+    'a linha nao pede mais para eu "ligar o envio": ele esta ligado desde 20/09');
+  check(/nunca foi medida/.test(aprender),
+    'e diz que aprender aqui nao aprende nada — a cadeia do mobiliza.me nao foi medida');
+}
+
 fim();

@@ -6497,7 +6497,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * Na BOLHA e conferindo `defaultPrevented` de propósito: os editores da Config e o da resposta
      * escutam Esc na CAPTURA para fechar sem salvar, e a caixa da pergunta já usa Esc como "parar".
      * Quem tratou primeiro marcou o evento — roubar a tecla deles faria Esc fechar um diálogo E
-     * parar a rodada com um toque só. Campo de texto continua de fora, pela mesma razão de sempre.
+     * parar a rodada com um toque só.
+     *
+     * **E CAMPO DE TEXTO NÃO FICA DE FORA, porque o Esc não digita nada** (03/11/2026, medido na
+     * tela dele: *"o Parar e o Esc não encerram a espera de 'responda à mão'"*). A guarda
+     * `ehCampoDeTexto` existe para não roubar tecla de quem está DIGITANDO — é ela que impede o
+     * "2" da conversa de virar a tecla Pular —, e eu a tinha copiado para cá, onde a única tecla
+     * que chega é o Escape.
+     *
+     * O preço era o atalho morrer exatamente onde ele serve: nas duas esperas longas
+     * (`esperarVoceConcluir`, `esperarVoceEnviar`) o painel sai da frente e **o foco dele vive no
+     * campo da conversa**, que é onde ele lê e responde. Apertando Esc dali, nada acontecia — e a
+     * caixa da pergunta já fechou, então não há outro Esc escutando. O que sobrava era achar e
+     * clicar o ■, que exige ponteiro de verdade (`detail !== 0`, guarda de 29/10).
+     *
+     * **Este recorte já é o do painel do Facebook** (21/10/2026): *"passam só as setas e o Escape;
+     * os DÍGITOS continuam barrados"*. Mesma razão, mesma decisão.
+     *
+     * Parar sem querer custa um ▶ — a janelinha fica na tela dizendo PARADA e o log diz "pelo
+     * Esc", e `hsm.decidirReenvio` impede o contato já tratado de receber duas vezes. Não parar
+     * custa a espera inteira até o teto, em silêncio.
      */
     function aoTeclar(ev) {
       if (ev.key !== 'Escape' || ev.defaultPrevented) return;
@@ -6520,7 +6539,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       if (!ev.isTrusted) return;
       if (!state.auto.rodando) return;
-      if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
       ev.preventDefault();
       state.auto.parar = true;
       pintar();
@@ -12569,14 +12587,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // digitando em lugar nenhum. Agora que a conversa é clicável (para você ler e responder
         // sem parar a rodada), o atalho tem que sair da frente de quem está escrevendo — senão
         // o número vai para a decisão e o atendimento fecha no meio de uma frase.
-        if (ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
+        //
+        // **O Esc é a exceção, e por isso a guarda pergunta a tecla primeiro** (03/11/2026): ele
+        // não digita nada, então não há o que roubar de quem escreve — e aqui Esc significa PARAR
+        // A RODADA. Ele lê e responde no campo da conversa com esta caixa aberta: barrar o Esc ali
+        // é barrá-lo no único lugar em que ele está. Mesmo recorte do painel do Facebook
+        // (21/10/2026: "passam só as setas e o Escape; os DÍGITOS continuam barrados").
+        const ehEsc = ev.key === 'Escape';
+        if (!ehEsc && ehCampoDeTexto(ev.composedPath?.()[0] || ev.target)) return;
 
         // A caixa mostra a letra em MAIÚSCULA (ver `sugestao.mostrarTecla`), então o Shift junto
         // tem que valer: caixa que ensina uma tecla e recusa o jeito óbvio de apertá-la é pior
         // que caixa sem atalho. As teclas em si continuam minúsculas — o que muda é só a leitura.
         // O Esc que a EXTENSÃO dispara para fechar overlay do Material chega aqui como qualquer
         // outro, e aqui Esc significa PARAR A RODADA — foi assim que ela parou sozinha (07/09).
-        if (ev.key === 'Escape' && !ev.isTrusted) return;
+        if (ehEsc && !ev.isTrusted) return;
         const apertada = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
         const opcao = opcoes.find((o) => o.tecla === apertada);
         if (!opcao && ev.key !== 'Escape') return;
@@ -13801,8 +13826,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * texto desde então. O texto velho era verdade por algumas horas e ficou na tela.
      *
      * O que continua verdadeiro é só o caso de NÃO haver envio aprendido, e é só ele que fica.
+     *
+     * **E em 03/11/2026 ele voltou a mentir, por PLATAFORMA e não por tempo.** O envio aprendido é
+     * de `api.mobiliza.app` (20/09) e no mobiliza.me `page-mob.enviarImagem` **recusa**: a arte não
+     * sai, a rodada cai para texto e escreve *"a imagem de X NÃO saiu"* no Andamento a cada envio.
+     * Com `state.contratoImagem` preenchido — e ele está, aprendido na plataforma velha — a guarda
+     * acima se cala, então o cartão não dizia nada no único lugar em que ele liga a caixa.
+     *
+     * **Contrato aprendido não é contrato que serve aqui**, e a pergunta certa é a da plataforma.
+     * O mecanismo é o de `avisoSemModeloAprovado` (28/10): `naPlataformaNova()`, que custa zero e
+     * funciona no modo janela, onde `location.hostname` é o da extensão e não diz nada sobre onde a
+     * conversa está.
+     *
+     * **A caixa NÃO é desligada por aqui.** Ligar e desligar o que sai para eleitor é decisão dele,
+     * e controle que se desmarca sozinho é o controle mentindo pelo outro lado (25/09). O que muda
+     * é o cartão parar de ficar calado.
      */
-    if ((ligada || semInterruptor) && guardada && !state.contratoImagem) {
+    const imagemRecusadaAqui = naPlataformaNova() && (ligada || semInterruptor) && guardada;
+    if (imagemRecusadaAqui) {
+      linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
+        'Guardada, mas NESTA plataforma a imagem não sai: o envio aprendido é do mobiliza.app antigo, ' +
+          'e aqui a extensão recusa em vez de adivinhar a cadeia de upload. A rodada não quebra — ela ' +
+          'manda só o texto e escreve "a imagem não saiu" no Andamento a cada envio. Para parar de ver ' +
+          'esse aviso, desmarque "mandar junto" aqui em cima.'));
+    } else if ((ligada || semInterruptor) && guardada && !state.contratoImagem) {
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
         'Guardada. Falta o passo de aprender o envio, com você mandando uma imagem à mão uma vez — ' +
           'até lá a extensão não tem como mandar a arte sozinha.'));
@@ -13816,6 +13863,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * Enquanto não houver contrato, a linha diz que a imagem não sai — controle que promete o que não
    * faz é pior que controle nenhum.
+   *
+   * **E a linha do contrato aprendido envelheceu duas vezes** (03/11/2026). Ela dizia *"Me avise
+   * para eu ligar o envio automático"*, e o envio está ligado desde 20/09 — `sendTemplate` manda a
+   * arte antes do texto. E ela não dizia a coisa que mais importa hoje: o contrato é da plataforma
+   * ANTIGA, e no mobiliza.me `aprenderImagemStart` e `enviarImagem` **recusam** os dois. Gravar de
+   * novo aqui não produz contrato nenhum.
    */
   function aprenderEnvioDeImagemUI() {
     const contrato = state.contratoImagem;
@@ -13836,9 +13889,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             'O painel continua funcionando; se você não mandar, eu paro sozinho em 3 minutos.'
           : contrato
             ? `Envio aprendido em ${new Date(contrato.aprendidoEm).toLocaleString('pt-BR')}, ` +
-              `${contrato.passos.length} passos. Me avise para eu ligar o envio automático.`
-            : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
-              'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
+              `${contrato.passos.length} passos. ` +
+              (naPlataformaNova()
+                ? 'Mas ele é do mobiliza.app ANTIGO: nesta plataforma a imagem não sai, e gravar de ' +
+                  'novo aqui também não aprende nada — a cadeia de upload do mobiliza.me nunca foi medida.'
+                : 'O envio está ligado: a rodada manda a arte antes do texto.')
+            : naPlataformaNova()
+              ? 'Nesta plataforma a extensão não sabe mandar imagem, e não dá para aprender aqui: a ' +
+                'gravação recusa, porque a cadeia de upload do mobiliza.me nunca foi medida.'
+              : 'A extensão ainda não sabe mandar imagem. Clique aqui, mande UMA imagem com legenda à mão ' +
+                'no contato de teste, e ela copia o formato. Nada é enviado para fora: fica no seu navegador.')
     );
     if (contrato && !gravando) linhas.push(...montarEnvioAprendido(contrato));
     return linhas;
