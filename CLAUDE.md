@@ -3452,6 +3452,56 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **NO MODO "EU MANDO" O RODIZIO NUNCA ANDOU, E A GUARDA DO MOMENTO FICOU DESLIGADA** (03/11/2026,
+  relato dele: *"a mensagem do momento nao esta variando"*).
+  **`avancarVariante` e `markSent` moram DEPOIS do `page.sendText`, e o ramo do modo "Eu mando"
+  devolve `true` antes de chegar la.** E o buraco de 02/10 (*"colar nao e enviar, e marca que mora
+  depois do `page.sendText` nao acontece em metade dos envios"*) **na metade em que o envio
+  ACONTECEU**: quem apertou Enter foi ele, a mensagem foi para o eleitor, e o painel nao anotou nada.
+  **Duas consequencias, e a segunda e a cara:** toda resposta pronta com variacoes saiu sempre com o
+  **MESMO texto**, contato apos contato (e em 26/09 ele derrubou um numero mandando a mesma mensagem
+  em sequencia para menos de dez pessoas); e **`momentoJaEnviado` nunca ficava verdadeiro**, porque
+  ele e `wasSent(contato, momento.id)` — a guarda que impede a mesma pessoa de receber a mensagem do
+  momento duas vezes (a Carmem Souza, 03/09) estava desligada.
+  **O comentario que monta o momento na rodada dizia *"mesmo mecanismo das respostas prontas:
+  `sendTemplate` reveza sozinho"*** — verdade ate 28/10, quando o modo nasceu. **Ao criar MODO de
+  envio, procure o que mora depois do `sendText`:** rodizio, `markSent`, etiquetas. O ramo de **so
+  inserir** continua sem anotar nada, de proposito — la o texto nao saiu.
+  Prova: tirar as duas linhas derruba 2 assercoes em `tests/templates.test.mjs`.
+
+- **O VEREDITO DA RODADA CONTAVA LINHA DE SERVICO COMO CONTATO PULADO** (03/11/2026, medido numa
+  rodada real: *"0 enviado(s), **14** pulado(s)"* com **cinco** contatos pulados no Andamento — e
+  antes disso *"2 pulado(s)"* numa rodada de um contato so. Sempre o dobro).
+  **`resultado: 'pulado'` virou o rotulo generico de linha informativa:** o custo de cada chamada da
+  IA, o aviso do keepalive, o status do canal, o *"carreguei mais da fila"* e o proprio botao Parar
+  entram no log com ele, e `conta('pulado')` contava tudo como gente.
+  **O veredito e a linha que deveria distinguir *"a rodada trabalhou"* de *"a rodada nao conseguiu
+  fazer nada"* (25/09)** — inflado, ele deixa de distinguir, e dobra sozinho em toda rodada com IA.
+  Hoje ha `NOMES_DE_SERVICO` e o nome fixo e o que separa (nenhum contato se chama "rodada" ou
+  "fila"). **Quem impede a lista de envelhecer e `tests/veredito.test.mjs`**, que varre os nomes
+  fixos de `registrarNaRodada` no proprio `panel.js` e exige que cada um esteja la — **ele ja achou
+  tres que eu tinha perdido** (`aba`, `rede`, `sonda`), dois deles contando como pulado.
+  Prova: tirar o filtro do `conta` derruba 1 assercao; tirar "IA" da lista derruba 2.
+
+- **AVISO DE ESTADO SEM `data-fica` SOME ATRAS DO "ⓘ DETALHES" — e sumiu o mais caro do cartao**
+  (03/11/2026, medido na tela dele nos dois sentidos: com o cartao fechado o ⚠ da mensagem do
+  momento vencida nao aparece; clicando os detalhes, aparece).
+  Ele nascia como `.wf-hint`, e `encolherExplicacoes` recolhe toda explicacao de mais de uma linha
+  que nao esteja marcada. **A regra de 10/09 ja dizia que DADO ou AVISO de estado marca
+  `data-fica`** — este nao marcava, e enquanto o aviso esta escondido a **tecla 5 nao sai para
+  ninguem** e a unica pista mora no Andamento, que so aparece depois de comecar uma rodada.
+  **E ele mandava para a aba errada:** dizia *"atualize em Config"*, e `renderCartaoMomento` so e
+  chamado por `renderAutomatizado` — a Config nao tem nem o campo nem o aviso. Hoje ele nomeia o
+  CARTAO, que existe num lugar so (trocar de aba de novo nao envelhece a frase).
+  **Junto, as travas do modo de envio citavam "Enviar automatico" ligado na "aba Config"**, controle
+  que nao existe mais com esse nome: hoje e o box **"Quem manda a mensagem"** ("Eu mando" / "A
+  extensao manda sozinha"), no topo do Automatizado e na Config. Sao sete textos de tela e tres
+  comentarios — a licao de 28/10 (*ao trocar o nome de uma coisa na tela, grep pelo nome ANTIGO*)
+  vale tambem para as travas. **Nenhuma trava afrouxou:** a da tecla 4 continua certa fora da rodada,
+  porque ali `esperarVoceEnviar` nao espera.
+  Prova: tirar o `data-fica` derruba 1 assercao; voltar "atualize em Config" derruba 3; voltar o nome
+  velho da trava derruba 2.
+
 - **DUAS LISTAS DE PALAVRA-SEM-CONTEUDO EM `cortesia.js`, E ELAS DISCORDAVAM** (15/10/2026, *"Tudo
   certo obrigado"* recebeu `agradecer-info` — *"terceira vez seguida que manda a mensagem rapida, me
   de a lista de frases que entram como finalizacao de conversa"*).

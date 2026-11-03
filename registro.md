@@ -45,6 +45,24 @@ As ETIQUETAS continuam de fora, como a decisao de 02/10 deixou.
 Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu mando" ligado. Fecho por
 cortesia ligado. O quadro nao foi tocado.
 
+### O QUE FICOU NO CLAUDE.md (para a proxima sessao)
+
+As TRES armadilhas de hoje entraram na secao "Armadilhas do proprio painel", no topo: o rodizio
+que nunca andou no modo "Eu mando" (com a guarda do momento desligada junto), o veredito contando
+linha de servico como contato pulado, e o aviso de estado sem `data-fica` sumindo atras do
+"ⓘ detalhes". O comando de testes de la foi corrigido: eram 30 nomes com 39 suites no diretorio, e
+hoje sao as 40.
+
+**O que NAO esta no CLAUDE.md e continua aberto, por decisao sua:**
+
+- a imagem junto da mensagem do momento esta LIGADA e nao pode sair aqui (envio aprendido e da
+  plataforma antiga; `page-mob.enviarImagem` recusa — cai para texto e registra "a imagem NAO saiu");
+- `1 TESTE DISPARO` e `2 Sem Retorno` nao foram achadas no CRM na lista "Etiquetas que a rodada
+  REMOVE" — pode ser grafia, pode ser a amostra de 0,9% do catalogo;
+- as duas melhorias de fluxo/IA medidas e NAO implementadas: sem momento disponivel, quem nao tem
+  cadastro devia ir para a tecla 4 em vez do silencio; e convite pessoal ("tomar um cafe") nao tem
+  detector nem resposta — a IA ignorou um.
+
 Prova: tirar as duas linhas do ramo derruba 2 assercoes em `tests/templates.test.mjs`.
 
 ## 2026-11-03 - v3.252.0 - o veredito contava a IA como contato pulado
