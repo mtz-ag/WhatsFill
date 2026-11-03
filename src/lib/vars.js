@@ -14,7 +14,7 @@ export const KNOWN_VARS = [
   ['{{nome}}', 'Nome completo do contato (evite: o cadastro erra, e sem valor trava o envio)'],
   ['{{primeiro_nome}}', 'Só o primeiro nome (evite, mesmo motivo)'],
   ['{{cidade}}', 'Cidade classificada do contato'],
-  ['{{link_grupo}}', 'Link do grupo da cidade (tabela em Config)'],
+  ['{{link_grupo}}', 'Link do grupo do WhatsApp (aba Config)'],
   ['{{telefone}}', 'Telefone formatado'],
   // `{{funcao}}` e `{{partido}}` saíram em 01/09/2026 com os campos que os alimentavam. Resposta
   // salva que ainda use uma delas passa a bloquear o envio com o motivo na tela ("variável
@@ -249,12 +249,15 @@ export async function buildContext(ctx = {}) {
    * **`linkFor` é chamado mesmo SEM cidade** — a outra metade do conserto de 07/09/2026.
    *
    * Antes, cidade vazia nem consultava: o motivo virava *"Cidade ainda não classificada"* e
-   * `{{link_grupo}}` bloqueava o envio. Com o link padrão preenchido, a resposta que só precisa do
-   * link (a do grupo da agenda) passa a funcionar na chegada, que é quando ela é usada.
+   * `{{link_grupo}}` bloqueava o envio. Com o link preenchido, a resposta que só precisa do link
+   * (a do grupo da agenda) passa a funcionar na chegada, que é quando ela é usada.
    *
-   * Quem exige a cidade continua exigindo: a resposta `link-grupo` diz *"o grupo de {{cidade}}"*, e
-   * `{{cidade}}` bloqueia sozinha. Uma resposta que promete o grupo DA CIDADE não pode sair com o
-   * link geral — a trava certa para isso é o texto, e ela já está lá.
+   * **A cidade deixou de importar aqui em 03/11/2026**, quando a tabela de grupos por cidade saiu
+   * (*"função nunca foi utilizada"*): há um link só. Antes a nota dizia que a resposta `link-grupo`
+   * se protegia sozinha porque exige `{{cidade}}` — e isso era falso, porque `{{cidade}}` só barra
+   * a cidade **vazia**: com a tabela vazia e a cidade preenchida, ela saía dizendo *"o grupo de
+   * Caxias do Sul"* sobre o link geral. Hoje o texto da resposta não promete mais o grupo da
+   * cidade, que é a trava certa.
    */
   const resolved = await cities.linkFor(cidade);
   const linkGrupo = resolved.link || '';
@@ -270,6 +273,15 @@ export async function buildContext(ctx = {}) {
       telefone: ctx.contact?.phonenumberFormatted || ctx.contact?.phonenumber || '',
     },
     reasons: {
+      /**
+       * **O motivo da CIDADE passou a ser dela** (03/11/2026).
+       *
+       * Até aqui quem dizia *"preencha a Cidade na aba Dados"* era o motivo do `{{link_grupo}}`,
+       * porque o link vinha da tabela por cidade. Com a tabela removida, o link deixou de falar da
+       * cidade — e uma resposta dele que use `{{cidade}}` cairia no genérico *"Variável {{cidade}}
+       * sem valor"*, que diz o sintoma e não onde se mexe.
+       */
+      cidade: cidade ? null : 'Cidade ainda não classificada — preencha a Cidade na aba Dados.',
       link_grupo: linkReason,
       nome: nome ? null : 'Nome ainda não preenchido (o cadastro está com apelido automático) — preencha na aba Dados.',
       primeiro_nome: nome

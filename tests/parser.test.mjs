@@ -610,13 +610,18 @@ grupo('semAcentoNemCaixa NAO expande abreviacao');
   check(cities.semAcentoNemCaixa('Santo Ângelo') === 'santo angelo', 'tira acento e caixa');
 }
 
-grupo('cidade → link do grupo');
-mem.cityLinks = { 'santo angelo': { label: 'Santo Ângelo', link: 'https://chat.whatsapp.com/AAA' } };
+grupo('link do grupo');
+/**
+ * **A tabela por cidade saiu em 03/11/2026** (pedido dele: *"funcao nunca foi utilizada, pode ser
+ * removida"*), entao `linkFor` nao olha mais a cidade — e o parametro continua existindo porque
+ * quem chama tem a cidade na mao e nao deve saber se ela importa.
+ */
 mem.defaultGroupLink = '';
-check((await cities.linkFor('Sto Angelo')).link === 'https://chat.whatsapp.com/AAA', 'abreviação encontra o grupo certo');
-check((await cities.linkFor('Pelotas')).link === null, 'cidade sem grupo e sem padrão devolve null');
+check((await cities.linkFor('Pelotas')).link === null, 'sem link, devolve null com o motivo');
+check(/Link do grupo/.test((await cities.linkFor('Pelotas')).reason || ''), 'e o motivo aponta o campo da Config');
 mem.defaultGroupLink = 'https://chat.whatsapp.com/PADRAO';
-check((await cities.linkFor('Pelotas')).source === 'padrão', 'cai para o link padrão quando existe');
+check((await cities.linkFor('Pelotas')).link === 'https://chat.whatsapp.com/PADRAO', 'com link, ele sai');
+check((await cities.linkFor('')).link === 'https://chat.whatsapp.com/PADRAO', 'e sem cidade tambem — a chegada e o caso comum');
 
 grupo('memória das cidades recusadas no popup');
 {

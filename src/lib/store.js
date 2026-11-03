@@ -137,17 +137,39 @@ export const DEFAULT_TEMPLATES = [
   // **Isto é o DEFAULT, não o que está salvo.** Quem já usava a extensão tem a resposta guardada no
   // `chrome.storage` e ela continua aparecendo na lista até ser apagada à mão na aba Respostas.
   {
+    /**
+     * **A PROMESSA POR CIDADE SAIU EM 03/11/2026, e ela estava mentindo no ar.**
+     *
+     * O texto dizia *"Este é o grupo de {{cidade}}"*, e quem resolvia essa variável era a tabela
+     * de grupos por cidade da Config — a que ele mandou remover (*"função nunca foi utilizada"*),
+     * e que estava **vazia**. Medido com o estado dele antes de mexer:
+     * ```
+     * cityLinks {} + link padrão preenchido + cidade "Caxias do Sul"
+     *   -> missing: []   "Este é o grupo de Caxias do Sul: <link geral>"
+     * ```
+     * Ou seja: o eleitor de Caxias recebia o link do grupo GERAL com o nome da cidade dele em
+     * cima, e nada bloqueava. A guarda que o projeto citava para isso era `{{cidade}}`, que só
+     * barra a cidade **vazia** — e o caminho "Com link de grupo" da aba Respostas manda este
+     * texto, com a classificação gravada e o atendimento concluído em cima.
+     *
+     * **Com um link só, a promessa por cidade é impossível por construção**, então o conserto é
+     * o texto e não uma trava: ele passou a dizer o que o link é. `{{cidade}}` saiu junto, e com
+     * ela a resposta passa a servir na CHEGADA — que é quando alguém pede o grupo.
+     *
+     * A cópia gravada dele é alcançada por `templates.migrarLinkGrupoSemCidade`: default novo não
+     * chega em quem já usa a extensão (a armadilha do `-contato-assessor`, 04/09).
+     */
     id: 'link-grupo',
     name: 'Enviar link do grupo',
     text:
-      'Prontinho! Este é o grupo de {{cidade}}:\n\n' +
+      'Prontinho! Este é o nosso grupo no WhatsApp:\n\n' +
       '{{link_grupo}}\n\n' +
       'É lá que a gente avisa das agendas e manda os conteúdos primeiro. Te espero! 🇧🇷',
     variantes: [
-      'Aqui está! Esse é o grupo de {{cidade}}:\n\n' +
+      'Aqui está! Esse é o nosso grupo no WhatsApp:\n\n' +
         '{{link_grupo}}\n\n' +
         'As agendas e os conteúdos saem primeiro por lá. Vem com a gente! 🇧🇷',
-      'Segue o grupo de {{cidade}}:\n\n' +
+      'Segue o nosso grupo no WhatsApp:\n\n' +
         '{{link_grupo}}\n\n' +
         'É por ali que avisamos as agendas e mandamos os conteúdos em primeira mão. Esperamos você! 🇧🇷',
     ],
@@ -778,9 +800,14 @@ const DEFAULTS = {
   contratoImagem: null,
   imagemMomentoArquivo: null,
   imagemPedidoDadosArquivo: null,
-  /** { "santo angelo": "https://chat.whatsapp.com/..." } — chave sempre normalizada. */
-  cityLinks: {},
-  /** Usado quando a cidade não tem grupo próprio. Vazio = bloqueia o envio. */
+  /**
+   * O link do grupo do WhatsApp, um só. Vazio = bloqueia o envio, com o motivo na tela.
+   *
+   * Era o *"Link padrão"*, o segundo lugar depois da tabela de grupos por cidade — que saiu em
+   * 03/11/2026 a pedido dele (*"função nunca foi utilizada"*), com a área de texto vazia na print.
+   * Então ele deixou de ser padrão de alguma coisa e passou a ser a única fonte, que é o que ele
+   * sempre foi na prática.
+   */
   defaultGroupLink: '',
   settings: {
     autoSend: false, // começa desligado de propósito: primeiro teste você faz no seu número
@@ -1798,7 +1825,7 @@ export async function importJson(text) {
    * `conteudoPreferido` estava faltando desde antes, pelo mesmo motivo e com o mesmo efeito.
    */
   const allowed = [
-    'templates', 'cityLinks', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
+    'templates', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
     'modeloPadraoAnuncio', 'modelosPadraoAnuncio',

@@ -3452,6 +3452,63 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **A TABELA VAZIA NAO ERA SO INUTIL: ERA O QUE FAZIA A RESPOSTA DO GRUPO MENTIR** (03/11/2026,
+  print do cartao: *"funcao nunca foi utilizada, pode ser removida"*).
+  **Medi antes de remover, com o estado que a propria print dele mostra** (tabela por cidade VAZIA,
+  "Link padrao" preenchido):
+  ```
+  cityLinks {} + defaultGroupLink preenchido + cidade "Caxias do Sul"
+    -> missing: []
+    -> "Prontinho! Este e o grupo de Caxias do Sul:  <link GERAL>"
+  ```
+  O eleitor de Caxias recebia o link do grupo **geral** com o nome da cidade dele em cima, e **nada
+  bloqueava** — e o botao *"Enviar grupo + salvar + concluir"* da aba Respostas manda esse texto,
+  grava a classificacao e **conclui**.
+  **A guarda que o projeto citava era `{{cidade}}`, e ela so barra a cidade VAZIA.** Estava escrito
+  em dois lugares (o comentario de `vars.buildContext` e uma assercao de `vars.test.mjs`) que *"uma
+  resposta que diz 'o grupo de {{cidade}}' nao pode sair com o link geral, e a trava para isso e o
+  proprio texto"* — **a trava protegia so metade dos casos, e a metade errada**: cidade preenchida e
+  o caso NORMAL de quem ja foi classificado.
+  **A REMOCAO NAO CRIOU O DEFEITO, REVELOU.** Ele esta no ar desde 07/09/2026, quando a migracao
+  preencheu o link: dali em diante o primeiro ramo de `linkFor` nunca mais disparou. **Fonte com
+  prioridade cuja primeira opcao esta vazia nao e "prioridade": e um ramo morto com o segundo
+  respondendo sob o nome do primeiro.**
+  **Com um link so, a promessa por cidade e impossivel por construcao**, entao o conserto e o TEXTO
+  e nao uma trava nova — e ele precisou de **migracao** (`migrarLinkGrupoSemCidade`), porque default
+  novo nao chega em quem ja usa a extensao (a armadilha do `-contato-assessor`, 04/09). Quem
+  reescreveu a frase fica com a dele, e o preco esta dito no registro.
+  **O rotulo saiu junto:** *"Grupos por cidade"* descrevia a tabela, e **rotulo que sobrevive a
+  funcao que ele nomeia e rotulo que mente** — com ele a Config continuaria mandando cadastrar
+  grupo por cidade. Pelo mesmo motivo cairam o *"(padrao)"* da linha da aba Dados (com uma fonte so
+  ele nao informa nada), o *"tabela em Config"* do rotulo de `{{link_grupo}}`, e o motivo do
+  bloqueio, que mandava *"Cadastre na aba Config"* um grupo que nao tem mais onde ser cadastrado.
+  **E a remocao deixou um motivo PIOR em quem nao se esperava:** quem dizia *"preencha a Cidade na
+  aba Dados"* era o motivo do `{{link_grupo}}`, porque o link vinha da cidade. Sem ele, uma resposta
+  dele com `{{cidade}}` cairia no generico *"Variavel {{cidade}} sem valor"*. **Ao remover uma
+  fonte, procure as mensagens que falavam por ela** — `cidade` ganhou motivo proprio.
+  **O ultimo recurso de `loadMunicipios` era essa tabela, e ele nunca funcionou:** com ela vazia a
+  linha gravava `[]` em `municipiosCache`, e **nenhuma cidade seria reconhecida pelo resto da
+  sessao**, inclusive depois de a rede voltar — a armadilha escrita tres blocos acima dela. Hoje
+  chegar ali devolve `[]` **sem cachear**.
+  **`parseCityLinksText` e `formatCityLinks` sairam no mesmo commit**: funcao sem gatilho e a
+  armadilha do `pedido-emprego`.
+  Prova: devolver `{{cidade}}` ao texto da resposta derruba 3 assercoes em `vars.test.mjs` e 3 em
+  `templates.test.mjs`; religar a leitura por cidade no painel derruba 2 em `page-mob.test.mjs`.
+
+- **`\r\n` ESCRITO POR SCRIPT PYTHON VIRA UM CR DE VERDADE DENTRO DA EXPRESSAO REGULAR**
+  (03/11/2026, e custou cinco tentativas no mesmo arquivo). Escrevendo
+  `painel.replace(/\r\n/g, '\n')` por `python <<'PY'` com string normal, os `\r` e `\n` sao
+  interpretados **pelo Python**: o arquivo fica com um CR e um LF de verdade no meio do literal, a
+  regex nao fecha e o modulo morre com *"Invalid regular expression: missing /"*.
+  **E a busca pelo conserto erra pelo mesmo motivo:** procurar `b"...replace(/\r\n/g..."` nao acha,
+  porque no arquivo aquilo sao bytes 0x0D 0x0A — e ler o arquivo em modo TEXTO ainda converte CRLF
+  em LF, entao a comparacao olha outra coisa. O que achou foi `bytes([13])` e `bytes([10])`
+  montados sem barra nenhuma.
+  E a familia do `\b` que vira backspace e da crase executada pelo bash, ja registradas: **texto com
+  barra invertida vai pela ferramenta de edicao, nunca por script Python inline.** E, neste caso, o
+  conserto certo foi **nao precisar da normalizacao** — todas as ancoras daquele grupo sao trechos
+  DENTRO de uma linha, e CRLF nao as afeta.
+
 - **A DECISAO DO FLUXO SO DAVA PARA LER INICIANDO UMA RODADA — E A RODADA AGE** (03/11/2026,
   escolha dele: *"a linha do fluxo"*). Para medir um caso na tela dele eu tive que comecar uma
   rodada de verdade, e ela **concluiu cinco atendimentos** no caminho. E todo diagnostico deste
@@ -7244,7 +7301,7 @@ mudaram as maos, nao a cabeca.
   migracao (`migrarLinkDoGrupoAtual`), que **so preenche se estiver vazio** e marca em `migracoes`:
   sem a marca, o link que ele trocar amanha voltaria ao antigo no proximo carregamento do painel.
   **E nao entrou como default do `DEFAULT_STORE`** — o campo pode ja existir vazio no
-  armazenamento dele (o botao "Salvar grupos" o escreve), e ai o default nunca o alcancaria.
+  armazenamento dele (o botao do cartao o escreve), e ai o default nunca o alcancaria.
 - **"O sistema de mandar por anuncio ja existe"** — corte dele, 07/09/2026, e estava certo. Eu havia
   criado junto um detector (`perguntaAgenda`), a exclusao em `RESPONDIDA_POR_PRONTA` e DUAS caixas
   no `fluxoPadrao`, invocando a regra *"resposta pronta sem gatilho e trabalho parado"*. O gatilho

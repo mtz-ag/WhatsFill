@@ -35,6 +35,9 @@ export async function list({ perfil } = {}) {
     await migrarBoasVindasTemDados();
     await migrarRespostaAgendaGrupo();
     await migrarLinkDoGrupoAtual();
+    // DEPOIS da de cima: aquela so preenche o link, esta reescreve o TEXTO de quem ja tinha a
+    // resposta gravada prometendo o grupo da cidade (03/11/2026).
+    await migrarLinkGrupoSemCidade();
     await migrarRespostaFalarComDeputado();
     // DEPOIS da de cima: aquela acrescenta a resposta para quem não a tem, e esta limpa a
     // cláusula de campanha de quem já a tinha gravada (19/10/2026).
@@ -435,11 +438,13 @@ export async function migrarFalarComDeputadoSemCampanha() {
  * Ele mandou o link atual junto do pedido (07/09/2026) — e mandou porque **o link cai e ele troca**:
  * *"o link do grupo cai e eu tenho que trocar, então terá que ser uma mensagem pronta"*.
  *
- * O valor entra em `defaultGroupLink`, que é o campo *"Link padrão"* da aba Config: **um lugar para
- * trocar**, e as três variantes da resposta pegam o valor novo sem reescrita nenhuma.
+ * O valor entra em `defaultGroupLink`, que é o campo *"Link do grupo"* da aba Config: **um lugar
+ * para trocar**, e as três variantes da resposta pegam o valor novo sem reescrita nenhuma. (Ele se
+ * chamava *"Link padrão"* enquanto havia uma tabela por cidade na frente dele — removida em
+ * 03/11/2026, a pedido dele.)
  *
  * **Não entra como valor padrão de `DEFAULT_STORE`** por dois motivos, e o segundo é o que decide:
- * o campo pode já existir vazio no armazenamento dele (o botão "Salvar grupos" o escreve), e aí o
+ * o campo pode já existir vazio no armazenamento dele (o botão do cartão o escreve), e aí o
  * default nunca o alcançaria; e default é o que uma instalação nova recebe — link que já morreu,
  * ressuscitado, é pior que campo vazio, porque campo vazio BLOQUEIA o envio com o motivo na tela.
  *
@@ -448,6 +453,46 @@ export async function migrarFalarComDeputadoSemCampanha() {
  * vence sempre.
  */
 export const LINK_GRUPO_07_09_2026 = 'https://chat.whatsapp.com/BbZPFbtXJ74AVIpSaQ09dD';
+
+/**
+ * **A resposta do grupo para de prometer o grupo DA CIDADE** (03/11/2026).
+ *
+ * A tabela de grupos por cidade saiu a pedido dele (*"função nunca foi utilizada, pode ser
+ * removida"*), e com um link só a promessa por cidade é impossível de cumprir. **Pior: ela já não
+ * era cumprida** — medido antes de mexer, com a tabela vazia e o link preenchido, a resposta saía
+ * *"Este é o grupo de Caxias do Sul"* com o link GERAL, e `missing` vinha vazio.
+ *
+ * **Sem esta migração a troca não chega nele:** a lista de respostas está gravada, e `store.get`
+ * só mescla default em chave que FALTA (a armadilha do `-contato-assessor`, 04/09).
+ *
+ * A troca é do TRECHO e não do texto inteiro, pelo mesmo motivo das outras: ela alcança as três
+ * variantes de uma vez (*"Este é"*, *"Esse é"*, *"Segue"*) e qualquer reescrita dele que tenha
+ * mantido a frase. Reescrevendo a frase, ele fica com a dele — e aí a cidade continua no texto,
+ * o que está dito no registro.
+ */
+const GRUPO_DA_CIDADE = 'grupo de {{cidade}}';
+const GRUPO_SEM_CIDADE = 'nosso grupo no WhatsApp';
+
+export async function migrarLinkGrupoSemCidade() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.linkGrupoSemCidade) return [];
+
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const sem = (t) => String(t || '').split(GRUPO_DA_CIDADE).join(GRUPO_SEM_CIDADE);
+  const novos = templates.map((t) => {
+    if (t.id !== 'link-grupo') return t;
+    const text = sem(t.text);
+    const variantes = (t.variantes || []).map(sem);
+    const mudou = text !== t.text || variantes.some((v, i) => v !== (t.variantes || [])[i]);
+    if (mudou) mudadas.push(t.name || t.id);
+    return mudou ? { ...t, text, variantes } : t;
+  });
+
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, linkGrupoSemCidade: true });
+  return mudadas;
+}
 
 export async function migrarLinkDoGrupoAtual() {
   const migracoes = await store.get('migracoes');

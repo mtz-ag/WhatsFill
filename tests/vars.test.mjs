@@ -23,18 +23,25 @@ grupo('sem cidade classificada → bloqueia');
   check(/Cidade ainda não classificada/.test(vars.explainMissing(r.missing, r.reasons)), 'motivo explica o bloqueio');
 }
 
-grupo('cidade sem grupo e sem link padrão → bloqueia');
+grupo('sem link do grupo → bloqueia, e o motivo diz onde se mexe');
 {
-  mem.cityLinks = {};
   mem.defaultGroupLink = '';
   const r = vars.render(TEMPLATE, await vars.buildContext({ contact, cidade: 'Pelotas' }));
   check(r.missing.includes('link_grupo') && !r.missing.includes('cidade'), `faltando = ${JSON.stringify(r.missing)}`);
-  check(/Sem grupo cadastrado para "Pelotas"/.test(vars.explainMissing(r.missing, r.reasons)), 'motivo nomeia a cidade');
+  /**
+   * **O motivo nao nomeia mais a cidade, e isso e deliberado.** Ele dizia *"Sem grupo cadastrado
+   * para 'Pelotas'. Cadastre na aba Config"* — e depois de 03/11/2026 nao ha onde cadastrar grupo
+   * de cidade nenhuma. Aviso que manda procurar o lugar errado custa a mesma sessao de
+   * diagnostico que o aviso que nao envelhece.
+   */
+  const motivo = vars.explainMissing(r.missing, r.reasons);
+  check(/Link do grupo/.test(motivo), `motivo aponta o campo que existe = ${JSON.stringify(motivo)}`);
+  check(!/Pelotas/.test(motivo), 'e nao manda cadastrar o grupo de uma cidade');
 }
 
-grupo('cidade com grupo → libera e interpola');
+grupo('com link → libera e interpola');
 {
-  mem.cityLinks = { 'santo angelo': { label: 'Santo Ângelo', link: 'https://chat.whatsapp.com/AAA' } };
+  mem.defaultGroupLink = 'https://chat.whatsapp.com/AAA';
   const r = vars.render(TEMPLATE, await vars.buildContext({ contact, cidade: 'Santo Ângelo' }));
   check(r.missing.length === 0, 'nada faltando');
   check(r.text.startsWith('Prontinho, Ana!'), `primeiro nome = ${r.text.split('\n')[0]}`);
@@ -384,7 +391,6 @@ grupo('a resposta da AGENDA sai sem cidade, pelo link padrao (07/09/2026)');
   const agenda = store.DEFAULT_TEMPLATES.find((t) => t.id === 'agenda-grupo');
   check(!!agenda, 'a resposta da agenda existe no padrao');
 
-  mem.cityLinks = {};
   mem.defaultGroupLink = 'https://chat.whatsapp.com/EXEMPLO';
   const semCidade = vars.render(agenda.text, await vars.buildContext({ contact, cidade: '' }));
   check(semCidade.missing.length === 0, `sem cidade, nada bloqueia (${JSON.stringify(semCidade.missing)})`);
@@ -404,24 +410,33 @@ grupo('a resposta da AGENDA sai sem cidade, pelo link padrao (07/09/2026)');
    */
   mem.defaultGroupLink = '';
   const semLink = vars.render(agenda.text, await vars.buildContext({ contact, cidade: '' }));
-  check(semLink.missing.includes('link_grupo'), 'sem link padrao, o envio bloqueia');
+  check(semLink.missing.includes('link_grupo'), 'sem link, o envio bloqueia');
   const motivo = vars.explainMissing(semLink.missing, semLink.reasons);
-  check(/Cidade ainda não classificada/.test(motivo) && /Link padrão/.test(motivo),
-    'e o motivo diz as DUAS saidas (classificar a cidade, ou preencher o padrao)');
+  check(/Link do grupo/.test(motivo), 'e o motivo diz onde se mexe');
 
   /**
-   * **O grupo DA CIDADE continua vencendo o padrao**, e a resposta que promete o grupo da cidade
-   * continua exigindo a cidade: uma resposta que diz *"o grupo de {{cidade}}"* nao pode sair com o
-   * link geral, e a trava para isso e o proprio texto.
+   * **A ASSERCAO DO DEFEITO, invertida em 03/11/2026.**
+   *
+   * Ela dizia *"a resposta do grupo POR CIDADE ainda exige a cidade"* e tratava `{{cidade}}` como
+   * a trava que impedia o link geral de sair prometendo o grupo de uma cidade. **E era falso:**
+   * `{{cidade}}` so barra a cidade **VAZIA**. Com a tabela por cidade vazia — o estado dela desde
+   * sempre, conferido na print dele — e a cidade preenchida, o texto saia inteiro:
+   * ```
+   * "Este e o grupo de Caxias do Sul: <link geral>"   missing: []
+   * ```
+   * A tabela saiu a pedido dele (*"funcao nunca foi utilizada, pode ser removida"*) e com um link
+   * so a promessa por cidade e impossivel de cumprir, entao o conserto e o TEXTO: ele passou a
+   * dizer o que o link e. Devolvendo `{{cidade}}` ao texto da resposta, esta assercao cai.
    */
-  mem.cityLinks = { 'caxias do sul': { label: 'Caxias do Sul', link: 'https://chat.whatsapp.com/CAXIAS' } };
   mem.defaultGroupLink = 'https://chat.whatsapp.com/EXEMPLO';
-  const comCidade = vars.render(agenda.text, await vars.buildContext({ contact, cidade: 'Caxias do Sul' }));
-  check(comCidade.text.includes('CAXIAS'), 'com cidade, o grupo dela vence o padrao');
-
   const porCidade = store.DEFAULT_TEMPLATES.find((t) => t.id === 'link-grupo');
-  const bloqueia = vars.render(porCidade.text, await vars.buildContext({ contact, cidade: '' }));
-  check(bloqueia.missing.includes('cidade'), 'a resposta do grupo POR CIDADE ainda exige a cidade');
+  for (const t of [porCidade.text, ...porCidade.variantes]) {
+    check(!/\{\{\s*cidade\s*\}\}/.test(t), 'a resposta do grupo nao promete o grupo DE uma cidade');
+  }
+  const comCidade = vars.render(porCidade.text, await vars.buildContext({ contact, cidade: 'Caxias do Sul' }));
+  check(comCidade.missing.length === 0 && comCidade.text.includes('EXEMPLO'),
+    'com cidade, ela sai com o link do grupo — sem dizer que o grupo e daquela cidade');
+  check(!/Caxias do Sul/.test(comCidade.text), 'e sem o nome da cidade no texto');
 
   /**
    * **Nao pede nome e cidade.** Resposta que funde duas coisas nao tem como ser usada pela metade

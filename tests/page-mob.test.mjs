@@ -2151,4 +2151,47 @@ grupo('a imagem: o cartao diz a verdade DESTA plataforma, e nao desliga nada soz
     'e diz que aprender aqui nao aprende nada — a cadeia do mobiliza.me nao foi medida');
 }
 
+grupo('os grupos por cidade sairam, e o cartao nao promete mais o que nao existe (03/11/2026)');
+{
+  /**
+   * Pedido dele, com a print do cartao: *"funcao nunca foi utilizada, pode ser removida"* — e a
+   * print e a prova, com a area de texto VAZIA e o "Link padrao" preenchido.
+   *
+   * **E ela nao era so inutil: era o que fazia a resposta do grupo mentir.** Com a tabela vazia,
+   * `cities.linkFor` caia no link padrao e `link-grupo` saia dizendo *"Este e o grupo de Caxias do
+   * Sul"* sobre o link GERAL, sem nada bloquear. Medido antes de remover.
+   *
+   * O que este grupo trava e o que ENVELHECE: o cartao voltar a falar de uma tabela que nao
+   * existe, e a leitura por cidade voltar pela porta do painel.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+
+  check(!/cityLinks/.test(painel), 'o painel nao le nem grava a tabela por cidade');
+  check(!/formatCityLinks|parseCityLinksText/.test(painel),
+    'e o editor dela saiu junto — funcao sem gatilho e a armadilha do pedido-emprego');
+  /**
+   * O titulo da TELA, e nao a palavra: o comentario que explica a remocao cita o nome antigo, e
+   * ancorar na palavra solta faz a assercao cair na prosa em vez do codigo (a licao de 28/10).
+   */
+  check(!/'Grupos por cidade'/.test(painel),
+    'o titulo que descrevia a tabela saiu: rotulo que sobrevive a funcao que ele nomeia e rotulo que mente');
+
+  const cartao = painel.slice(
+    painel.indexOf("'Grupo do WhatsApp'"),
+    painel.indexOf("'Etiquetas por conteúdo'")
+  );
+  check(!!cartao, 'achei o cartao do grupo');
+  check(/'Link do grupo'/.test(cartao), 'o campo deixou de se chamar "Link padrao": ele e a unica fonte');
+  check(/defaultGroupLink/.test(cartao), 'e continua gravando na mesma chave, que e o que ele ja tem preenchido');
+
+  /** O caminho antigo da aba Respostas manda esta resposta — a descricao dele falava da tabela. */
+  const macro = painel.slice(
+    painel.indexOf("'Com link de grupo (caminho antigo)'"),
+    painel.indexOf("'Com link de grupo (caminho antigo)'") + 700
+  );
+  check(!/grupos cadastrados na aba Config/.test(macro),
+    'a descricao do caminho antigo nao manda mais cadastrar grupo por cidade');
+  check(/Link do grupo/.test(macro), 'ela diz o que o botao precisa hoje');
+}
+
 fim();

@@ -1,4 +1,93 @@
-## 2026-11-03 - v3.258.0 - ESTADO DE AGORA - parar pela pergunta conserva o reinicio
+## 2026-11-03 - v3.259.0 - ESTADO DE AGORA - os grupos por cidade sairam, e a promessa que eles faziam
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.259.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.259.0** na linha pequena do topo do painel
+4. Na **Config**, o cartao agora se chama **"Grupo do WhatsApp"** e tem **um campo so**: o link.
+   Confira que o seu link continua la (a chave e a mesma, nao foi apagada)
+5. Na **aba Respostas**, a resposta **"Enviar link do grupo"** foi reescrita. Se voce a tinha
+   editado a mao, ela **nao** foi tocada — veja o aviso no fim desta entrada
+
+### O QUE MUDOU
+
+Voce mandou remover o cartao: *"funcao nunca foi utilizada, pode ser removida"*. A tabela por
+cidade saiu, e com ela a funcao de editar, a leitura e a chave do perfil. **Ficou o campo do
+link**, agora chamado "Link do grupo" em vez de "Link padrao" — ele deixou de ser o segundo lugar
+depois da tabela e passou a ser o unico, que e o que ele sempre foi na pratica.
+
+**E ela nao era so inutil: era o que fazia a resposta do grupo mentir.** Medi antes de remover,
+com o estado que a sua print mostra (tabela VAZIA, link preenchido):
+
+```
+cityLinks {} + link preenchido + cidade "Caxias do Sul"
+  -> missing: []
+  -> "Prontinho! Este e o grupo de Caxias do Sul:  <link geral>"
+```
+
+Ou seja: o eleitor de Caxias recebia o link do grupo **geral** com o nome da cidade dele em cima,
+e **nada bloqueava**. A guarda que o projeto citava para isso era `{{cidade}}`, e ela so barra a
+cidade **vazia**. Com a tabela vazia desde sempre, isso esta no ar desde 07/09, quando a migracao
+preencheu o link — **a remocao nao criou o defeito, revelou**.
+
+E o caminho esta a um clique: o botao **"Enviar grupo + salvar + concluir"** da aba Respostas manda
+exatamente esse texto, grava a classificacao e **conclui** o atendimento. A descricao dele dizia
+*"so funciona com os grupos cadastrados na aba Config"*, o que era falso pelo mesmo motivo.
+
+**Com um link so, a promessa por cidade e impossivel de cumprir** — entao o conserto e o texto, e
+nao uma trava: a resposta passou a dizer *"este e o nosso grupo no WhatsApp"*. `{{cidade}}` saiu
+dela, e com isso ela passa a servir tambem na **chegada**, que e quando alguem pede o grupo.
+
+**O que mais mudou de tela:** o motivo do bloqueio deixou de mandar cadastrar o grupo de uma cidade
+(nao ha mais onde) e passou a apontar o campo que existe; a linha do grupo na aba Dados deixou de
+dizer "(padrao)", que com uma fonte so nao informava nada; e o rotulo de `{{link_grupo}}` deixou de
+falar de "tabela em Config".
+
+### O QUE ISSO CUSTA, E E SEU
+
+- **Se voce tinha reescrito a resposta "Enviar link do grupo" a mao, ela nao foi tocada** — essa e a
+  disciplina de todas as migracoes de texto aqui (quem editou fica com o dele). Nesse caso o
+  `{{cidade}}` continua no seu texto, e a mensagem continua dizendo "o grupo de <cidade>" sobre o
+  link geral. Se for o caso, me diga e eu reescrevo.
+- **Grupo por cidade deixou de existir como conceito.** Querendo um grupo diferente por regiao,
+  nao ha mais onde cadastrar — e a volta e a tabela inteira, nao um campo.
+- **O seu dado nao foi apagado:** a chave antiga continua no armazenamento, so nao e mais lida.
+
+### DOIS BOTOES QUE MANDAM O MESMO LINK, e e decisao sua
+
+Com um link so, **"Enviar link do grupo"** e **"Agenda: entrar no grupo"** mandam o mesmo link, com
+molduras diferentes (uma e "aqui esta o grupo", a outra e "a agenda sai no grupo"). Pela regra de
+28/10, mesmo ato em momentos diferentes nao e redundancia — entao mantive as duas. Achando ruido,
+uma sai.
+
+### O QUE FOI CONFERIDO
+
+42 suites passaram, `checar-modulos` e `checar-referencias` limpos. A medicao do defeito foi feita
+com dado ficticio, fora do repositorio; **nenhuma rodada foi iniciada e nenhum contato real foi
+tocado**. A tela depois de recarregar ainda nao foi conferida ao vivo.
+
+Testes novos: a migracao do texto (reescreve as tres variantes, nao mexe duas vezes, nao toca em
+texto reescrito por voce) e o cartao do painel (nao le a tabela, nao tem o editor dela, o titulo e
+a descricao do caminho antigo nao falam mais dela). E a assercao que gravava o defeito foi
+**invertida**, com o motivo escrito: ela dizia que `{{cidade}}` protegia a resposta, e nao
+protegia.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+Otimizacao do dossie por secao; rascunho manual descartado quando a IA se abstem; medicao de cache;
+consulta exata de etiquetas (o catalogo aqui e amostra de 0,9%); cadastro sem mensagem do momento;
+detector de convite pessoal. Nenhuma foi mexida nesta entrega.
+
+Sobraram sem destino, da revisao do Cursor: `lista-erros-cursor.md`,
+`whatsfill-ia-proposal-v11.diff` e `whatsfill-ia-v11-para-v12.diff` — o conteudo deles ja esta
+aplicado desde a 3.244. Posso apagar quando voce mandar.
+
+## 2026-11-03 - v3.258.0 - Estado anterior - parar pela pergunta conserva o reinicio
 
 Causa: fechar(valor) devolvia parar, mas nao marcava state.auto.parar. O finally fechava
 entao o controle flutuante. Botao e Esc da pergunta agora marcam a parada, como o quadrado.

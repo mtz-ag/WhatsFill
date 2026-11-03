@@ -2688,15 +2688,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * grupo: o link não faz parte do dia a dia"*. Ele não corresponde a tecla nenhuma da caixa da
      * rodada, o quadro não o alcança, e ficava no meio dos três botões de maior volume.
      *
-     * **Não removi**: nenhuma função sai da aba sem ele pedir, e o grupo da cidade continua
-     * cadastrado na Config para quem precisar. O lugar dele é depois das respostas prontas, junto
-     * dos modelos aprovados — os dois caminhos que existem para o caso avulso.
+     * **Não removi**: nenhuma função sai da aba sem ele pedir. O lugar dele é depois das respostas
+     * prontas, junto dos modelos aprovados — os dois caminhos que existem para o caso avulso.
+     *
+     * **A descrição falava da tabela de grupos por cidade, que saiu em 03/11/2026** (*"função
+     * nunca foi utilizada"*). Ela dizia *"só funciona com os grupos cadastrados na aba Config"* —
+     * e era falso mesmo antes: a tabela estava vazia, então quem respondia era o link padrão, e
+     * este botão mandava o link GERAL com o nome da cidade em cima, gravava a classificação e
+     * concluía o atendimento. O texto da resposta foi reescrito; esta descrição diz o que o botão
+     * faz hoje.
      */
     const macro = h('button', { class: 'wf-btn', type: 'button' }, 'Enviar grupo + salvar + concluir');
     macro.addEventListener('click', runMacro);
     body.append(h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Com link de grupo (caminho antigo)'),
-      h('div', { class: 'wf-preview' }, 'Envia o link do grupo da cidade, grava a classificação e conclui. Não corresponde a nenhuma tecla da rodada — o quadro não usa este caminho. Só funciona com os grupos cadastrados na aba Config.'),
+      h('div', { class: 'wf-preview' }, 'Envia a resposta "Enviar link do grupo", grava a classificação e conclui. Não corresponde a nenhuma tecla da rodada — o quadro não usa este caminho. Precisa do "Link do grupo" preenchido na aba Config.'),
       macro,
     ]));
 
@@ -14918,7 +14924,7 @@ const CONTATOS_POR_PAGINA = 200;
 
     const linkInfo = h('div', { class: 'wf-origin' }, '');
     cities.linkFor(input.value).then((r) => {
-      linkInfo.textContent = r.link ? `Grupo: ${truncate(r.link, 46)} (${r.source})` : r.reason || '';
+      linkInfo.textContent = r.link ? `Grupo: ${truncate(r.link, 46)}` : r.reason || '';
     });
     wrap.append(linkInfo);
   }
@@ -17790,24 +17796,34 @@ const CONTATOS_POR_PAGINA = 200;
     });
     body.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Intervalo mínimo entre envios (ms)'), throttleInput]));
 
-    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Grupos por cidade'));
+    /**
+     * **A TABELA DE GRUPOS POR CIDADE SAIU EM 03/11/2026** — pedido dele, com a print do cartão:
+     * *"função nunca foi utilizada, pode ser removida"*. A print é a prova: a área de texto
+     * **vazia** e o "Link padrão" preenchido, que é o estado dela desde que ela existe.
+     *
+     * **E ela não era só inútil: era o que fazia a resposta do grupo mentir.** Com a tabela vazia,
+     * `cities.linkFor` caía no link padrão e `link-grupo` — *"Este é o grupo de {{cidade}}"* —
+     * saía com o link GERAL sob o nome da cidade, sem nada bloquear (medido antes de remover).
+     *
+     * Ficou o campo do link, agora sem o "padrão" no nome: ele deixou de ser o segundo lugar
+     * depois da tabela e passou a ser o único. O título também mudou — *"Grupos por cidade"*
+     * descrevia a tabela, e **rótulo que sobrevive à função que ele nomeia é rótulo que mente**.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Grupo do WhatsApp'));
     body.append(
-      h('p', { class: 'wf-hint' }, 'Uma linha por cidade, no formato "Cidade = link". Acento e maiúscula não importam no casamento.')
+      h('p', { class: 'wf-hint' }, 'É o link que entra em {{link_grupo}} nas respostas prontas. Um lugar para trocar quando o convite cair — vazio, a resposta não sai e o motivo aparece na tela.')
     );
 
-    const cityArea = h('textarea', { rows: '7' });
-    const defaultInput = h('input', { type: 'text', placeholder: 'link usado quando a cidade não tem grupo' });
-    perfisLib.ler('cityLinks', perfilAtivo(), {}).then((m) => (cityArea.value = cities.formatCityLinks(m)));
+    const defaultInput = h('input', { type: 'text', placeholder: 'https://chat.whatsapp.com/...' });
     perfisLib.ler('defaultGroupLink', perfilAtivo(), '').then((v) => (defaultInput.value = v || ''));
 
-    const cityBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar grupos');
+    const cityBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar o link');
     cityBtn.addEventListener('click', async () => {
-      const parsed = cities.parseCityLinksText(cityArea.value);
-      await perfisLib.gravar('cityLinks', perfilAtivo(), parsed);
-      await perfisLib.gravar('defaultGroupLink', perfilAtivo(), defaultInput.value.trim());
-      setStatus(`${Object.keys(parsed).length} cidade(s) salva(s).`, 'ok');
+      const link = defaultInput.value.trim();
+      await perfisLib.gravar('defaultGroupLink', perfilAtivo(), link);
+      setStatus(link ? 'Link do grupo salvo.' : 'Link do grupo apagado: a resposta do grupo não vai sair.', 'ok');
     });
-    body.append(cityArea, h('label', { class: 'wf-field' }, [h('span', {}, 'Link padrão (opcional)'), defaultInput]), cityBtn);
+    body.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Link do grupo'), defaultInput]), cityBtn);
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Etiquetas por conteúdo'));
     body.append(

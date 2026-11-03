@@ -237,10 +237,18 @@ export async function loadMunicipios() {
     console.warn('[WhatsFill] não consegui ler a lista de municípios do pacote:', err.message);
   }
 
-  // Último recurso: as cidades que você já cadastrou na tabela de links.
-  const links = await perfis.lerDoAtivo('cityLinks', {});
-  municipiosCache = Object.values(links).map((v) => v.label).filter(Boolean);
-  return municipiosCache;
+  /**
+   * **O último recurso era a tabela de links por cidade, e ela saiu em 03/11/2026** (pedido dele:
+   * *"função nunca foi utilizada, pode ser removida"*).
+   *
+   * Na prática ele nunca funcionou: a tabela estava vazia, então a linha gravava `[]` em
+   * `municipiosCache` — e aí **nenhuma cidade seria reconhecida pelo resto da sessão**, inclusive
+   * depois de a rede voltar, que é exatamente a armadilha escrita três blocos acima.
+   *
+   * Por isso a lista vazia **não é cacheada**: chegando aqui, as duas fontes de verdade falharam,
+   * e a próxima chamada tem de poder tentar de novo.
+   */
+  return [];
 }
 
 function levenshtein(a, b) {
@@ -1124,69 +1132,44 @@ export async function suggest(text, n = 3) {
 }
 
 /**
- * Link do grupo para a cidade. Devolve o motivo quando não encontra, para o painel
- * poder explicar por que o envio está bloqueado em vez de mandar {{link_grupo}} cru.
+ * O link do grupo do WhatsApp. Devolve o motivo quando não há, para o painel poder explicar por
+ * que o envio está bloqueado em vez de mandar `{{link_grupo}}` cru.
+ *
+ * **A TABELA POR CIDADE SAIU EM 03/11/2026, e com ela a promessa que nunca se cumpria.** Pedido
+ * dele, com a print do cartão: *"função nunca foi utilizada, pode ser removida"* — e a print
+ * mostrava a área de texto **vazia** com o "Link padrão" preenchido, que é o estado dela desde
+ * sempre.
+ *
+ * **O que a tabela vazia causava, medido antes de mexer:** com ela vazia, o primeiro ramo nunca
+ * disparava e a resposta `link-grupo` — *"Este é o grupo de {{cidade}}"* — saía com o link GERAL
+ * sob o nome da cidade, sem nada bloquear:
+ * ```
+ * cityLinks {} + defaultGroupLink preenchido + cidade "Caxias do Sul"
+ *   -> missing: []   texto: "Este é o grupo de Caxias do Sul: <link geral>"
+ * ```
+ * A guarda que o projeto citava para isso era `{{cidade}}`, e ela só barra a cidade **vazia**.
+ * Então o defeito estava no ar desde 07/09/2026, quando a migração preencheu o link padrão — a
+ * remoção não o criou, revelou. O texto da resposta foi reescrito junto (ver
+ * `templates.migrarLinkGrupoSemCidade`), porque com um link só a promessa por cidade é
+ * impossível por construção.
+ *
+ * **Fica o que já era a única fonte na prática**, e o parâmetro continua existindo porque quem
+ * chama tem a cidade na mão e não deve saber se ela importa. Vazio BLOQUEIA o envio com o motivo
+ * na tela — é o que impede link morto de sair para eleitor quando ele cair.
  */
 export async function linkFor(city) {
-  const links = await perfis.lerDoAtivo('cityLinks', {});
-  const fallback = await perfis.lerDoAtivo('defaultGroupLink', '');
-  const key = normalize(city);
-
-  if (key && links[key]?.link) return { link: links[key].link, source: 'cidade' };
+  const link = await perfis.lerDoAtivo('defaultGroupLink', '');
+  if (link) return { link };
 
   /**
-   * **O link PADRÃO era inalcançável sem cidade — e sem cidade é justamente a chegada.**
+   * **A cidade não entra mais no motivo, e isso é metade do conserto.**
    *
-   * O `if (!key) return` ficava ACIMA daqui e devolvia *"Cidade não definida"*, então
-   * `{{link_grupo}}` bloqueava o envio mesmo com o link padrão preenchido na Config. Ou seja: o
-   * campo que existe para o caso *"não tenho o grupo desta cidade"* não valia no caso mais comum
-   * de todos, que é **não ter cidade nenhuma** — quem acaba de chegar pelo anúncio.
-   *
-   * Apareceu em 07/09/2026, quando ele pediu a resposta que manda a pessoa entrar no grupo para
-   * acompanhar a agenda: a print era um contato do anúncio *CONVERSE CONOSCO* com Cidade vazia.
-   *
-   * **A prioridade não muda:** grupo da cidade primeiro, padrão depois. O que muda é o padrão
-   * passar a ser consultado sempre — e `source` continua dizendo qual dos dois respondeu, que é o
-   * que a aba Dados mostra.
+   * Até aqui ele dizia *"Sem grupo cadastrado para 'X'. Cadastre na aba Config"* — e depois da
+   * remoção não há onde cadastrar grupo de cidade nenhuma. Aviso que manda procurar o lugar
+   * errado custa a mesma sessão de diagnóstico que o aviso que não envelhece.
    */
-  if (fallback) return { link: fallback, source: 'padrão' };
-
-  // Sem cidade E sem link padrão: as DUAS saídas resolvem, então as duas são ditas. Nomear só uma
-  // e o que faz a pessoa ir mexer no lugar errado — a família do aviso que mandava procurar o
-  // interruptor na aba de onde ele havia saído.
-  if (!key) {
-    return {
-      link: null,
-      reason:
-        'Cidade ainda não classificada e sem link padrão de grupo — preencha a Cidade na aba Dados, ' +
-        'ou o "Link padrão" na aba Config.',
-    };
-  }
   return {
     link: null,
-    reason: `Sem grupo cadastrado para "${city}" e sem link padrão. Cadastre na aba Config.`,
+    reason: 'Sem link do grupo — preencha "Link do grupo" na aba Config.',
   };
-}
-
-/** Editor da tabela em texto: uma linha por cidade, "Cidade = link". */
-export function parseCityLinksText(text) {
-  const out = {};
-  for (const rawLine of String(text || '').split('\n')) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-    const idx = line.indexOf('=');
-    if (idx < 0) continue;
-    const label = line.slice(0, idx).trim();
-    const link = line.slice(idx + 1).trim();
-    if (!label || !link) continue;
-    out[normalize(label)] = { label, link };
-  }
-  return out;
-}
-
-export function formatCityLinks(map) {
-  return Object.values(map || {})
-    .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
-    .map((v) => `${v.label} = ${v.link}`)
-    .join('\n');
 }

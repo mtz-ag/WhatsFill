@@ -648,6 +648,59 @@ grupo('o link do grupo entra uma vez, e nunca por cima do dele (07/09/2026)');
   check(!(await templates.migrarRespostaAgendaGrupo()), 'e nao acrescenta duas vezes');
 }
 
+grupo('a resposta do grupo para de prometer o grupo DA CIDADE (03/11/2026)');
+{
+  /**
+   * A tabela de grupos por cidade saiu a pedido dele — *"funcao nunca foi utilizada, pode ser
+   * removida"* —, e com um link so a promessa por cidade e impossivel de cumprir. **Medido antes
+   * de remover: ela ja nao era cumprida.** Com a tabela vazia (o estado dela na print) e o link
+   * preenchido, o texto saia inteiro:
+   * ```
+   * "Este e o grupo de Caxias do Sul: <link geral>"   missing: []
+   * ```
+   * **Sem esta migracao a troca nao chega nele:** a lista esta gravada, e `store.get` so mescla
+   * default em chave que FALTA (a armadilha do `-contato-assessor`, 04/09).
+   */
+  const antigo = {
+    id: 'link-grupo',
+    name: 'Enviar link do grupo',
+    text: 'Prontinho! Este e o grupo de {{cidade}}:\n\n{{link_grupo}}\n\nTe espero!',
+    variantes: [
+      'Aqui esta! Esse e o grupo de {{cidade}}:\n\n{{link_grupo}}\n\nVem com a gente!',
+      'Segue o grupo de {{cidade}}:\n\n{{link_grupo}}\n\nEsperamos voce!',
+    ],
+  };
+
+  mem.migracoes = {};
+  mem.templates = [{ ...antigo, variantes: [...antigo.variantes] }];
+  const mexidas = await templates.migrarLinkGrupoSemCidade();
+  check(mexidas.length === 1, `reescreve a resposta gravada (${JSON.stringify(mexidas)})`);
+
+  const nova = mem.templates.find((t) => t.id === 'link-grupo');
+  for (const t of [nova.text, ...nova.variantes]) {
+    check(!/\{\{\s*cidade\s*\}\}/.test(t), 'nenhuma das tres promete o grupo de uma cidade');
+    check(/\{\{link_grupo\}\}/.test(t), 'e o link continua sendo a variavel, nao texto colado');
+  }
+  check(/nosso grupo no WhatsApp/.test(nova.text), 'o texto diz o que o link e');
+
+  // A marca e o que garante o "uma vez": sem ela, cada carregamento do painel reescreveria.
+  check((await templates.migrarLinkGrupoSemCidade()).length === 0, 'segunda passada nao mexe em nada');
+
+  /**
+   * **Quem reescreveu a frase fica com a dele** — a disciplina das outras migracoes de texto. O
+   * preco esta dito no registro: se ele tiver reescrito, a cidade continua no texto dele.
+   */
+  mem.migracoes = {};
+  mem.templates = [{ ...antigo, text: 'Entra no grupo da tua regiao: {{link_grupo}}', variantes: [] }];
+  check((await templates.migrarLinkGrupoSemCidade()).length === 0, 'texto reescrito por ele nao e tocado');
+
+  // E o texto de FABRICA ja nasce sem a promessa.
+  const grupoDeFabrica = store.DEFAULT_TEMPLATES.find((t) => t.id === 'link-grupo');
+  for (const t of [grupoDeFabrica.text, ...grupoDeFabrica.variantes]) {
+    check(!/\{\{\s*cidade\s*\}\}/.test(t), 'a resposta de fabrica nao fala de cidade');
+  }
+}
+
 /**
  * **"Gostaria de falar com o deputado"** — pedido dele (08/09/2026), com o print do pastor e a
  * resposta que ele digitou a mao.

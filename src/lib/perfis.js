@@ -56,7 +56,6 @@ export const CHAVES_DO_PERFIL = [
    * o painel usa para reconhecer o clique.
    */
   'defaultGroupLink',
-  'cityLinks',
   'contentTemplates',
   'modelosPadraoAnuncio',
   'modeloPadraoAnuncio',
