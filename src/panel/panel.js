@@ -12798,6 +12798,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       function fechar(valor) {
+        // Parar pela pergunta (botão ou Esc) deve preservar o controle de reinício,
+        // assim como o quadrado flutuante. Outras escolhas não mudam a bandeira.
+        if (valor === 'parar' && state.auto.rodando) state.auto.parar = true;
         document.removeEventListener('keydown', aoTeclar, true);
         fundo.remove();
         resolve(valor);

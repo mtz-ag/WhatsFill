@@ -1,4 +1,12 @@
-## 2026-11-03 - v3.257.0 - ESTADO DE AGORA - aviso de etiquetas respeita amostra
+## 2026-11-03 - v3.258.0 - ESTADO DE AGORA - parar pela pergunta conserva o reinicio
+
+Causa: fechar(valor) devolvia parar, mas nao marcava state.auto.parar. O finally fechava
+entao o controle flutuante. Botao e Esc da pergunta agora marcam a parada, como o quadrado.
+Pular e concluir nao mudam essa bandeira. Teste executa o fechamento real nas tres escolhas.
+Nenhuma rodada em producao foi iniciada. Validacao visual ao vivo ainda pendente.
+Recarregue a extensao e a aba do Mobiliza. Demais pendencias permanecem na entrada anterior.
+
+## 2026-11-03 - v3.257.0 - Estado anterior - aviso de etiquetas respeita amostra
 
 loadTags descartava completa e lidos ao transformar a lista da API. Agora preserva os dois.
 O aviso de etiquetas a remover informa quando o catalogo e parcial; nao afirma inexistencia

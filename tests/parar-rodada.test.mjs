@@ -116,4 +116,20 @@ const caixa = (() => {
   check(painel.includes('if (state.auto.parar) controleDaRodada?.pintar();'), 'parada solicitada mantém o controle com reinício');
 }
 
+{
+  grupo('parada pela pergunta preserva o controle: execução do fechamento real');
+  const inicio = painel.indexOf('      function fechar(valor) {', painel.indexOf('function perguntarNaRodada'));
+  const fimCorpo = painel.indexOf('      fecharDeFora = fechar;', inicio);
+  const executar = new Function('state', 'document', 'fundo', 'resolve', 'aoTeclar', 'valor',
+    painel.slice(inicio, fimCorpo) + '\nfechar(valor);');
+  for (const valor of ['parar', 'pular', 'concluir']) {
+    const state = { auto: { rodando: true, parar: false } };
+    let devolvido;
+    let removido = false;
+    executar(state, { removeEventListener() {} }, { remove() { removido = true; } },
+      (v) => { devolvido = v; }, () => {}, valor);
+    check(state.auto.parar === (valor === 'parar'), `${valor}: só parar marca a parada`);
+    check(removido && devolvido === valor, `${valor}: fecha a pergunta e devolve a escolha`);
+  }
+}
 fim();
