@@ -3452,6 +3452,37 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **A DECISAO DO FLUXO SO DAVA PARA LER INICIANDO UMA RODADA — E A RODADA AGE** (03/11/2026,
+  escolha dele: *"a linha do fluxo"*). Para medir um caso na tela dele eu tive que comecar uma
+  rodada de verdade, e ela **concluiu cinco atendimentos** no caminho. E todo diagnostico deste
+  projeto comeca igual (*medi o sinal, medi a ordem*, 14/10), entao o primeiro passo custava uma
+  rodada em producao.
+  **A previsao mora DENTRO de `processarRespondido`, com `ctx.simular`, e nao numa funcao nova.**
+  Medido antes de escolher: **28 valores atravessam** a fronteira entre o que a funcao calcula e
+  a decisao, ao longo de 900 linhas. Remonta-los noutro lugar e literalmente a armadilha de 14/10
+  — *"reconstrucao de contexto COPIA a composicao do painel, nunca a funcao de nome parecido"* —,
+  e a copia divergiria na primeira regra nova, **em silencio**. Simular na propria funcao e a
+  unica leitura que nao pode mentir: **e o mesmo codigo que decide de verdade.**
+  **Medido: entre o `load()` e a decisao ha SETE nomes que agem, e so eles** — `removerEtiquetas
+  Listadas` (1), `saveClassification` (2), `concluirPeloPainel` (2), `perguntarNaRodada` (2),
+  `etiquetarEndereco` (2), `aplicarEtiquetaDePedido` (1) e `registrarNaRodada` (6). Nenhuma outra
+  escrita, envio ou chamada paga. `simular` desliga os sete, o `load()` (o contato ja esta
+  carregado) e transforma as **tres saidas que agiriam** em previsao.
+  **A previsao para DEPOIS do ajuste do anuncio e do fecho por cortesia, e ANTES da IA, e as duas pontas sao regra:**
+  `decidirComAnuncio` pode TROCAR o desfecho, entao parar antes mostraria a primeira decisao e
+  nao a que sairia — **previsao que mente e pior que previsao nenhuma**; e dali para baixo a
+  funcao pode chamar a IA, que e dinheiro por clique.
+  **O efeito colateral que quase passou: `sugerirAcaoComFluxo` CONTA VITORIAS e grava.** A
+  previsao roda em todo contato que ele abre — contando, ela **dobraria** a medicao contra as
+  rodadas reais e escreveria no armazenamento a cada conversa aberta. Dai o `contar: false`.
+  **Ao por leitura nova em cima de uma funcao que decide, procure o que ela MEDE, e nao so o que
+  ela escreve.**
+  **E a linha leva `data-fica`**, porque e DADO de estado: sem a marca o "ⓘ detalhes" a recolhe —
+  o defeito cometido **duas vezes em 03/11** (o aviso do momento vencido e o da imagem).
+  Prova: tirando a guarda da remocao, a do log do anuncio e o `contar`, caem 3 assercoes em
+  `tests/previsao-do-fluxo.test.mjs`. **O teste conta os sete nomes que agem**: escrita nova ali
+  quebra a contagem, que e o que impede isto de envelhecer.
+
 - **O ESC NAO PARAVA A RODADA ONDE ELE MAIS SERVE: COM O FOCO NO CAMPO DA CONVERSA**
   (03/11/2026, medido na tela dele: *"o Parar e o Esc nao encerram a espera de 'responda a mao'"*).
   O ■ exige ponteiro de verdade (`detail !== 0`, guarda de 29/10) e funciona; o Esc nao pegava.
@@ -7402,7 +7433,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 41 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 42 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu:** em 03/11/2026 ela tinha 30 nomes e o diretório já tinha
 > 39 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -7411,7 +7442,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 41 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

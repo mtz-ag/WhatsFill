@@ -363,6 +363,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     iaTemChaveRascunho: false,
     /** O que o cartão "Chamar a IA" mostra — sobrevive ao `renderAll()` do `withBusy`. */
     rascunhoDoCartao: null,
+    /** O que a rodada FARIA com o contato aberto, sem fazer nada — ver `preverOFluxo`. */
+    previsao: null,
     /** As imagens que vão junto da mensagem, lidas do armazenamento — ver `campoDeImagem`. */
     imagens: { imagemMomentoArquivo: null, imagemPedidoDadosArquivo: null },
     /** O ponteiro de revezamento dos pares do lote — ver `lote.parDaVez`. */
@@ -678,6 +680,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.anuncioSemResposta = null;
     // Os sinais do contato anterior decidiriam o rascunho deste. Mesma armadilha do anuncio.
     state.sinais = null;
+    // E a previsão do fluxo é do CONTATO: deixá-la de pé mostraria o desfecho de um na tela do
+    // outro, que é a armadilha da pergunta de cidade na forma mais fácil de acreditar.
+    state.previsao = null;
     // "Já esteve aqui antes" é do CONTATO: sobreviver à troca faria a primeira vinda de um herdar
     // o histórico do outro. Mesma armadilha do anúncio.
     state.temConversaAnterior = false;
@@ -972,11 +977,49 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Depois do status: se houver o que aplicar, a mensagem de "Aplicado sozinho" substitui.
       await aplicarAutomatico();
+      await preverOFluxo(sessionId);
     } catch (err) {
       state.error = err.message;
       setStatus(err.message, 'err');
     }
     renderAll();
+  }
+
+  /**
+   * **O que a rodada FARIA com este contato, sem fazer nada** — pedido dele (03/11/2026).
+   *
+   * O buraco que isto fecha: até hoje a única forma de ler a decisão do fluxo era **iniciar uma
+   * rodada de verdade**, e ela age. Eu precisei fazer isso para diagnosticar um caso e ela
+   * concluiu cinco atendimentos no caminho. Todo diagnóstico deste projeto começa igual — *medi o
+   * sinal, medi a ordem* (14/10) — e esse primeiro passo custava uma rodada em produção.
+   *
+   * **Roda no `load()`, que é o momento em que ele abre a conversa**, e não num botão: a pergunta
+   * *"o que ia sair para esta pessoa?"* é a que ele faz ao olhar o contato, e um botão a mais seria
+   * um clique entre a dúvida e a resposta.
+   *
+   * **Três guardas, e cada uma paga o próprio custo:**
+   *
+   *  1. **nunca durante a rodada** — lá a decisão de verdade acontece logo em seguida, e prever
+   *     antes seria calcular duas vezes e arriscar mostrar a previsão de um contato enquanto a
+   *     rodada já abriu outro;
+   *  2. **nunca sem contato carregado**, porque `simular` pula o `load()` — é o contato que está
+   *     no `state` que está sendo previsto, e só ele;
+   *  3. **a falha é silenciosa e só no console.** Isto é uma linha informativa: derrubar o
+   *     carregamento do contato porque a previsão não deu é trocar algo que funciona há meses por
+   *     uma conveniência nova. Sem previsão, a tela simplesmente não mostra a linha.
+   */
+  async function preverOFluxo(sessionId) {
+    state.previsao = null;
+    if (state.auto.rodando || !state.contact) return;
+    const contato = state.contact;
+    try {
+      const r = await processarRespondido(sessionId, { simular: true });
+      if (state.contact !== contato || state.auto.rodando) return;
+      state.previsao = r?.resultado === 'previsao' ? r
+        : r?.resultado === 'pulado' ? { ...r, motivo: `pularia: ${r.motivo}` } : null;
+    } catch (err) {
+      console.warn('[WhatsFill] não consegui prever o fluxo deste contato:', err?.message || err);
+    }
   }
 
   /**
@@ -2325,6 +2368,31 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     })();
 
+    /**
+     * **O FLUXO FARIA: a decisão da rodada para este contato, sem a rodada** — pedido dele
+     * (03/11/2026), depois de eu precisar iniciar uma rodada de verdade só para ler isto.
+     *
+     * **No CABEÇALHO porque ele vale em toda aba.** É a pergunta que precede qualquer outra ao
+     * abrir uma conversa — *"o que ia sair para esta pessoa?"* —, e escondê-la numa aba faria
+     * depender de ele lembrar de ir lá.
+     *
+     * **`data-fica` é obrigatório**: isto é DADO de estado, não explicação, e sem a marca
+     * `encolherExplicacoes` o recolhe atrás do "ⓘ detalhes" — o defeito que este projeto cometeu
+     * duas vezes no mesmo dia (o aviso do momento vencido e o da imagem, 03/11).
+     *
+     * **Fica calada quando não há previsão** (rodada andando, contato não carregado, erro): linha
+     * que aparece vazia ou dizendo "não sei" em toda conversa é alarme que se aprende a ignorar.
+     */
+    if (state.previsao) {
+      header.append(
+        h('div', { class: 'wf-origin', 'data-fica': '1' },
+          `O fluxo faria: ${state.previsao.motivo}` +
+            (state.previsao.paraAIA ? ' — esta previsão não chama a IA.' : '.') +
+            (String(state.auto.cfg.etiquetasParaRemover || '').trim()
+              ? ' Prévia com as etiquetas atuais; a remoção configurada pode mudar a decisão na rodada.' : ''))
+      );
+    }
+
     const grafia = state.grafiaDaCidade;
     if (grafia && !grafia.ok) {
       const aviso = h('div', { class: 'wf-block' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);
@@ -2658,10 +2726,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Sem árvore, o caminho é o de sempre. Isso importa mais do que parece: quem nunca abriu a
    * janela continua rodando o motor testado desde agosto, sem depender de nada novo dar certo.
    */
-  function sugerirAcaoComFluxo(ctx) {
+  /**
+   * **A previsão em português: o que a rodada FARIA com o contato aberto.**
+   *
+   * Escrita a partir da mesma `sugestao` que a rodada executa — o rótulo sai de `TECLAS`, que é a
+   * lista do que uma regra pode mandar apertar, e não de um texto meu ao lado: duas descrições do
+   * mesmo desfecho divergem na primeira tecla nova, e esta é lida justamente para decidir se o
+   * quadro está certo.
+   *
+   * **Diz a REGRA e o CAMINHO** porque é com eles que ele acha a caixa na janela do fluxo — sem
+   * isso a linha informa o desfecho e não ajuda a mexer nele.
+   */
+  function descreverPrevisao(sugestao) {
+    if (!sugestao) return state.ia?.ligada
+      ? 'nenhuma regra decide este caso — iria para a IA escrever um rascunho'
+      : 'nenhuma regra decide este caso — aguardaria sua escolha (IA desligada)';
+    const onde =
+      ` ("${sugestao.id}"` + (sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : '') + ')' + (sugestao.motivo ? ` — ${sugestao.motivo}` : '');
+    if (sugestao.ia) return `um ramo do seu quadro entrega este caso para a IA${onde}`;
+    if (sugestao.resposta) return `manda a resposta pronta "${sugestao.resposta}"${onde}`;
+    const tecla = sugestaoLib.TECLAS[sugestao.tecla];
+    if (!tecla) return `tecla ${sugestaoLib.mostrarTecla(sugestao.tecla)}${onde}`;
+    return `tecla ${sugestaoLib.mostrarTecla(sugestao.tecla)} — ${tecla.rotulo.toLowerCase()}${onde}`;
+  }
+
+  /**
+   * **`contar: false` é para a PREVISÃO** (03/11/2026). As vitórias são a medição de qual regra
+   * decide de verdade, e a previsão roda em TODO contato que ele abre — contando, ela dobraria o
+   * número contra as rodadas reais e gravaria no armazenamento a cada conversa aberta. Previsão
+   * é leitura: não mexe na medida que ela existe para ajudar a ler.
+   */
+  function sugerirAcaoComFluxo(ctx, { contar = true } = {}) {
     const arvore = state.fluxo?.arvore;
     const r = Array.isArray(arvore) && arvore.length ? arvoreLib.decidir(ctx, arvore, state.fluxo) : sugerirAcao(ctx, state.fluxo);
-    if (r?.id) {
+    if (contar && r?.id) {
       const v = { ...(state.fluxo?.vitorias || {}) };
       v[r.id] = (Number(v[r.id]) || 0) + 1;
       state.fluxo = { ...state.fluxo, vitorias: v };
@@ -9655,10 +9753,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   async function processarRespondido(sessionId, ctx) {
     let nome = 'contato';
+    /**
+     * **SIMULAR: a MESMA função, parada antes de agir** — pedido dele (03/11/2026), depois de eu
+     * ter precisado iniciar uma rodada de verdade só para ler o que o fluxo decidiria, e ela ter
+     * concluído cinco contatos no caminho.
+     *
+     * **Por que aqui e não numa função nova:** a decisão do fluxo depende de ~28 valores que esta
+     * função calcula ao longo de 900 linhas, e remontá-los em outro lugar é literalmente a
+     * armadilha de 14/10 (*"reconstrução de contexto COPIA a composição do painel, nunca a função
+     * de nome parecido"*) — eu mediria a minha própria suposição e ela divergiria na primeira
+     * regra nova. Simular na própria função é a única leitura que não pode mentir: **é o mesmo
+     * código que decide de verdade.**
+     *
+     * **O que `simular` desliga são CINCO pontos, e só eles agem antes da decisão:** o `load()`
+     * (o contato já está carregado — quem simula é a tela dele), a remoção de etiquetas, as duas
+     * conclusões (canal removido e "já respondi há pouco") e as duas caixas de pergunta. Medido:
+     * entre o `load()` e a decisão não há nenhuma outra escrita, envio ou chamada paga.
+     *
+     * **Toda saída antecipada vira previsão em vez de ação**, e a rodada de verdade não muda:
+     * sem `simular` esta função é byte a byte a que já existia.
+     */
+    const simular = !!ctx?.simular;
+    /** A previsão sai com `resultado: 'previsao'`, que nenhuma rodada produz — ver `veredito`. */
+    const prever = (o) => ({ nome, resultado: 'previsao', ...o });
     try {
       // Carrega pelo caminho de sempre: parser, sugestão de etiquetas, e a classificação
       // automática do que é determinístico.
-      await load(sessionId);
+      if (!simular) await load(sessionId);
       if (!state.contact) return { nome, resultado: 'erro', motivo: 'não consegui carregar o contato' };
       nome = state.contact.name || state.contact.nameWhatsapp || 'sem nome';
 
@@ -9673,7 +9794,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * etiqueta de sem interesse ou a de assessor, ela deixa de proteger nesta mesma passada — o
        * contato passa a receber o que a etiqueta impedia. Está escrito no cartão.
        */
-      const falhouARemocao = await removerEtiquetasListadas(nome);
+      // Simulando, a remoção não acontece: ela ESCREVE no CRM, e a previsão é leitura.
+      const falhouARemocao = simular ? null : await removerEtiquetasListadas(nome);
       if (falhouARemocao) {
         return { nome, resultado: 'pulado', parar: true, motivo: falhouARemocao.motivo };
       }
@@ -9706,6 +9828,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const canalRemovido = await canalDesteAtendimentoRemovido();
       if (canalRemovido) {
+        if (simular) {
+          return prever({
+            motivo:
+              'o número deste atendimento foi REMOVIDO da conta — a rodada ' +
+              (state.auto.cfg.concluirCanalRemovido && rodadaAutomatica()
+                ? 'concluiria sem enviar nada (a caixa "Concluir sozinho…" está marcada)'
+                : 'pararia para perguntar o que fazer'),
+          });
+        }
         const concluirSozinho = !!state.auto.cfg.concluirCanalRemovido && rodadaAutomatica();
         const escolhaRemovido = concluirSozinho
           ? 'concluir'
@@ -10301,6 +10432,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Conclui sozinho só quem eu respondi HÁ POUCO. Quem está calado desde ontem cai na
       // pergunta como todo mundo — a regra e o porquê moram em `hsm.decidirSemResposta`.
       if (decisao?.acao === 'concluir') {
+        if (simular) {
+          return prever({
+            motivo: `${decisao.motivo} (${formatarQuando(ultima.at)}) — a rodada concluiria sem enviar nada`,
+          });
+        }
         await saveClassification({ withCompletionDate: true, quiet: true });
         const fechouRespondido = await concluirPeloPainel();
         if (!fechouRespondido.ok) {
@@ -10497,6 +10633,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // Canal fora do ar: some TODA saída que envia, e sobra pular. Ver `canalDesteContatoFora`.
       const canalFora = await canalDesteContatoFora();
       if (canalFora) {
+        if (simular) {
+          return prever({
+            motivo: 'o número deste atendimento está fora do ar — a rodada pararia para perguntar, e nada sairia',
+          });
+        }
         // Não grava ANTES de perguntar: as duas saídas daqui são pular (que não grava) e
         // concluir (que grava na hora). Gravar aqui pagava o custo mesmo quando ele ia pular.
         const escolhaFora = await perguntarNaRodada({
@@ -11192,7 +11333,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * outro é a armadilha da pergunta de cidade.
        */
       state.sinais = sinaisDoContato;
-      let sugestao = sugerirAcaoComFluxo(sinaisDoContato);
+      let sugestao = sugerirAcaoComFluxo(sinaisDoContato, { contar: !simular });
 
       /**
        * **A EXCEÇÃO da etiqueta de material: ela pediu material fora do anúncio** — regra dele
@@ -11210,7 +11351,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * testa uma PROMESSA — sempre verdadeira —, então a exceção nunca marcaria ninguém, e em silêncio.
        * Escrevi assim na primeira versão; testes e verificadores passaram, porque nenhum roda o painel.
        */
-      if (!(await etiquetaDeEndereco())) {
+      // Simulando, nenhuma etiqueta é gravada: as duas marcas abaixo escrevem no CRM e uma delas
+      // passa pela conferência da IA, que é chamada paga. A previsão lê, não marca.
+      if (!simular && !(await etiquetaDeEndereco())) {
         const pediuMaterial = pedeMaterialForaDoAnuncio(state.entrantes, state.padroesDeAnuncio);
         if (pediuMaterial) {
           const aviso = await etiquetarEndereco(state.contact, { gatilho: `ela escreveu um pedido de material: ${pediuMaterial.motivo}` });
@@ -11232,7 +11375,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * etiqueta que o contato já tem não é aplicada de novo (`aplicarEtiquetaDePedido` confere).
        */
       const motivoDoPedido = sugestaoLib.motivoDaEtiquetaDePedido(sinaisDoContato);
-      if (motivoDoPedido && String(state.auto.cfg.etiquetaPedidoAjuda || '').trim()) {
+      if (!simular && motivoDoPedido && String(state.auto.cfg.etiquetaPedidoAjuda || '').trim()) {
         const marca = await aplicarEtiquetaDePedido(state.contact, { gatilho: motivoDoPedido });
         if (marca) registrarNaRodada(nome, 'info', `${motivoDoPedido} — etiqueta de pedido${marca}`);
       }
@@ -11327,9 +11470,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         { jaSaiu: jaSaiuOAnuncio }
       );
       if (doAnuncio) {
-        registrarNaRodada(nome, 'info', doAnuncio.motivo);
+        // A troca vale também na previsão — é ela que faz a previsão ser a decisão FINAL, e não a
+        // primeira. O que não vale é a linha no Andamento: aquele log é da rodada de verdade.
+        if (!simular) registrarNaRodada(nome, 'info', doAnuncio.motivo);
         sugestao = doAnuncio;
-      } else if (state.anuncio) {
+      } else if (!simular && state.anuncio) {
         /**
          * **Reconhecer o anúncio e não fazer nada precisa APARECER.**
          *
@@ -11353,6 +11498,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             (sugestao ? '' : ' — e o fluxo não decidiu nada para este caso, então é com você')
         );
       }
+
 
       /**
        * A avaliação de contexto — a SEGUNDA camada, e só do que a primeira não resolveu.
@@ -11395,9 +11541,32 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ligado: state.auto.cfg.concluirCortesiaSozinho !== false,
       });
       if (fechoDeCortesia) {
-        if (fechoDeCortesia.id !== sugestao?.id) registrarNaRodada(nome, 'info', fechoDeCortesia.motivo);
+        if (!simular && fechoDeCortesia.id !== sugestao?.id) registrarNaRodada(nome, 'info', fechoDeCortesia.motivo);
         sugestao = fechoDeCortesia;
       }
+
+      /**
+       * **A PREVISÃO PARA AQUI, e a posição é a regra.**
+       *
+       * Aqui `sugestao` já é a decisão FINAL: passou pela tabela ou pelo quadro dele
+       * (`sugerirAcaoComFluxo`) e pelo fechamento por cortesia e pelo ajuste do anúncio, que pode TROCAR o
+       * desfecho. Parar uma linha antes mostraria a primeira decisão e não a que sairia — previsão
+       * que mente é pior que previsão nenhuma.
+       *
+       * **E para antes da IA de propósito:** daqui para baixo a função pode CHAMAR a IA, que é
+       * dinheiro por clique. A previsão diz *que* o caso iria para ela; quem decide pagar é ele,
+       * no botão que já existe.
+       */
+      if (simular) {
+        return prever({
+          tecla: sugestao?.tecla || '',
+          regra: sugestao?.id || '',
+          caminho: sugestao?.caminho || null,
+          paraAIA: !!state.ia?.ligada && (!sugestao || sugestao.tecla === '6' || !!sugestao.ia),
+          motivo: descreverPrevisao(sugestao),
+        });
+      }
+
 
       const regraPedeGente = sugestao?.tecla === '6';
 
@@ -12470,6 +12639,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
       return { nome, resultado: 'enviado' };
     } catch (err) {
+      if (simular) throw err;
       await page.closeOverlay().catch(() => {});
       /**
        * **A rede de baixo de TUDO o que esta função faz** — e é por aqui que `sendTemplate`,

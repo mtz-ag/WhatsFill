@@ -1,8 +1,76 @@
-## 2026-11-03 - v3.254.0 - ESTADO DE AGORA - o Esc nao parava a rodada onde ele mais serve
+## 2026-11-03 - v3.255.0 - ESTADO DE AGORA - "o fluxo faria", sem a rodada agir
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.254.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.255.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.255.0** na linha pequena do topo do painel
+4. Abra uma conversa: no cabecalho, logo abaixo de "Primeiro contato", aparece
+   **"O fluxo faria: ..."**. E a decisao que a rodada tomaria para aquele contato — **sem a
+   rodada rodar, sem gravar, sem enviar e sem chamar a IA**
+
+### Revisao da continuacao (Codex)
+
+A previsao agora inclui o fechamento por cortesia antes de devolver a decisao, mostra o motivo
+legivel da regra e informa os pulos antecipados. Canal removido respeita tambem o modo automatico.
+Falhas na simulacao nao fecham dialogos da plataforma. A linha nao promete IA quando desligada e
+avisa que a remocao configurada de etiquetas pode mudar a decisao (a previa usa as atuais).
+Teste executavel reproduz a troca de mensagem do momento por conclusao por cortesia, sem log.
+Validacao: 42 suites passaram e sintaxe do painel conferida. A suite page-mob agora normaliza
+CRLF ao ler o painel: nove falhas eram ancoras de texto dependentes de LF no Windows.
+Validacao local; a exibicao na extensao carregada ainda precisa ser conferida apos recarregar.
+
+### O QUE MUDOU
+
+Voce escolheu a linha do fluxo. O buraco que ela fecha e o que me pegou ontem: **a unica forma de
+ler o que o fluxo decidiria era iniciar uma rodada de verdade, e a rodada age** — ela concluiu
+cinco atendimentos enquanto eu media um caso. E todo diagnostico aqui comeca igual, medindo o
+sinal e a ordem, entao esse primeiro passo custava uma rodada em producao.
+
+**A previsao e a MESMA funcao que decide, parada antes de agir.** Nao e uma funcao nova: medi, e
+**28 valores atravessam** a fronteira entre o que `processarRespondido` calcula e a decisao, ao
+longo de 900 linhas. Remonta-los noutro lugar seria a armadilha de 14/10 — a copia divergiria da
+rodada na primeira regra nova, **em silencio**, e a linha passaria a mentir justamente quando voce
+fosse confiar nela.
+
+**O que `simular` desliga sao sete pontos, e medi que so eles agem** antes da decisao: a remocao
+de etiquetas, as duas conclusoes, as duas caixas de pergunta, as duas marcas de etiqueta e as
+linhas do Andamento. Mais o `load()`, porque o contato ja esta carregado — quem simula e a tela
+que voce esta vendo.
+
+**A linha para depois do ajuste do anuncio e antes da IA.** O anuncio ainda pode TROCAR o
+desfecho, entao parar antes mostraria a primeira decisao e nao a que sairia; e dali para baixo a
+funcao pode chamar a IA, que e dinheiro por clique. A linha diz *que* o caso iria para a IA —
+quem decide pagar continua sendo voce, no botao.
+
+**E um efeito colateral quase passou:** `sugerirAcaoComFluxo` **conta vitorias e grava**. A
+previsao roda em todo contato que voce abre, entao contando ela **dobraria** essa medicao contra
+as rodadas de verdade e escreveria no armazenamento a cada conversa aberta.
+
+### O QUE NAO MUDOU
+
+**Sem `simular`, o comportamento de `processarRespondido` foi preservado** — a rodada de verdade nao mudou
+em nada. Nenhuma trava afrouxou. Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu
+mando" ligado. Fecho por cortesia ligado. O quadro nao foi tocado.
+
+### O QUE CONTINUA ABERTO
+
+Da lista que eu te dei, ficaram as outras duas que eu recomendei — **o dossie por secao** (ele e
+um terco do prompt: 8.671 tokens de 25.255) e **o teste do `data-fica`** (33 dos 68 avisos do
+painel podem sumir atras do "detalhes"). E as de antes: o aviso de etiqueta que **nega existencia
+a partir de uma amostra** (`⛔ 2 Sem Retorno` existe no CRM, eu li), o rascunho descartado quando a
+IA se abstem no botao manual, a janelinha da rodada que some ao parar, a tecla 4 em vez do
+silencio sem momento, e o convite pessoal sem detector.
+
+Prova: tirando a guarda da remocao, a do log do anuncio e o `contar`, caem 3 assercoes em
+`tests/previsao-do-fluxo.test.mjs` (suite nova, a 42a). O teste conta os sete nomes que agem antes
+da decisao — escrita nova ali quebra a contagem.
+
+## 2026-11-03 - v3.254.0 - o Esc nao parava a rodada onde ele mais serve
 
 ### O QUE VOCE PRECISA FAZER
 

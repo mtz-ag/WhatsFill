@@ -840,7 +840,7 @@ grupo('O ADAPTADOR SO VALE PELOS NOMES QUE QUEM CHAMA LE');
    * Nenhum verificador pega: sintaticamente esta tudo certo, e `undefined` nao estoura — ele
    * vira "nao tem". O que pega e **comparar os dois lados**, e e isso que esta escrito aqui.
    */
-  const fontePanel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const fontePanel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const fonteApiMob = readFileSync(new URL('../src/lib/api-mob.js', import.meta.url), 'utf8');
 
   // o que o painel DESESTRUTURA de cada chamada, copiado da fonte dele
@@ -1304,7 +1304,7 @@ grupo('ESPERAR OS DOIS SINAIS — a recusa estava certa, a pressa e que estava e
    * **O painel tem de separar os dois**, senao a recusa de um contato para a rodada inteira. Aqui
    * isso se prova no texto do painel: e o unico lugar em que ele decide `pulado` em vez de `erro`.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   check(/page\.ehRecusaPorSinalFraco\(err\?\.message\)/.test(painel), 'o painel consulta o detector antes de chamar de erro');
   /**
    * **A decisao saiu de dentro do `catch` e virou funcao** (29/10/2026): ela vivia so em
@@ -1413,7 +1413,7 @@ grupo('A TELA DESENHA DEPOIS DO CLIQUE — e quem le antes conclui que a aba tro
   check(semId.sessionId === null && vazia2.perguntas() === 1, 'sem `id`, "nenhuma aberta" e resposta final — nao espera');
 
   /** O painel tem de separar as duas causas, senao a rodada morre no primeiro desenho atrasado. */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   // Ancora no CODIGO e nao no texto: o comentario logo acima cita a mesma frase, e o
   // `indexOf` caia nele — o teste falhava apontando para a prosa, nao para o ramo.
   const i = painel.indexOf("resultado: 'erro', motivo: 'a aba trocou");
@@ -1485,7 +1485,7 @@ grupo('"SO ESCREVER": o campo esvaziar e o sinal de que ELE mandou');
    * **O painel so espera DENTRO da rodada.** Fora dela ele clicou em "Inserir", o texto esta la e
    * nao ha o que esperar — esperar ali travaria o botao.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   check(/if \(send && !state\.settings\.autoSend && state\.auto\.rodando\) \{/.test(painel),
     'a espera e condicionada a rodada estar andando');
   const i = painel.indexOf('async function esperarVoceEnviar');
@@ -1635,7 +1635,7 @@ grupo('O BOX DO MODO DE ENVIO — uma chave so, mostrada em dois lugares');
    * **A chave e a MESMA, e e isso que este teste trava.** Uma segunda chave divergiria em
    * silencio: a tela dizendo um modo e a rodada fazendo outro.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   const gravacoes = (painel.match(/salvarAjuste\(\{ autoSend:/g) || []).length;
   check(gravacoes === 1, `so UM lugar grava o modo de envio (achei ${gravacoes})`);
@@ -1707,7 +1707,7 @@ grupo('A ABA AUTOMATIZADO: um interruptor, um lugar, e a ordem do trabalho');
    * `settings.autoSend` vale para as DUAS filas; dentro de um cartao ela parece ser daquela fila,
    * que e o defeito de 06/09 repetido.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   // Ate o proximo `function render` de modulo: a aba cresceu com os comentarios, e um numero
   // fixo de caracteres cortava antes das chamadas que este grupo compara.
   const inicio = painel.indexOf('function renderAutomatizado');
@@ -1753,7 +1753,7 @@ grupo('O MODO "EU MANDO" NAO PODE SER IMPEDIMENTO DE TELA');
    * deixa apertar e mais forte que a que recusa depois do clique — e e a que nao aparece quando
    * se procura pelo texto do erro.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   const corte = (nome) => {
     const i = painel.indexOf('function ' + nome);
@@ -1793,7 +1793,7 @@ grupo('BOTOES REDUNDANTES — dois botoes com o mesmo efeito nao sao escolha');
    *
    * Tres acharam-se, e dois deles eu mesmo tinha criado nos dias anteriores.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   /**
    * **1. "Parar a rodada" do cartao de Ritmo.** Ele so servia com a rodada andando — e nesse
@@ -1902,7 +1902,7 @@ grupo('O ROTULO DA ETIQUETA SAI DO CONTATO — o catalogo aqui e uma AMOSTRA');
    * **Levou junto as quatro listas** (assessor, a que dispensa da fila, as que pulam o disparo, a
    * de endereco) **e o sinal de "veio de anuncio alguma vez"** — tres leitores com a mesma forma.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   check(/async function rotulosDoContato\(\)/.test(painel), 'a resolucao mora numa funcao so');
 
@@ -1946,7 +1946,7 @@ grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');
    * o segundo ponto de saida do painel —, entao o modo que ele acabou de pedir funcionava na tecla
    * e era ignorado pela IA, que seguia tentando mandar sozinha.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   const i = painel.indexOf('const euMando = !state.settings.autoSend;\n        const avisosDuros');
   check(i > 0, 'achei o ramo do envio automatico do rascunho');
@@ -1990,7 +1990,7 @@ grupo('A RECUSA POR UM SINAL SO PULA O CONTATO — nas TRES filas, nao so nos No
    * **Tres copias da mesma decisao divergem na primeira semana**, entao ela mora numa funcao so e
    * quem chama diz apenas o estrago que a recusa evitou.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
   check(/function pularPorSinalFraco\(nome, err, oQuePoderiaDarErrado\)/.test(painel),
     'a decisao mora num lugar so');
@@ -2027,7 +2027,7 @@ grupo('A RECUSA POR UM SINAL SO PULA O CONTATO — nas TRES filas, nao so nos No
 grupo('quem e contato novo: as tres pernas, e as duas que estavam cegas');
 {
   /** **A perna da ETIQUETA volta pelo contato, nao pelo catalogo** — o conserto do ASSESSOR aqui. */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const i = painel.indexOf('const cidadeJaNoCrm =');
   check(i > 0, '`cidadeJaNoCrm` existe');
   const corpo = painel.slice(i, i + 400);
@@ -2073,7 +2073,7 @@ grupo('popup das teclas enquanto ele confere o texto');
    * adicionar mais"*, e *"a opcao 1 deve ser a mensagem do momento"*. Apertar o numero troca o
    * texto e envia. Remover etiqueta e corrigir o cadastro nao pode fazer a rodada agir.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const ini = painel.indexOf('function abrirPopupDeAtalhos');
   const fimPopup = painel.indexOf('async function esperarVoceEnviar');
   const popup = painel.slice(ini, fimPopup);
@@ -2095,7 +2095,7 @@ grupo('identificar a cidade e preencher — a porta do contrato nao existe aqui'
    * velha, e aqui `learnStart` responde que nao ha o que aprender. A porta fechada fazia a
    * cidade ser reconhecida e nada ser perguntado nem gravado.
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const i = painel.indexOf('async function gravacaoLiberada');
   const fn = painel.slice(i, i + 280);
   check(i > 0 && fn.includes('if (naPlataformaNova()) return true;'),
@@ -2118,7 +2118,7 @@ grupo('a imagem: o cartao diz a verdade DESTA plataforma, e nao desliga nada soz
    * isso o cartao ficava calado no unico lugar em que ele liga a caixa "mandar junto". A pergunta
    * certa e a da PLATAFORMA, pelo mecanismo de `avisoSemModeloAprovado` (28/10).
    */
-  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const campo = painel.slice(
     painel.indexOf('function campoDeImagem('),
     painel.indexOf('function aprenderEnvioDeImagemUI()')
