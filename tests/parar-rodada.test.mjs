@@ -105,4 +105,15 @@ const caixa = (() => {
     'esperarVoceConcluir le state.auto.parar a cada volta');
 }
 
+{
+  grupo('controle manual antes de concluir');
+  const inicio = painel.indexOf("if (decisao?.acao === 'concluir')");
+  const gravacao = painel.indexOf('await saveClassification', inicio);
+  const trecho = painel.slice(inicio, gravacao);
+  check(trecho.includes('if (!rodadaAutomatica())'), 'modo manual exige confirmação para contato respondido');
+  check(trecho.includes("if (confirmacao !== 'concluir')"), 'pular ou parar sai antes de gravar ou concluir');
+  check(painel.includes('if (rodadaAutomatica() && sugestao && !ramoChamaIA)'), 'cortesia só pode escolher automaticamente no modo automático');
+  check(painel.includes('if (state.auto.parar) controleDaRodada?.pintar();'), 'parada solicitada mantém o controle com reinício');
+}
+
 fim();

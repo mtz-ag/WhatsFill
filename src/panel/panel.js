@@ -2319,7 +2319,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     })();
     if (paraLimpar) {
       header.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           `Cidade "${paraLimpar}" vai ser APAGADA do CRM ao concluir — não é nome de lugar, é ` +
             'endereço de máquina. Se a pessoa disser de onde é, a cidade dela entra no lugar.')
       );
@@ -2395,7 +2395,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const grafia = state.grafiaDaCidade;
     if (grafia && !grafia.ok) {
-      const aviso = h('div', { class: 'wf-block' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);
+      const aviso = h('div', { class: 'wf-block', 'data-fica': '1' }, `Cidade escrita fora do padrão: ${grafia.motivo}`);
       if (grafia.oficial) {
         const corrigir = h('button', { class: 'wf-btn wf-mini wf-primary', type: 'button' }, `Corrigir para "${grafia.oficial}"`);
         corrigir.disabled = state.busy;
@@ -2514,7 +2514,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const guardado = iaLib.rascunhoDoCartaoAtual(state.rascunhoDoCartao, state.contact?.id);
     if (guardado) {
       saida.value = guardado.texto;
-      for (const a of guardado.avisos) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
+      for (const a of guardado.avisos) avisos.append(h('div', { class: 'wf-block', 'data-fica': '1' }, `⚠ ${a}`));
     }
     saida.addEventListener('input', () => {
       if (state.rascunhoDoCartao && state.rascunhoDoCartao.contatoId === state.contact?.id) {
@@ -2533,7 +2533,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         state.rascunhoDoCartao = { contatoId: state.contact?.id, texto: saida.value, avisos: [...(r.avisos || [])] };
         // Os avisos ficam ao lado do texto, e não numa barra de status que a próxima ação apaga:
         // são o que ele precisa reler ANTES de mandar, não enquanto o rascunho chega.
-        for (const a of r.avisos || []) avisos.append(h('div', { class: 'wf-block' }, `⚠ ${a}`));
+        for (const a of r.avisos || []) avisos.append(h('div', { class: 'wf-block', 'data-fica': '1' }, `⚠ ${a}`));
         setStatus('No campo de mensagem. Leia, ajuste e mande você mesmo.', 'ok');
       })
     );
@@ -2565,11 +2565,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       botao.disabled = true;
       // Diz QUAL chave falta: é a do modelo do RASCUNHO, não a das conferências.
       const casa = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
-      card.append(h('div', { class: 'wf-block' },
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
         `Sem a chave da ${casa} (o modelo do rascunho é ${modeloDoRascunho()}) — cadastre na aba Config.`));
     } else if (state.session?.expired) {
       botao.disabled = true;
-      card.append(h('div', { class: 'wf-block' }, 'Janela de 24h vencida: texto livre não chega neste contato. Só modelo aprovado.'));
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, 'Janela de 24h vencida: texto livre não chega neste contato. Só modelo aprovado.'));
     }
 
     body.append(card);
@@ -2583,7 +2583,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     if (state.session?.expired) {
       body.append(
-        h('div', { class: 'wf-block' }, 'Janela de atendimento expirada — resposta livre está bloqueada. Os modelos de mensagem aprovados, no fim desta aba, continuam funcionando.')
+        h('div', { class: 'wf-block', 'data-fica': '1' }, 'Janela de atendimento expirada — resposta livre está bloqueada. Os modelos de mensagem aprovados, no fim desta aba, continuam funcionando.')
       );
     }
 
@@ -2630,7 +2630,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!state.settings.autoSend) {
       pedir.disabled = true;
       cartaoPedir.append(
-        h('div', { class: 'wf-block' }, 'Precisa de "A extensão manda sozinha", no box "Quem manda a mensagem" (aba Automatizado): sem isso o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter saído.')
+        h('div', { class: 'wf-block', 'data-fica': '1' }, 'Precisa de "A extensão manda sozinha", no box "Quem manda a mensagem" (aba Automatizado): sem isso o texto só é inserido, e concluir fecharia o atendimento sem a pergunta ter saído.')
       );
     }
     body.append(cartaoPedir);
@@ -2663,7 +2663,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     } else if (conteudos.length > 1) {
       cartaoFechar.append(
-        h('div', { class: 'wf-block' }, `Casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}) — escolha o modelo à mão.`)
+        h('div', { class: 'wf-block', 'data-fica': '1' }, `Casou com ${conteudos.length} conteúdos (${conteudos.map((c) => c.nome).join(', ')}) — escolha o modelo à mão.`)
       );
     }
     body.append(cartaoFechar);
@@ -2903,11 +2903,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (comParams) {
       enviar.disabled = true;
       preparar.disabled = true;
-      card.append(h('div', { class: 'wf-block' }, `Este modelo ${hsmLib.PARAMS_NAO_APRENDIDOS}`));
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, `Este modelo ${hsmLib.PARAMS_NAO_APRENDIDOS}`));
     } else if (pendente) {
       enviar.disabled = true;
       preparar.disabled = true;
-      card.append(h('div', { class: 'wf-block' }, 'Atendimento pendente — clique em Iniciar atendimento acima.'));
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, 'Atendimento pendente — clique em Iniciar atendimento acima.'));
     } else {
       enviar.addEventListener('click', () => withBusy(() => enviarModelo(modelo, { send: true })));
       preparar.addEventListener('click', () => withBusy(() => enviarModelo(modelo, { send: false })));
@@ -3176,9 +3176,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       card.querySelectorAll('.wf-block').forEach((n) => n.remove());
       if (pending) {
-        card.append(h('div', { class: 'wf-block' }, 'Atendimento pendente — clique em Iniciar atendimento acima.'));
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, 'Atendimento pendente — clique em Iniciar atendimento acima.'));
       } else if (missing.length) {
-        card.append(h('div', { class: 'wf-block' }, vars.explainMissing(missing, reasons)));
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, vars.explainMissing(missing, reasons)));
       }
 
       const already = await templatesLib.wasSent(state.contact.id, template.id);
@@ -3186,7 +3186,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // O nome de quem recebeu vai no aviso: se for outro, o próprio aviso denuncia o bug.
         const outroNome = already.nome && state.contact.name && already.nome !== state.contact.name;
         card.append(
-          h('div', { class: 'wf-block' },
+          h('div', { class: 'wf-block', 'data-fica': '1' },
             `Já enviei esta resposta para ${already.nome || 'este contato'} em ` +
               `${new Date(already.at).toLocaleString('pt-BR')}.` +
               (outroNome ? ` Atenção: o registro está no nome de ${already.nome}, não neste contato — isso é bug do WhatsFill.` : ''))
@@ -4541,7 +4541,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (state.ia?.ligada && !state.iaTemChaveRascunho) {
       const prov = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
       card.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           `A IA está ligada mas não há chave da ${prov} salva — o modelo do rascunho é dessa casa. ` +
             'Cadastre na aba Config, senão ela não escreve nada.')
       );
@@ -4551,7 +4551,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // do outro pode estar cheio, o que faz o aviso parecer defeito do painel.
       const prov = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(state.ia?.modelo || iaLib.MODELO_PADRAO)];
       card.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           `Sem a chave da ${prov}, o modelo das CONFERÊNCIAS (cidade e etiquetas) não roda — elas ` +
             'seguem sem a IA, como antes. O rascunho não depende desta chave.')
       );
@@ -4692,7 +4692,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     if (state.auto.cfg.automatizarComIA && !state.ia?.ligada) {
       card.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           'Atenção: a caixa "Usar a IA nas rodadas", no TOPO desta aba, está DESMARCADA — então a ' +
             'IA não escreve nada aqui. As REGRAS continuam sendo executadas sozinhas por esta ' +
             'caixa, e a maioria delas envia mensagem. Marque a de cima para a IA escrever (e, com ' +
@@ -4874,7 +4874,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * então a rodada pede os dados outra vez. Já custou três anotações quando o separador do
        * template mudou.
        */
-      card.append(h('div', { class: 'wf-block' },
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' },
         'Falta a linha "Nome , Cidade" neste texto. Sem ela a extensão não reconhece a resposta ' +
           'do contato como resposta ao pedido, e vai pedir de novo.'));
 
@@ -5035,7 +5035,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
 
     if (!cfg.etiquetaSemInteresse && !cfg.etiquetaPedidoAjuda && !cfg.etiquetaEndereco) {
-      card.append(h('div', { class: 'wf-block' }, 'Nenhuma das três primeiras está preenchida — nesses casos a rodada não marca ninguém.'));
+      card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, 'Nenhuma das três primeiras está preenchida — nesses casos a rodada não marca ninguém.'));
     }
     return card;
   }
@@ -6312,11 +6312,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (modelo) {
       card.append(h('div', { class: 'wf-preview', 'data-fica': '1' }, modelo.text || '(modelo sem texto)'));
       if (modelo.params?.length) {
-        card.append(h('div', { class: 'wf-block' }, `Este modelo ${hsmLib.PARAMS_NAO_APRENDIDOS}`));
+        card.append(h('div', { class: 'wf-block', 'data-fica': '1' }, `Este modelo ${hsmLib.PARAMS_NAO_APRENDIDOS}`));
       }
     } else if (cfg.templateId) {
       card.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           `O modelo salvo ("${cfg.templateName || cfg.templateId}") não está na lista deste canal. Escolha de novo.`)
       );
     }
@@ -10434,8 +10434,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (decisao?.acao === 'concluir') {
         if (simular) {
           return prever({
-            motivo: `${decisao.motivo} (${formatarQuando(ultima.at)}) — a rodada concluiria sem enviar nada`,
+            motivo: `${decisao.motivo} (${formatarQuando(ultima.at)}) — ` +
+              (rodadaAutomatica() ? 'a rodada concluiria sem enviar nada' : 'pediria sua confirmação para concluir sem enviar nada'),
           });
+        }
+        if (!rodadaAutomatica()) {
+          const confirmacao = await perguntarNaRodada({
+            titulo: nome,
+            linhas: [decisao.motivo],
+            pergunta: 'Este contato já foi respondido. Concluir sem enviar nada?',
+            opcoes: [
+              { tecla: '3', valor: 'concluir', rotulo: 'Concluir sem enviar', primaria: true },
+              { tecla: '2', valor: 'pular', rotulo: 'Pular e deixar aberto' },
+              { tecla: 's', valor: 'parar', rotulo: 'Parar a rodada' },
+            ],
+          });
+          if (confirmacao !== 'concluir') {
+            return { nome, resultado: 'pulado', parar: confirmacao !== 'pular',
+              motivo: 'conclusão não confirmada — atendimento continua aberto' };
+          }
         }
         await saveClassification({ withCompletionDate: true, quiet: true });
         const fechouRespondido = await concluirPeloPainel();
@@ -13977,6 +13994,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
     }
 
+    if (ligada && !guardada && !/^https:\/\//i.test(caminho)) {
+      linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
+        '“Mandar junto” está ligado, mas nenhuma imagem foi escolhida. Escolha um arquivo ou informe um link HTTPS válido.'));
+    }
+
     linhas.push(campoTexto(`${nome}: link da imagem (opcional, https)`, caminho, aoMudar));
     if (doDisco) {
       linhas.push(h('div', { class: 'wf-block', 'data-fica': '1' },
@@ -14378,7 +14400,7 @@ const CONTATOS_POR_PAGINA = 200;
     );
 
     if (state.esperando.fbPaginas) conta.append(h('p', { class: 'wf-hint' }, 'Carregando as páginas…'));
-    if (fb.erro) conta.append(h('p', { class: 'wf-block' }, fb.erro));
+    if (fb.erro) conta.append(h('p', { class: 'wf-block', 'data-fica': '1' }, fb.erro));
 
     if (fb.paginas.length) {
       const sel = h('select');
@@ -14403,7 +14425,7 @@ const CONTATOS_POR_PAGINA = 200;
        * hora de enviar a resposta, que é tarde — ele já teria escrito o texto.
        */
       if (escolhida && escolhida.podeResponder === false) {
-        conta.append(h('p', { class: 'wf-block' },
+        conta.append(h('p', { class: 'wf-block', 'data-fica': '1' },
           'Este token lê esta página mas não pode responder. Falta a permissão de moderação — ' +
           'confira se você é administrador dela.'));
       }
@@ -14435,7 +14457,7 @@ const CONTATOS_POR_PAGINA = 200;
     );
     posts.append(carregarPosts);
     if (state.esperando.fbPosts) posts.append(h('p', { class: 'wf-hint' }, 'Carregando as postagens…'));
-    if (fb.erroPosts) posts.append(h('p', { class: 'wf-block' }, fb.erroPosts));
+    if (fb.erroPosts) posts.append(h('p', { class: 'wf-block', 'data-fica': '1' }, fb.erroPosts));
 
     for (const p of fb.posts) {
       const resumo = (p.texto || '(sem texto)').replace(/\s+/g, ' ').slice(0, 90);
@@ -14459,7 +14481,7 @@ const CONTATOS_POR_PAGINA = 200;
     recarregar.addEventListener('click', carregarComentarios);
     lista.append(recarregar);
     if (state.esperando.fbComentarios) lista.append(h('p', { class: 'wf-hint' }, 'Carregando os comentários…'));
-    if (fb.erroComentarios) lista.append(h('p', { class: 'wf-block' }, fb.erroComentarios));
+    if (fb.erroComentarios) lista.append(h('p', { class: 'wf-block', 'data-fica': '1' }, fb.erroComentarios));
 
     const abertos = facebook.semResposta(fb.comentarios);
     if (!state.esperando.fbComentarios && !fb.erroComentarios && !abertos.length && fb.comentarios.length) {
@@ -14550,7 +14572,7 @@ const CONTATOS_POR_PAGINA = 200;
     // depois de clicar em Salvar fazia parecer que o preenchimento estava quebrado.
     if (!state.hasContract) {
       body.append(
-        h('div', { class: 'wf-block' }, [
+        h('div', { class: 'wf-block', 'data-fica': '1' }, [
           document.createTextNode(
             'Ainda não dá para gravar: o contrato de escrita não foi aprendido. Vá na aba Config → "Gravar campos no CRM". '
           ),
@@ -14745,7 +14767,7 @@ const CONTATOS_POR_PAGINA = 200;
          * etiqueta de cidade existe para evitar.
          */
         linha.append(
-          h('div', { class: 'wf-block' },
+          h('div', { class: 'wf-block', 'data-fica': '1' },
             `A etiqueta "${sug.nome}" ainda não existe no CRM. Sem ela, este contato fica sem ` +
               'etiqueta de cidade e não aparece no filtro por município.')
         );
@@ -14765,7 +14787,7 @@ const CONTATOS_POR_PAGINA = 200;
       } else {
         // Nome não existe (ou não casa) na lista de etiquetas do CRM: escolha manual, e a
         // escolha fica salva como apelido para não precisar repetir.
-        linha.append(h('div', { class: 'wf-block' }, sug.nome
+        linha.append(h('div', { class: 'wf-block', 'data-fica': '1' }, sug.nome
           ? `Não achei a etiqueta "${sug.nome}" no CRM. Escolha a correspondente:`
           : sug.motivo));
         if (sug.nome) linha.append(renderTagPicker(sug));
@@ -15425,7 +15447,7 @@ const CONTATOS_POR_PAGINA = 200;
     // O aviso mais importante da aba, e ele vem primeiro por um motivo: foi assim que uma passada
     // inteira se perdeu em silêncio.
     body.append(
-      h('div', { class: 'wf-block' },
+      h('div', { class: 'wf-block', 'data-fica': '1' },
         'DEIXE ESTA ABA VISÍVEL enquanto roda. O Chrome CONGELA aba em segundo plano — o laço ' +
           'para no meio sem erro nenhum. A extensão toca um áudio inaudível para evitar isso, mas ' +
           'ele não sobrevive a tudo: minimizar a janela ou o computador suspender ainda param a ' +
@@ -15504,7 +15526,7 @@ const CONTATOS_POR_PAGINA = 200;
         const tentar = h('button', { class: 'wf-btn', type: 'button' }, 'Carregar a lista de etiquetas');
         tentar.addEventListener('click', () => prepararCidades());
         cardLer.append(
-          h('div', { class: 'wf-block' },
+          h('div', { class: 'wf-block', 'data-fica': '1' },
             c.erroEtiquetas
               ? `Não consegui listar as etiquetas: ${c.erroEtiquetas}`
               : 'A lista de etiquetas ainda não foi carregada.'),
@@ -15629,7 +15651,7 @@ const CONTATOS_POR_PAGINA = 200;
     const soma =
       a.paraGravar.length + a.jaOk + a.semEtiqueta + a.semCidade + a.esperandoCriacao + contatosRevisar;
     if (soma !== c.lidos) {
-      resumo.append(h('div', { class: 'wf-block' }, `Atenção: a soma dá ${soma} e foram lidos ${c.lidos}. Isso é bug de contagem — me avise.`));
+      resumo.append(h('div', { class: 'wf-block', 'data-fica': '1' }, `Atenção: a soma dá ${soma} e foram lidos ${c.lidos}. Isso é bug de contagem — me avise.`));
     }
     resumo.append(
       h('div', { class: 'wf-origin' },
@@ -15641,7 +15663,7 @@ const CONTATOS_POR_PAGINA = 200;
     // aqui evita a leitura de que só os "prontos agora" vão ser etiquetados algum dia.
     if (a.esperandoCriacao) {
       resumo.append(
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           `Os ${a.esperandoCriacao} travados NÃO estão de fora: eles só esperam as ` +
             `${a.faltamCriar.length} etiqueta(s) do passo 2 serem criadas. Crie e leia de novo — ` +
             `aí os ${elegiveis} elegíveis ficam todos gravaveis.`)
@@ -15684,7 +15706,7 @@ const CONTATOS_POR_PAGINA = 200;
         h('div', { class: 'wf-preview' },
           'Estas cidades existem na base e ainda não têm etiqueta no CRM. Sem elas, os contatos ' +
             'dessas cidades não podem ser gravados — o painel não inventa id de etiqueta.'),
-        h('div', { class: 'wf-block' },
+        h('div', { class: 'wf-block', 'data-fica': '1' },
           'A rota de criar etiqueta foi lida do código do app (PUT /core/v1/tag), mas nunca foi ' +
             'executada de verdade. Por isso a primeira é criada sozinha, como sonda: se ela ' +
             'falhar, nenhuma outra é tentada e o motivo aparece aqui.'),
@@ -16972,7 +16994,7 @@ const CONTATOS_POR_PAGINA = 200;
      * instruções extras e o dossiê.
      */
     body.append(
-      h('div', { class: cfg.ligada ? 'wf-origin' : 'wf-block' },
+      h('div', { class: cfg.ligada ? 'wf-origin' : 'wf-block', 'data-fica': '1' },
         cfg.ligada
           ? 'A avaliação por IA está LIGADA. O interruptor fica na aba Automatizado, junto do botão de começar.'
           : 'A avaliação por IA está DESLIGADA. O interruptor fica na aba Automatizado, junto do botão de começar.')
@@ -17357,7 +17379,7 @@ const CONTATOS_POR_PAGINA = 200;
      * eleitor votar em outra pessoa. Ligar é ato dele, depois de conferir — e a tela diz o porquê
      * em vez de deixar o interruptor mudo.
      */
-    const avisoDossie = h('div', { class: 'wf-block' }, 'Conferindo o arquivo do dossiê…');
+    const avisoDossie = h('div', { class: 'wf-block', 'data-fica': '1' }, 'Conferindo o arquivo do dossiê…');
     const checkDossie = h('input', { type: 'checkbox' });
     checkDossie.checked = !!cfg.dossieAtivo;
     checkDossie.addEventListener('change', () =>
@@ -17495,7 +17517,7 @@ const CONTATOS_POR_PAGINA = 200;
     const teto = Number(cfg.tetoUsd) || 0;
 
     body.append(
-      h('div', { class: 'wf-block' },
+      h('div', { class: 'wf-block', 'data-fica': '1' },
         'A chave da API NÃO usa assinatura nenhuma — nem o Claude Pro/Max, nem o ChatGPT Plus. ' +
           'São cobranças diferentes: a assinatura é do site e do app; a API é pré-paga por token, ' +
           'com fatura própria no console do provedor. Ligar a IA aqui gera gasto NOVO em cima do ' +
@@ -17510,7 +17532,7 @@ const CONTATOS_POR_PAGINA = 200;
     const perto = teto > 0 && !estourou && usado >= teto * 0.8;
 
     body.append(
-      h('div', { class: estourou || perto ? 'wf-block' : 'wf-preview' },
+      h('div', { class: estourou || perto ? 'wf-block' : 'wf-preview', 'data-fica': '1' },
         estourou
           ? `TETO ATINGIDO — ${linha}. A IA está parada até você levantar o teto ou virar o mês. ` +
             'O resto da extensão segue funcionando normalmente.'
@@ -18176,7 +18198,7 @@ const CONTATOS_POR_PAGINA = 200;
             card.append(alvo);
             if (foraDoCanal) {
               card.append(
-                h('div', { class: 'wf-block' },
+                h('div', { class: 'wf-block', 'data-fica': '1' },
                   `O modelo "${anuncio.valor}" continua salvo, mas não está entre os modelos aprovados ` +
                     'deste canal — ele não vai sair enquanto for assim. Escolha um da lista, ou volte ' +
                     'para o candidato dono deste anúncio.')
@@ -18591,7 +18613,7 @@ const CONTATOS_POR_PAGINA = 200;
     // Aviso, não bloqueio: a decisão de não chamar pelo nome é dele, e ele pode desfazer numa
     // resposta específica. O que não pode é o nome voltar sem ninguém perceber — foi ele que
     // mandou "Boa noite, Zane!" para a Rosane e "Boa noite, Santa Cruz!" para a Serlei.
-    const avisoNome = h('div', { class: 'wf-block' },
+    const avisoNome = h('div', { class: 'wf-block', 'data-fica': '1' },
       'Esta resposta chama o contato pelo nome. O nome do cadastro erra bastante (apelido do ' +
         'perfil, cidade no campo do nome, "[NOVO] …") e, sem valor, ele BLOQUEIA o envio.');
     const conferirNome = () => {

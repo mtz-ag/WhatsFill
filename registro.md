@@ -1,4 +1,24 @@
-## 2026-11-03 - v3.255.0 - ESTADO DE AGORA - "o fluxo faria", sem a rodada agir
+## 2026-11-03 - v3.256.0 - ESTADO DE AGORA - avisos visiveis e confirmacao manual
+
+Recarregue a extensao e a aba do Mobiliza para ver a versao 3.256.0.
+
+- 39 declaracoes de avisos receberam data-fica. Teste exige a marca nas declaracoes wf-block
+  do painel, inclusive classes condicionais. Avisos nao perdem o restante do texto nos detalhes.
+- Mandar junto ligado sem arquivo nem link HTTPS mostra aviso; a escolha nao e desligada.
+- Pedido confirmado nesta conversa: Automatizar desmarcado deve perguntar antes de concluir.
+  O ramo antecipado de contato respondido agora confirma antes de gravar e concluir. Pular ou
+  parar preserva o atendimento aberto. A previsao informa que pedira confirmacao.
+- Fechamento por cortesia ja depende de rodadaAutomatica para executar a escolha sozinho;
+  acrescentada verificacao de regressao. Parada solicitada ja conserva a janelinha no finally;
+  o desaparecimento relatado ainda nao foi reproduzido ao vivo.
+
+Escopo pendente: otimizacao do dossie, rascunho manual, medicao de cache, consulta exata de
+etiquetas, cadastro sem momento e convite pessoal. Nao foram implementados nesta rodada.
+As mudancas de geracao/selecao de mensagens politicas personalizadas nao foram realizadas.
+Validacao: 42 suites passaram, sintaxe do painel e diff conferidos.
+Validacao visual na extensao carregada continua pendente. Nenhum contato real foi usado.
+
+## 2026-11-03 - v3.255.0 - Estado anterior - "o fluxo faria", sem a rodada agir
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.255.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 /**
  * O resumo do painel: o que fica à vista e o que vai para "ⓘ detalhes".
  *
@@ -57,6 +58,18 @@ grupo('aviso: a primeira frase fica');
   check(partir('Variáveis: {{saudacao}} {{nome}} {{cidade}}') === null, 'nem "Variáveis:"');
   const e = partir('O reserva é o MESMO modelo do titular — repetir a mesma casa não é failsafe.');
   check(e?.cabeca === 'O reserva é o MESMO modelo do titular', 'o aviso marcado para ficar mantem o ESTADO');
+}
+
+grupo('todo aviso do painel declara que fica visível');
+{
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const avisos = [...painel.matchAll(/\{ class: [^{}\n]+\}/g)]
+    .map((m) => m[0]).filter((atributos) => atributos.includes('wf-block'));
+  check(avisos.length > 60, 'a varredura alcança os avisos do painel');
+  for (const atributos of avisos) {
+    check(atributos.includes("'data-fica': '1'"), `aviso protegido: ${atributos}`);
+  }
+  check(/ligada && !guardada && !\/\^https:/.test(painel), 'imagem ligada sem arquivo nem HTTPS exibe aviso');
 }
 
 fim();

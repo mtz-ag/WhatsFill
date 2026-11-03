@@ -56,7 +56,7 @@ const regiao = (() => {
     'removerEtiquetasListadas(': 1,
     'saveClassification(': 2,
     'concluirPeloPainel(': 2,
-    'perguntarNaRodada(': 2,
+    'perguntarNaRodada(': 3,
     'etiquetarEndereco(': 2,
     'aplicarEtiquetaDePedido(': 1,
     'registrarNaRodada(': 6,
