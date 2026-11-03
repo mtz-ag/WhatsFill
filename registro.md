@@ -1,4 +1,13 @@
-## 2026-11-03 - v3.256.0 - ESTADO DE AGORA - avisos visiveis e confirmacao manual
+## 2026-11-03 - v3.257.0 - ESTADO DE AGORA - aviso de etiquetas respeita amostra
+
+loadTags descartava completa e lidos ao transformar a lista da API. Agora preserva os dois.
+O aviso de etiquetas a remover informa quando o catalogo e parcial; nao afirma inexistencia
+no CRM a partir da amostra. Catalogo antigo sem esse campo mantem a compatibilidade.
+Teste cobre os textos para amostra e lista completa. Nenhuma remocao foi executada para testar.
+A consulta exata por nome continua pendente; esta entrega corrige a informacao exibida.
+As outras pendencias da v3.256.0 continuam abertas. Recarregue a extensao e a aba do Mobiliza.
+
+## 2026-11-03 - v3.256.0 - Estado anterior - avisos visiveis e confirmacao manual
 
 Recarregue a extensao e a aba do Mobiliza para ver a versao 3.256.0.
 

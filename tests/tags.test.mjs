@@ -591,4 +591,13 @@ grupo('a palavra-chave no que NOS mandamos');
   check(tags.regrasQueCasam([{ padrao: 'x', etiqueta: '' }], 'x').length === 0, 'regra sem etiqueta nao marca nada');
 }
 
+grupo('ausência em amostra não afirma inexistência');
+{
+  const parcial = tags.avisoDeEtiquetasAusentes(['Etiqueta de teste'], { completa: false });
+  check(parcial.includes('lista é parcial'), 'explica que a busca disponível é uma amostra');
+  check(!parcial.includes('não existe'), 'não nega existência no CRM');
+  const completa = tags.avisoDeEtiquetasAusentes(['Etiqueta de teste'], { completa: true });
+  check(completa.includes('lista de etiquetas carregada'), 'lista completa descreve o que foi consultado');
+  check((await tags.loadTags()).completa === true, 'API antiga conserva catálogo completo');
+}
 fim();

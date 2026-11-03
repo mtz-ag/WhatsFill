@@ -5079,7 +5079,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           'reaplica na passada seguinte, então listar uma delas é guerra perdida — o que resolve ' +
           'ali é corrigir o campo Cidade ou a regra que as gera.'),
       h('div', { class: 'wf-origin' },
-        'Nome que não existe no CRM só gera aviso no Andamento e a rodada segue: ao contrário da ' +
+        'Nome não encontrado na lista carregada gera aviso no Andamento e a rodada segue: ao contrário da ' +
           'lista de PULAR do disparo, aqui o nome errado não manda nada para ninguém — ele apenas ' +
           'deixa a etiqueta onde estava. O primeiro contato de cada rodada em que algo sai é relido ' +
           'para conferir que a plataforma removeu de verdade; se não removeu, a rodada para ali.')
@@ -9019,7 +9019,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         registrarNaRodada(
           'remover etiquetas',
           'aviso',
-          `${faltando.map((n) => `"${n}"`).join(', ')} nao existe(m) no CRM — nao removi nada com ` +
+          tagsLib.avisoDeEtiquetasAusentes(faltando, await tagsLib.allTags()) + ' Não removi nada com ' +
             'esse(s) nome(s). Confira a grafia no cartao "Etiquetas que a rodada REMOVE".'
         );
       }

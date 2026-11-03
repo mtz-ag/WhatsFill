@@ -50,6 +50,8 @@ export async function loadTags({ force = false } = {}) {
       bgColor: t.bgColor || undefined,
       textColor: t.textColor || undefined,
     }));
+  tagsCache.completa = raw?.completa ?? arr.completa ?? true;
+  tagsCache.lidos = raw?.lidos ?? arr.lidos ?? arr.length;
   return tagsCache;
 }
 
@@ -759,4 +761,12 @@ export async function allTags() {
  */
 export function invalidateTags() {
   tagsCache = null;
+}
+
+/** Ausência numa amostra não prova inexistência no CRM. */
+export function avisoDeEtiquetasAusentes(nomes, catalogo) {
+  const lista = nomes.map((nome) => `"${nome}"`).join(', ');
+  return catalogo?.completa === false
+    ? `${lista} não foi/foram encontrada(s) na amostra de etiquetas. A lista é parcial e não confirma ausência no CRM.`
+    : `${lista} não foi/foram encontrada(s) na lista de etiquetas carregada. Confira a grafia.`;
 }
