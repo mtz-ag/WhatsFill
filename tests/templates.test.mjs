@@ -955,6 +955,41 @@ Nome , Cidade`),
   check(!templates.ehAgradecimentoDeApoio('Bom dia! Em que podemos ajudar?'), 'e texto sem agradecimento nenhum nao e');
 }
 
+grupo('o rodizio anda no modo "Eu mando" (03/11/2026)');
+{
+  /**
+   * Relato dele: *"a mensagem do momento nao esta variando"*.
+   *
+   * `avancarVariante` e `markSent` moram depois do `page.sendText`, e o ramo do modo "Eu mando"
+   * devolve `true` antes de chegar la. Duas consequencias: o rodizio nunca anda (toda resposta com
+   * variacoes sai sempre com o MESMO texto) e `momentoJaEnviado` — que e `wasSent` — nunca fica
+   * verdadeiro, entao a guarda que impede a mesma pessoa de receber a mensagem do momento duas
+   * vezes fica desligada.
+   *
+   * O ramo de SO inserir continua sem anotar nada: la o texto nao saiu.
+   */
+  const { readFileSync } = await import('node:fs');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const i = painel.indexOf('async function sendTemplate');
+  const corpo = painel.slice(i, i + 12000);
+  check(i > 0 && corpo.length > 1000, 'achei sendTemplate');
+
+  const inicio = corpo.indexOf('if (send && !state.settings.autoSend && state.auto.rodando)');
+  const fim2 = corpo.indexOf("setStatus('Você enviou", inicio);
+  check(inicio > 0 && fim2 > inicio, 'achei o ramo do modo "Eu mando" dentro da rodada');
+  const ramo = corpo.slice(inicio, fim2);
+
+  check(/avancarVariante\(template\)/.test(ramo),
+    'o ramo que esperou o Enter dele AVANCA a variante — senao nada reveza neste modo');
+  check(/markSent\(alvo\.id, template\.id/.test(ramo),
+    'e registra o envio — senao momentoJaEnviado nunca fica verdadeiro');
+
+  /** O ramo de so inserir (fora da rodada) nao pode anotar: ali o texto nao saiu. */
+  const soInsere = corpo.slice(fim2, corpo.indexOf('if (state.session?.expired)'));
+  check(!/avancarVariante|markSent/.test(soInsere),
+    'o ramo de so inserir continua sem anotar nada — colar nao e enviar');
+}
+
 grupo('boas-vindas em tom neutro (31/10/2026)');
 {
   const { readFileSync } = await import('node:fs');

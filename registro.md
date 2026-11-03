@@ -1,8 +1,53 @@
-## 2026-11-03 - v3.252.0 - ESTADO DE AGORA - o veredito contava a IA como contato pulado
+## 2026-11-03 - v3.253.0 - ESTADO DE AGORA - no modo "Eu mando" o rodizio nunca andava
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.252.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.253.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. **Troque o texto da mensagem do momento** (o salvo e de domingo, 01/11). Enquanto ele
+   estiver ai a tecla 5 nao sai para ninguem. Cartao "Mensagem do momento (tecla 5)", aba
+   Automatizado
+2. `chrome://extensions` -> **recarregar** a extensao
+3. **F5** na aba do mobiliza.me
+4. Confira **3.253.0** na linha pequena do topo do painel
+
+### O QUE MUDOU
+
+Relato dele: *"a mensagem do momento nao esta variando"*. **Estava certo, e era maior que a
+variacao.**
+
+`avancarVariante` e `markSent` moram depois do `page.sendText`, e o ramo do modo **"Eu mando"**
+devolve `true` antes de chegar la. E o buraco de 02/10 (*"colar nao e enviar, e marca que mora
+depois do `page.sendText` nao acontece em metade dos envios"*) **na metade em que o envio
+ACONTECEU**: quem apertou Enter foi ele, a mensagem foi para o eleitor, e o painel nao anotou
+nada.
+
+Duas consequencias, desde 28/10, no modo que ele usa:
+
+1. **o rodizio nunca andava** — toda resposta pronta com variacoes saiu sempre com o MESMO
+   texto, contato apos contato. O comentario que monta o momento na rodada dizia *"mesmo
+   mecanismo das respostas prontas: `sendTemplate` reveza sozinho"*, verdade ate 28/10. E
+   variar nao e cosmetica: em 26/09 ele derrubou um numero mandando a mesma mensagem em
+   sequencia para menos de dez pessoas;
+2. **`momentoJaEnviado` nunca ficava verdadeiro**, porque ele e `wasSent(contato, momento.id)`.
+   A guarda que impede a mesma pessoa de receber a mensagem do momento duas vezes — o caso da
+   Carmem Souza, 03/09 — estava desligada.
+
+O ramo de **so inserir** continua sem anotar nada, de proposito: la o texto so foi para o
+campo. Aqui ele saiu, e quem prova e o ato dele que `esperarVoceEnviar` esperou.
+
+As ETIQUETAS continuam de fora, como a decisao de 02/10 deixou.
+
+### O QUE NAO MUDOU
+
+Regua 0,9. Modo Normal. Conferencia do canal desligada. Modo "Eu mando" ligado. Fecho por
+cortesia ligado. O quadro nao foi tocado.
+
+Prova: tirar as duas linhas do ramo derruba 2 assercoes em `tests/templates.test.mjs`.
+
+## 2026-11-03 - v3.252.0 - o veredito contava a IA como contato pulado
 
 ### O QUE VOCE PRECISA FAZER
 

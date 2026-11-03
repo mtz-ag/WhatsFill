@@ -3249,6 +3249,40 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           setStatus(`Não concluí: ${mandou.motivo}.`, 'err');
           return anotarEnvioQueNaoSaiu(mandou.motivo);
         }
+
+        /**
+         * **O TEXTO SAIU, ENTÃO O REGISTRO DO ENVIO TEM DE ACONTECER AQUI** (03/11/2026, relato
+         * dele: *"a mensagem do momento não está variando"*).
+         *
+         * **Medido:** `avancarVariante` e `markSent` moram depois do `page.sendText`, lá embaixo —
+         * e este ramo devolve `true` antes de chegar lá. É o buraco de 02/10 (*"colar não é
+         * enviar, e marca que mora depois do `page.sendText` não acontece em metade dos envios"*)
+         * **na metade em que o envio ACONTECEU**: quem apertou Enter foi ele, a mensagem foi para
+         * o eleitor, e o painel não anotou nada.
+         *
+         * São duas consequências, e a segunda é a cara:
+         *
+         *  1. **o rodízio nunca anda.** O comentário que monta a mensagem do momento na rodada diz
+         *     *"mesmo mecanismo das respostas prontas: `sendTemplate` reveza sozinho"* — verdade
+         *     até 28/10, quando o modo "Eu mando" nasceu. Desde então, no modo que ele usa, toda
+         *     resposta pronta com variações sai sempre com o MESMO texto, contato após contato. E
+         *     variar não é cosmética: em 26/09 ele derrubou um número mandando a mesma mensagem em
+         *     sequência para menos de dez pessoas;
+         *  2. **`momentoJaEnviado` nunca fica verdadeiro**, porque ele é
+         *     `wasSent(contato, momento.id)` (ver `renderPergunta`). A guarda que impede a mesma
+         *     pessoa de receber a mensagem do momento duas vezes — o caso da Carmem Souza, 03/09 —
+         *     ficou desligada no modo "Eu mando".
+         *
+         * **O ramo de baixo (inserir e pronto) continua sem anotar nada, de propósito:** lá o
+         * texto só foi para o campo, e o rodízio anda *quando o envio acontece*. Aqui ele
+         * aconteceu, e quem prova é o ato dele que `esperarVoceEnviar` esperou.
+         *
+         * As ETIQUETAS continuam de fora, como a decisão de 02/10 deixou: a de palavra já saiu
+         * acima (`etiquetarPorPalavra`), e a de material segue sendo escolha dele.
+         */
+        await templatesLib.avancarVariante(template);
+        if (alvo?.id) await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
+
         setStatus('Você enviou — sigo daqui.' + marcaPalavra, 'ok');
         return true;
       }
