@@ -68,8 +68,12 @@ const PROBLEMA_PESSOAL =
  * alto"*). Padrão importa mais do que parece: ligar a IA com o Opus 5 embaixo custaria ~4× o
  * que ele escolheu, e o padrão é o que roda em quem nunca abriu o seletor.
  *
- * Consequência a lembrar: o Haiku **não cacheia** este prompt (ver `CACHE_MINIMO_TOKENS`), então
- * "SEM CACHE" no log é o esperado aqui, não defeito.
+ * **Isto deixou de ser verdade e a prosa ficou:** aqui dizia que o Haiku *"não cacheia este
+ * prompt"*, porque em 29/08 o sistema tinha ~1.300 tokens e o mínimo dele é 4.096. Medido em
+ * 03/11/2026, o sistema do rascunho tem **~13.582 tokens sem dossiê e ~25.255 com ele** — passa do
+ * mínimo nos dois casos. Então "SEM CACHE" em chamadas SEGUIDAS voltou a ser alarme de verdade
+ * neste modelo; numa chamada só, fria, continua sendo o esperado (o primeiro pedido de um prefixo
+ * novo nunca tem cache para ler).
  */
 export const MODELO_PADRAO = 'claude-haiku-4-5';
 
@@ -415,9 +419,13 @@ export function esquemaEstrito(schema) {
  *
  * **Abaixo do mínimo o cache não dá erro: ele simplesmente não acontece**, e `cacheLido` volta
  * zero para sempre. Como o painel ensina que "SEM CACHE em chamadas seguidas" é sinal de
- * problema, o Haiku produziria esse alarme em 100% das chamadas sendo que está tudo certo — o
- * prompt de sistema tem ~1.300 tokens (medido em 29/08, com as 11 respostas de fábrica) e o
- * mínimo do Haiku 4.5 é 4.096. Ele nem chega perto.
+ * problema, o Haiku produziria esse alarme em 100% das chamadas sendo que está tudo certo — era
+ * o caso em 29/08, quando o prompt de sistema tinha ~1.300 tokens com as 11 respostas de fábrica
+ * contra os 4.096 do Haiku 4.5.
+ *
+ * **Hoje ele passa: ~13.582 tokens sem dossiê, ~25.255 com** (medido em 03/11/2026). A tabela
+ * continua, porque é ela que responde a pergunta — e a resposta mudou sem ninguém mexer nela, só
+ * porque o prompt cresceu.
  *
  * O mínimo **não cresce com a geração**: 512 no Opus 5, 1.024 no Sonnet 5, 4.096 no Haiku 4.5.
  * Por isso é tabela, e não uma regra do tipo "modelo novo cacheia".

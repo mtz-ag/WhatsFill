@@ -24,10 +24,24 @@
  *
  * ## Custo
  *
- * Vai no prompt de SISTEMA, que é o cacheado. Cuidado com o efeito de borda: o Haiku 4.5 só cacheia
- * prefixo de 4.096 tokens (ver `CACHE_MINIMO_TOKENS`), e o sistema hoje tem ~1.300 — o dossiê pode
- * **empurrar o prompt para dentro da faixa de cache** e sair mais barato por chamada do que a
- * conta ingênua sugere. A aba Config mostra os dois números; confira lá em vez de estimar.
+ * Vai no prompt de SISTEMA, que é o cacheado.
+ *
+ * **Os números envelheceram 7× e foram remedidos em 03/11/2026** (relato dele: *"entrada de 26.175
+ * tokens e SEM CACHE... o prompt era de ~8.400 em 25/09: triplicou"*). O que aqui dizia "o sistema
+ * hoje tem ~1.300" era de 29/08. Medido agora, com as respostas de fábrica:
+ * ```
+ * arquivo gabinete.md ........ 41.702 chars
+ * o que vai no prompt ........ 31.217 chars  ~8.671 tok   (o resto é `semBlocoDeRevisao`)
+ * sistema do rascunho SEM ele  48.894 chars ~13.582 tok
+ * sistema do rascunho COM ele  90.918 chars ~25.255 tok
+ * ```
+ * Ou seja: **o dossiê é um terço do prompt**, e a maior seção dele é "O que o mandato FEZ" (12.506
+ * chars, ~3.474 tok). O efeito de borda do Haiku não existe mais — o prompt passa de 4.096 com ou
+ * sem dossiê —, então hoje ele é custo puro nas conversas que o puxam. É isso que torna
+ * `precisaDoDossie` a peça que decide dinheiro, e não um detalhe.
+ *
+ * **Cortar o dossiê é decisão DELE:** é pesquisa dele, marcada linha a linha, e o que sai de lá a
+ * IA deixa de saber. A aba Config mostra os dois números; confira lá em vez de estimar.
  */
 
 import * as store from './store.js';
@@ -78,7 +92,8 @@ function semBlocoDeRevisao(md) {
  * A conversa toca em gente, chapa, voto ou partido?
  *
  * Pedido dele (01/09/2026): *"o dossiê deve ser consultado somente quando for necessário"*. E ele
- * está certo pelo número: o dossiê custa ~1.284 tokens **em toda chamada**, e a esmagadora maioria
+ * está certo pelo número: o dossiê custa ~8.671 tokens **em toda chamada** (medido em 03/11/2026;
+ * eram ~1.284 quando isto foi escrito), e a esmagadora maioria
  * das conversas é "Amém", "obrigado", nome e cidade — nenhuma delas precisa saber quem é vice de
  * quem.
  *

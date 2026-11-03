@@ -3452,6 +3452,52 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **O ESC NAO PARAVA A RODADA ONDE ELE MAIS SERVE: COM O FOCO NO CAMPO DA CONVERSA**
+  (03/11/2026, medido na tela dele: *"o Parar e o Esc nao encerram a espera de 'responda a mao'"*).
+  O ■ exige ponteiro de verdade (`detail !== 0`, guarda de 29/10) e funciona; o Esc nao pegava.
+  **A causa e uma guarda copiada de onde ela faz sentido para onde ela nao faz.** `ehCampoDeTexto`
+  existe para nao roubar tecla de quem esta DIGITANDO — e ela que impede o `"2"` digitado na
+  conversa de virar a tecla Pular (31/08) —, e os DOIS escutadores de Esc a consultavam antes de
+  olhar a tecla. **O Escape nao digita nada**, entao ali ela nao protegia de nada.
+  **O preco era o atalho morrer exatamente onde ele serve:** nas duas esperas longas
+  (`esperarVoceConcluir`, `esperarVoceEnviar`) o painel sai da frente e o foco dele **vive no campo
+  da conversa**, que e onde ele le e responde; a caixa da pergunta ja fechou, entao **nao ha outro
+  Esc escutando**. O que sobrava era achar e clicar o ■.
+  **O recorte ja estava decidido neste projeto, no painel do Facebook** (21/10): *"passam so as
+  setas e o Escape; os DIGITOS continuam barrados"*. Mesma razao, mesma decisao — e e por isso que
+  a guarda da caixa da pergunta pergunta a TECLA primeiro (`!ehEsc && ehCampoDeTexto(...)`) em vez
+  de sair.
+  **Nada afrouxou:** `defaultPrevented` (os editores fecham sem salvar na captura), `isTrusted`
+  (a propria extensao dispara Esc em toda passada que envia, 07/09) e `state.auto.rodando`
+  continuam. E a assimetria e barata: parar sem querer custa um ▶ — a janelinha fica dizendo
+  PARADA, o log diz "pelo Esc" e `hsm.decidirReenvio` impede o contato ja tratado de receber duas
+  vezes —, enquanto nao parar custa a espera inteira ate o teto, **em silencio**.
+  **Ao copiar uma guarda de teclado, pergunte o que a TECLA faz:** guarda de "quem esta digitando"
+  nao vale para tecla que nao escreve. Prova: reintroduzindo as duas linhas, caem 2 assercoes em
+  `tests/parar-rodada.test.mjs`.
+
+- **CONTRATO APRENDIDO NAO E CONTRATO QUE SERVE AQUI, E O CARTAO FICAVA CALADO** (03/11/2026). O
+  envio de imagem foi aprendido em `api.mobiliza.app` (20/09) e no mobiliza.me
+  `page-mob.enviarImagem` **recusa**: a arte nao sai, a rodada cai para texto e escreve *"a imagem
+  de X NAO saiu"* no Andamento **a cada envio**. As duas caixas "mandar junto" estao LIGADAS.
+  **O aviso do cartao perguntava `!state.contratoImagem`** — e o contrato esta preenchido, entao
+  ele se calava **no unico lugar em que ele liga a caixa**. E a familia do *"aviso que nao
+  envelhece com o que ja foi feito e aviso que mente"* (20/09) **por PLATAFORMA e nao por tempo**:
+  o aviso estava certo sobre o contrato e errado sobre onde ele vale.
+  **A pergunta certa e a da plataforma**, pelo mecanismo de `avisoSemModeloAprovado` (28/10):
+  `naPlataformaNova()` le `state.pageState.plataforma`, custa zero, **vem preenchido mesmo sem
+  conversa aberta** (os dois `return` de `page-mob.getState` levam `plataforma: mob.HOST`) e
+  funciona no modo janela, onde `location.hostname` e o da extensao.
+  **O cartao NAO desmarca a caixa sozinho**, e ha teste contando isso: ligar e desligar o que sai
+  para eleitor e decisao dele, e controle que se desmarca sozinho e o controle mentindo pelo outro
+  lado (25/09). O que mudou e ele parar de ficar calado, com a saida escrita ao lado (desmarcar
+  "mandar junto").
+  **E a linha do "envio aprendido" prometia o que ja estava feito:** dizia *"Me avise para eu
+  ligar o envio automatico"*, e a cadeia esta ligada desde 20/09. Hoje ela diz o que vale em cada
+  plataforma, e que **gravar de novo aqui nao aprende nada** — `aprenderImagemStart` tambem recusa.
+  Prova: `imagemRecusadaAqui = false` ou a frase velha de volta derrubam 2 assercoes em
+  `tests/page-mob.test.mjs`.
+
 - **NO MODO "EU MANDO" O RODIZIO NUNCA ANDOU, E A GUARDA DO MOMENTO FICOU DESLIGADA** (03/11/2026,
   relato dele: *"a mensagem do momento nao esta variando"*).
   **`avancarVariante` e `markSent` moram DEPOIS do `page.sendText`, e o ramo do modo "Eu mando"
@@ -7356,7 +7402,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 40 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 41 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu:** em 03/11/2026 ela tinha 30 nomes e o diretório já tinha
 > 39 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -7365,7 +7411,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 40 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
