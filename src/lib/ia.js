@@ -2413,6 +2413,24 @@ export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
   '(exemplo: Pedro Silva , Porto Alegre)',
 ].join('\n');
 
+/** Apresentação explícita vale mesmo sem ter sido gravada no cadastro. */
+export function nomeApresentado(mensagens = []) {
+  return mensagens.some((m) => {
+    if (m.de === 'nos' || m.sistema || m.anuncio) return false;
+    const t = String(m.texto || '').trim();
+    const match = /^(?:eu sou|sou|me chamo|meu nome [ée])\s+([\p{L}][\p{L}'’-]*(?:\s+[\p{L}][\p{L}'’-]*){1,4})[.!]?$/iu.exec(t);
+    if (!match) return false;
+    const partes = match[1].split(/\s+/);
+    return !/^(?:de|do|da|o|a|um|uma|presidente|diretor|professor|policial|morador|empresario|empresário)\b/i.test(match[1]) &&
+      partes.every((v) => /^(?:da|de|do|dos|das)$/i.test(v) || /^\p{Lu}/u.test(v));
+  });
+}
+
+export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}) {
+  if (!nomeApresentado(mensagens)) return PEDIDO_DE_DADOS_NO_RASCUNHO;
+  return String(campos.Cidade || '').trim() ? '' : 'E, se puder, me diga de qual cidade você é.';
+}
+
 /**
  * **Tira do fim do rascunho o formulário LITERAL**, quando a própria IA disse que ele não cabe.
  *
@@ -2928,6 +2946,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
 
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
   const temAudioOuvido = lista.some((m) => m.transcrito);
+  const identidadeIncerta = lista.some((m) => m.de !== 'nos' &&
+    /(?:usando|com) (?:o )?(?:telefone|celular) (?:do|da|de)|(?:telefone|celular) do meu marido/i.test(m.texto || ''));
+
   const temMidiaSemTexto = lista.some((m) => m.semConteudo);
   /**
    * **Mídia COM legenda e link também** (22/09/2026): *"a IA tem focado nas imagens e links perguntando
@@ -3041,7 +3062,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * (o cadastro erra o nome com frequência alta demais).
    */
   const sabidos = Object.entries(campos || {})
-    .filter(([, v]) => v != null && String(v).trim() !== '')
+    .filter(([k, v]) => (!identidadeIncerta || !/^(nome|genero|gênero|sexo)$/i.test(k)) && v != null && String(v).trim() !== '')
     .map(([k, v]) => `${k}: ${String(v).trim()}`);
 
   const cadastro = sabidos.length
@@ -3050,11 +3071,16 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'NÃO peça nada que já esteja nesta linha. Pedir de novo dá a impressão de que ninguém leu',
         'a conversa. (O nome está aqui para você saber que já o temos: continua proibido usá-lo no',
         'texto.)',
-        linhaDoGenero(campos?.Nome),
+        linhaDoGenero(identidadeIncerta ? '' : campos?.Nome),
       ].filter(Boolean).join('\n')
-    : linhaDoGenero(campos?.Nome);
+    : linhaDoGenero(identidadeIncerta ? '' : campos?.Nome);
 
   return [
+    'ATRIBUIÇÃO: o titular do número não é necessariamente quem fala. Leia as apresentações no histórico, inclusive anteriores à última resposta. "É a Ana" e "estou com o telefone do meu marido" identificam outra pessoa; não atribua suas falas ao cadastro. Não use o nome do cadastro nem deduza gênero dele.',
+    'ALVO: xingamentos citados ou dirigidos a familiares/terceiros não são crítica ao destinatário deste atendimento. "Você" isolado não prova que o alvo somos nós. Na dúvida, mantenha o alvo indeterminado. Dinheiro mencionado numa briga não é pedido de dinheiro a nós sem solicitação explícita.',
+    'BRIGA PESSOAL/FAMILIAR: inclusive disputa de casal sobre empresa ou dinheiro, acolha brevemente em primeira pessoa, sem tomar partido, sem repetir detalhes, sem nome, perguntas ou formulário. Não encaminhe automaticamente à Justiça nem discorra sobre empresa ou valores. Havendo risco concreto e imediato de violência, priorize a segurança.',
+    identidadeIncerta ? 'IDENTIDADE DO FALANTE: há indicação de telefone emprestado no histórico. O nome e o gênero do cadastro não identificam o interlocutor atual; trate de forma neutra.' : '',
+
     /**
      * **O relógio faltava AQUI** — e era o caminho que escreve texto para o eleitor.
      *
@@ -3184,14 +3210,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * (`sugestao.pedirDadosNaoCabe`): duas definições divergiriam, e a que ninguém olha é a que
      * pede o cadastro de quem já o deu.
      */
-    pedirDados
+    pedirDados && pedidoDeCadastroDoRascunho(lista, campos)
       ? [
           'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
           'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
           'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
           'reconhece que o pedido saiu.',
           '',
-          PEDIDO_DE_DADOS_NO_RASCUNHO,
+          pedidoDeCadastroDoRascunho(lista, campos),
           '',
           /**
            * **A licença de NÃO pedir, colada na ordem de pedir** — print dele de 24/09/2026: uma

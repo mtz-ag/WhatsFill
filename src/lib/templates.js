@@ -1099,6 +1099,7 @@ export function tirarPedidoDeCadastro(texto) {
 }
 
 export function ehPedidoDeDados(texto) {
+  if (String(texto || '').includes('E, se puder, me diga de qual cidade você é.')) return true;
   const plano = String(texto || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

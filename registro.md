@@ -1,4 +1,33 @@
-## 2026-11-04 - v3.262.0 - ESTADO DE AGORA - o preterito, os dois alvos, e a tecla que contradizia
+## 2026-11-04 - v3.263.0 - ESTADO DE AGORA - publicacao das correcoes locais
+
+As correcoes de apresentacao, identidade do falante e conflito familiar abaixo agora integram
+esta versao. Antes, o manifest permanecia em 3.262.0, mesmo com os arquivos locais alterados.
+Recarregue a extensao em chrome://extensions e depois de F5 no Mobiliza. Confira 3.263.0.
+O botao Recarregar do painel nao substitui a recarga da extensao pelo navegador.
+
+Limites: o resumo externo do audio ainda nao foi corrigido; a resposta da IA nao foi validada
+com chamada real. Apresentacao reconhecida pelo novo detector exige frase curta e nome composto
+com iniciais maiusculas. As correcoes foram testadas localmente, sem enviar mensagens.
+
+## 2026-11-04 - Correcao local: formulario apos apresentacao
+
+O prompt e o piso do painel usavam sempre Nome, Cidade. Apresentacao explicita no historico
+agora seleciona pedido so de cidade; com Cidade conhecida, nao acrescenta formulario.
+O bloco literal ja gerado tambem e substituido; pedido parcial e reconhecido no historico.
+Detector conservador: nome composto com iniciais maiusculas, sem inferir nome de cargo ou
+cidade. Nomes em minusculas, apresentacoes em frase longa e parafrases do formulario ainda
+exigem ampliacao/validacao. Testes com nomes ficticios. Sem envio ou chamada paga.
+
+## 2026-11-04 - Correcao local em validacao: falante e conflito familiar
+
+Prompt do rascunho distingue titular, interlocutor e alvo de insultos; historico de telefone
+emprestado produz aviso explicito de identidade incerta. Conflito familiar inclui casal e
+empresa familiar. Xingamento com contexto familiar reconhecido como desabafo.
+Testes usam somente nomes ficticios. Resumo do audio do CRM ainda nao corrigido: o adaptador
+le transcricao externa. Sem chamada paga, envio ou teste em contato real. Esta mudanca nao
+comprova ainda que o modelo produz a resposta aprovada; precisa de validacao do rascunho.
+
+## 2026-11-04 - v3.262.0 - Estado anterior - o preterito, os dois alvos, e a tecla que contradizia
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.262.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

@@ -3343,9 +3343,9 @@ export function pareceCorrente(texto) {
  * @returns {{motivo:string, familia:boolean, conflito:boolean, raiva:boolean, agressao:boolean, sofrimento:boolean, politico:boolean}|null}
  */
 const DESABAFO_FAMILIA =
-  /(^|[^a-z])((minha|meu|minhas|meus)\s+(familia|parentes?|irma|irmao|irmas|irmaos|mae|pai|marido|esposa|mulher|filh[oa]s?|cunhad[oa]s?|sogr[oa]s?|tias?|tios?|prim[oa]s?|sobrinh[oa]s?|genro|nora|vizinh[oa]s?)|parentes|familiares|(na|da|com a|com minha)\s+familia)([^a-z]|$)/;
+  /(^|[^a-z])((minha|meu|minhas|meus)\s+(familia|parentes?|irma|irmao|irmas|irmaos|mae|pai|marido|esposa|mulher|filh[oa]s?|cunhad[oa]s?|sogr[oa]s?|tias?|tios?|prim[oa]s?|sobrinh[oa]s?|genro|nora|vizinh[oa]s?)|parentes|familiares|casal|empresa familiar|(na|da|com a|com minha)\s+familia)([^a-z]|$)/;
 const DESABAFO_CONFLITO =
-  /(^|[^a-z])(brig(a|as|amos|aram|ou|uei|ando)|discut(i|imos|iram|indo)|bloquei(ei|ou|amos|aram)|debocha\w*|humilha\w*|xinga\w*|zomba\w*|zoaram|me\s+expulsa\w*|cortei\s+relac\w*|nao\s+falo\s+mais\s+com)([^a-z]|$)/;
+  /(^|[^a-z])(brig(a|as|amos|aram|ou|uei|ando)|discut(i|imos|iram|indo)|bloquei(ei|ou|amos|aram)|babaca|mentiroso|mentirosa|debocha\w*|humilha\w*|xinga\w*|zomba\w*|zoaram|me\s+expulsa\w*|cortei\s+relac\w*|nao\s+falo\s+mais\s+com)([^a-z]|$)/;
 const DESABAFO_AMEACA =
   /vontade\s+de\s+(matar|bater|esganar|socar|enforcar)|(vou|quero|queria|ia)\s+(matar|esganar|enforcar)|matar\s+(1|um|uma)\s+por\s+(1|um|uma)/;
 const DESABAFO_RAIVA = /(^|[^a-z])(raiva|odio|revoltad[oa]|furios[oa]|sangue\s+nos\s+olhos)([^a-z]|$)/;

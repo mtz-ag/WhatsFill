@@ -135,4 +135,33 @@ const APROVADA =
   check(/desabafo:/.test(cli) && /perguntouSoOCargo/.test(cli), 'validarRascunho recebe desabafo e perguntouSoOCargo');
 }
 
+{
+  grupo('briga privada não vira pedido por mencionar valores');
+  check(!!cortesia.desabafoPessoal(so('Briguei com meu marido pela administração da empresa e pelo dinheiro'), null), 'casal e empresa: desabafo');
+  check(!!cortesia.desabafoPessoal(so('Meu marido é um mentiroso, você babaca'), null), 'xingamento ao marido: desabafo');
+  check(!cortesia.desabafoPessoal(so('Preciso de dinheiro para a empresa'), null), 'menção empresarial sozinha não prova briga familiar');
+  const fonte = ler('src/lib/ia.js');
+  const inicio = fonte.indexOf('  const identidadeIncerta =');
+  const final = fonte.indexOf(';', inicio);
+  const detectar = new Function('lista', fonte.slice(inicio, final + 1) + 'return identidadeIncerta;');
+  check(detectar([{ de: 'contato', texto: 'É a Ana, estou usando o telefone do meu marido' }]), 'apresentação de esposa em telefone emprestado');
+  check(detectar([{ de: 'contato', texto: 'Eu tô com o telefone do Carlos' }]), 'telefone emprestado por pessoa nomeada');
+  check(!detectar([{ de: 'nos', texto: 'Estou com o telefone do Carlos' }]), 'fala nossa não troca identidade do contato');
+  check(!detectar([{ de: 'contato', texto: 'Meu marido trabalha comigo' }]), 'referência ao marido não basta para trocar falante');
+  check(fonte.includes('IDENTIDADE DO FALANTE') && fonte.includes('telefone emprestado'), 'prompt inclui contexto de outro falante');
+  check(fonte.includes('mantenha o alvo indeterminado'), 'não presume que insulto é dirigido ao atendimento');
+}
+{
+  grupo('não repetir nome informado espontaneamente');
+  const conversa = [{ de: 'contato', texto: 'Sou Carlos Almeida' }];
+  check(ia.nomeApresentado(conversa), 'reconhece apresentação sem formulário');
+  check(ia.pedidoDeCadastroDoRascunho(conversa).includes('qual cidade'), 'pede só cidade');
+  check(ia.pedidoDeCadastroDoRascunho(conversa, { Cidade: 'Canoas' }) === '', 'não pede nada quando a cidade também é conhecida');
+  for (const texto of ['Sou Presidente da Federação', 'Sou de Porto Alegre', 'Sou muito grato']) {
+    check(!ia.nomeApresentado([{ de: 'contato', texto }]), `não confunde descrição com nome: ${texto}`);
+  }
+  check(!ia.nomeApresentado([{ de: 'nos', texto: 'Sou Carlos Almeida' }]), 'não usa apresentação do atendente');
+  const templates = await lib('templates.js');
+  check(templates.ehPedidoDeDados(ia.pedidoDeCadastroDoRascunho(conversa)), 'pedido parcial continua reconhecível no histórico');
+}
 fim();

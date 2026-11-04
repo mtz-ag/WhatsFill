@@ -16868,14 +16868,18 @@ const CONTATOS_POR_PAGINA = 200;
      * texto é ditado por nós palavra por palavra, então tirá-lo é mecânico (`ia.semOFormulario`) e
      * não é reescrever no lugar dela. Paráfrase continua passando, de propósito.
      */
+    const pedidoCadastro = iaLib.pedidoDeCadastroDoRascunho(conversaParaIA(), { Cidade: valueNamed('Cidade') });
+    if (!escolhida?.naoCabePedirOCadastro && pedidoCadastro !== iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO) {
+      texto = texto.split(iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO).join(pedidoCadastro).trim();
+    }
     if (escolhida?.naoCabePedirOCadastro) {
       const limpo = iaLib.semOFormulario(texto);
       if (limpo !== texto) {
         texto = limpo;
         avisos.push('a IA disse que o cadastro não cabe aqui — tirei o formulário do fim');
       }
-    } else if (pedirDadosNoRascunho && !templatesLib.ehPedidoDeDados(texto)) {
-      texto = [texto, '', iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO].join('\n');
+    } else if (pedirDadosNoRascunho && pedidoCadastro && !texto.includes(pedidoCadastro) && !templatesLib.ehPedidoDeDados(texto)) {
+      texto = [texto, '', pedidoCadastro].join('\n');
       avisos.push('a IA não pediu o cadastro — acrescentei o formulário no fim');
     }
 
