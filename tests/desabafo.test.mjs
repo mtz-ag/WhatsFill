@@ -154,6 +154,9 @@ const APROVADA =
 {
   grupo('não repetir nome informado espontaneamente');
   const conversa = [{ de: 'contato', texto: 'Sou Carlos Almeida' }];
+  for (const pedido of [ia.pedidoDeCadastroDoRascunho(conversa), ia.PEDIDO_DE_DADOS_NO_RASCUNHO]) {
+    check(pedido.includes('salvar seu contato') && pedido.includes('melhorar o atendimento'), 'pedido explica a finalidade dos dados');
+  }
   check(ia.nomeApresentado(conversa), 'reconhece apresentação sem formulário');
   check(ia.pedidoDeCadastroDoRascunho(conversa).includes('qual cidade'), 'pede só cidade');
   check(ia.pedidoDeCadastroDoRascunho(conversa, { Cidade: 'Canoas' }) === '', 'não pede nada quando a cidade também é conhecida');

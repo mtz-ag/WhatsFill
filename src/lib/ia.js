@@ -2406,7 +2406,7 @@ export function montarRequisicaoRascunho({ sistema, contato, modelo = MODELO_PAD
  * rodada deixa de enxergar que o pedido saiu e pede de novo na passada seguinte.
  */
 export const PEDIDO_DE_DADOS_NO_RASCUNHO = [
-  'E, se puder, me diga seu:',
+  'Para eu salvar seu contato e melhorar o atendimento, me informe, por favor:',
   '',
   'Nome , Cidade',
   '',
@@ -2428,7 +2428,7 @@ export function nomeApresentado(mensagens = []) {
 
 export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}) {
   if (!nomeApresentado(mensagens)) return PEDIDO_DE_DADOS_NO_RASCUNHO;
-  return String(campos.Cidade || '').trim() ? '' : 'E, se puder, me diga de qual cidade você é.';
+  return String(campos.Cidade || '').trim() ? '' : 'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, de qual cidade você é.';
 }
 
 /**

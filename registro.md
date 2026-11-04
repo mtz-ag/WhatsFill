@@ -1,4 +1,10 @@
-## 2026-11-04 - v3.263.0 - ESTADO DE AGORA - publicacao das correcoes locais
+## 2026-11-04 - v3.264.0 - ESTADO DE AGORA - finalidade do pedido de dados
+
+Pedido de cidade e formulario completo agora explicam: salvar o contato e melhorar o atendimento.
+A selecao dos dados faltantes permanece. O reconhecimento do pedido parcial aceita a redacao
+nova e a anterior para preservar o historico. Recarregar extensao e aba para ver 3.264.0.
+
+## 2026-11-04 - v3.263.0 - Estado anterior - publicacao das correcoes locais
 
 As correcoes de apresentacao, identidade do falante e conflito familiar abaixo agora integram
 esta versao. Antes, o manifest permanecia em 3.262.0, mesmo com os arquivos locais alterados.

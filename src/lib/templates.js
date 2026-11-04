@@ -1099,7 +1099,9 @@ export function tirarPedidoDeCadastro(texto) {
 }
 
 export function ehPedidoDeDados(texto) {
-  if (String(texto || '').includes('E, se puder, me diga de qual cidade você é.')) return true;
+  if (['E, se puder, me diga de qual cidade você é.',
+    'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, de qual cidade você é.'
+  ].some((pedido) => String(texto || '').includes(pedido))) return true;
   const plano = String(texto || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
