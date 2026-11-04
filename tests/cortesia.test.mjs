@@ -3832,4 +3832,56 @@ grupo('o apoiador que o "sem interesse" marcaria (o Eraldo, 03/11/2026)');
   check(!si('voces viram? o Lula foi pro inferno'), 'nem o falso positivo que a regra ja protegia');
 }
 
+grupo('acusar o adversario nao e trazer uma denuncia (04/11/2026)');
+{
+  /**
+   * Print dele, com o rascunho parado no campo: 300 caracteres de indignacao com o Lula, terminando
+   * em *"os politicos de direita nao tem lideranca?"*, e saiu *"Agradeco por compartilhar sua
+   * preocupacao e as informacoes. Estamos atentos e acompanhando esse assunto com
+   * responsabilidade."*
+   *
+   * **Medido: a IA tinha OBEDECIDO** — o texto e, frase por frase, o que a regra 15 manda. O erro
+   * era de classificacao:
+   * ```
+   * desabafoPessoal    -> null
+   * denunciaOuCorrente -> "trouxe denuncia ou acusacao politica"   <- foi por aqui
+   * perguntaPendente   -> true                                      <- e a regra 15 manda PARAR
+   * revisarRascunho    -> zero avisos
+   * ```
+   * E quem disparou foi a palavra **"criminosos"**, ela falando de bandido solto na rua.
+   */
+  const d = (t) => trouxeDenuncia(t);
+  const daPrint =
+    'Eu nao vejo os politicos , com autoridade pra fazer esse lula ser destituido do poder , ele faz ' +
+    'horrores de barbares contra o povo , e fica tudo por isso mesmo,ate falar que vai eliminar a ' +
+    'policia e deixar o territorio livre para os criminosos , o os politicos de direita nao tem lideranca?';
+
+  check(d(daPrint)?.contraOAdversario === true,
+    'a mensagem da print e desabafo contra o adversario, e nao denuncia a apurar');
+  check(d('esses ladroes do PT acabaram com o Brasil')?.contraOAdversario === true,
+    'xingar o partido adversario tambem');
+  check(d('o PT so sabe fazer corrupcao')?.contraOAdversario === true, 'e a acusacao generica contra ele');
+
+  /**
+   * **As tres guardas, e cada uma e um caso que PRECISA continuar sendo desconversado.** Sem elas o
+   * conserto viraria a porta de saida da regra 15 — bastaria citar o adversario na frase.
+   */
+  check(d('tem desvio de verba na prefeitura daqui')?.contraOAdversario === false,
+    'alvo LOCAL continua sendo denuncia: ha para onde o caso ir');
+  check(d('esquema do Lula e desvio na obra da prefeitura daqui')?.contraOAdversario === false,
+    'citar o adversario ao lado de um alvo local nao transforma o caso em desabafo');
+  check(d('quero denunciar um esquema de corrupcao no PT')?.contraOAdversario === false,
+    'pedir providencia vence: ai e denuncia mesmo contra o adversario');
+  check(d('tem um esquema de fraude nas urnas, voces podem apurar?')?.contraOAdversario === false,
+    'e pedir para apurar tambem');
+  check(d('o PL e uma quadrilha de ladroes igual ao PT')?.contraOAdversario === false,
+    'acusacao contra o NOSSO lado nunca entra aqui — quem trata disso e semInteresse');
+
+  /** E o que a regra sempre protegeu continua de pe. */
+  check(!d('roubaram a minha moto ontem na frente de casa'), 'crime contra ELA continua fora dos dois');
+  check(!d('Bom dia, tudo bem?'), 'e sem acusacao nenhuma nao ha denuncia');
+  check(!!d('tem desvio de verba na prefeitura daqui'),
+    'o sinal continua VERDADEIRO nos dois casos — e ele que cala o formulario no rascunho');
+}
+
 fim();

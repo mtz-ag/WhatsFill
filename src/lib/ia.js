@@ -1967,6 +1967,11 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    disso. Agradeça as informações, diga que estamos atentos e acompanhando, e PARE. Nunca diga',
     '    que a denúncia é séria ou grave, nunca diga o que deveria ser apurado, nunca fale de provas,',
     '    fatos, responsabilidade ou direitos de ninguém, e nunca prometa levar o caso adiante.',
+    '    **O "agradeça e PARE" é para quem TRAZ UM CASO — um alvo que dá para ir olhar (prefeitura,',
+    '    vereador, secretaria, obra, verba) ou um pedido para apurarmos. NÃO vale para quem só',
+    '    esbraveja contra o adversário:** aí ela está do nosso lado (regra 17), desconversar soa como',
+    '    quem não leu, e a pergunta dela continua tendo de ser respondida. O mérito da acusação',
+    '    continua fora nos dois casos.',
     /**
      * **A regra 16 é dele, de 24/09/2026** — print de uma contato que chegou pelo anúncio e escreveu
      * só *"As outras de Venâncio Aires capital do chimarrão"*, um pedaço de frase que não pede nada
@@ -3322,6 +3327,28 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * **Fica FORA de quem trouxe um problema pessoal**, como a regra da pauta: quem foi roubada ou
      * teve o benefício fraudado não recebe "obrigado, estamos atentos" — a regra 11 é quem atende.
      */
+    /**
+     * **ACUSAÇÃO CONTRA O ADVERSÁRIO — vem ANTES das outras duas** (04/11/2026, ver
+     * `cortesia.trouxeDenuncia`). A print: 300 caracteres de indignação com o Lula, terminando em
+     * *"os políticos de direita não têm liderança?"*, e o rascunho saiu frase por frase como a
+     * regra 15 manda — *"Agradeço por compartilhar suas informações. Estamos atentos e
+     * acompanhando"* —, com a pergunta dela morrendo no **PARE**.
+     *
+     * **O mérito continua proibido, e é por isso que este ramo não é a ausência dos outros:** ela
+     * trouxe acusação que ninguém conferiu, então nada de dizer se é grave, o que apurar ou
+     * prometer levar adiante. O que sai é o agradecimento-desconversa e o PARE — porque quem xinga
+     * o adversário está do nosso lado (regra 17), e desconversar com ela é responder a uma
+     * apoiadora como se ela fosse um problema a despachar.
+     */
+    denuncia?.contraOAdversario && !trouxeProblema
+      ? 'ELA DESABAFOU CONTRA O ADVERSÁRIO — NÃO É DENÚNCIA PARA DESCONVERSAR: quem xinga ou acusa o ' +
+        'adversário está do nosso lado (regra 17). NÃO agradeça "as informações", NÃO diga que estamos ' +
+        'atentos nem que estamos acompanhando, e NÃO desconverse — sai como quem não leu o que ela ' +
+        'escreveu. Continue FORA do mérito da acusação (não diga se é grave, o que precisa ser apurado, ' +
+        'nem prometa levar adiante) e, dentro disso: acolha o que ela sentiu em uma frase, sem dar lição ' +
+        'de moral e sem corrigi-la, e RESPONDA o que ela perguntou. Não havendo pergunta, uma frase de ' +
+        'acolhimento basta.'
+      :
     // Já agradecemos? Então NÃO se manda agradecer de novo — ver `jaAgradecemosADenuncia` (31/10/2026).
     denuncia && !trouxeProblema && !desabafo && jaAgradecemosADenuncia(lista)
       ? 'DENÚNCIA OU ACUSAÇÃO POLÍTICA — JÁ AGRADECEMOS: nas falas NÓS acima já agradecemos as ' +

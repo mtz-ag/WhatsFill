@@ -3183,13 +3183,81 @@ const ALVO_PUBLICO =
 const CRIME_CONTRA_ELA =
   /(^|[^\p{L}])(rouba(ram|m)?|furtaram|levaram|fraudaram|invadiram|assaltaram)\s+(a\s+)?(minha|meu|meus|minhas|nossa\s+casa)([^\p{L}]|$)|(^|[^\p{L}])(fui|fomos)\s+(roubad\w+|assaltad\w+|furtad\w+|lesad\w+|fraudad\w+)([^\p{L}]|$)|(^|[^\p{L}])(meu|minha)\s+(beneficio|aposentadoria|salario|conta|cartao|inss|pix)\s+\w*\s*(foi|esta)?\s*(fraudad\w+|roubad\w+|clonad\w+)/iu;
 
+/**
+ * **ALVO LOCAL: o que o mandato poderia de fato ir olhar.** É o que separa a denúncia que se
+ * desconversa (23/09) do desabafo contra o adversário — ver `contraOAdversario` abaixo.
+ *
+ * A arena nacional fica de FORA de propósito (`politicos`, `governo`, `presidente`, `congresso`,
+ * `stf`): quem fala dela está comentando o país, não trazendo um caso. Prefeitura, vereador,
+ * secretaria, obra e verba são o oposto — ali existe um lugar para onde o caso iria.
+ */
+const ALVO_LOCAL =
+  /(^|[^\p{L}])(prefeit\w+|vereador\w*|camara\s+municipal|secretari[ao]s?|delegad\w+|delegacia|posto\s+de\s+saude|ubs|hospital|escola|creche|obras?|licitac(ao|oes)|verbas?|convenio|conselho\s+tutelar)([^\p{L}]|$)/iu;
+
+/**
+ * **ELA QUER QUE A GENTE FAÇA ALGUMA COISA COM A ACUSAÇÃO.** Dizendo isso, é denúncia venha o alvo
+ * que vier — inclusive contra o adversário: *"quero denunciar um esquema no PT"* é um pedido, e
+ * desconversar continua sendo o certo (nós não temos como verificar nada).
+ */
+const PEDE_PROVIDENCIA =
+  /(^|[^\p{L}])(denunci(o|ar|ando|ei|amos)|quero\s+denunciar|fa(co|zer)\s+a\s+denuncia|apur(ar|em|e|acao)|investig(ar|uem|ue|acao)|fiscaliz(ar|em|e)|providencias?|tomem?\s+alguma\s+medida|olh(a|e|em)\s+isso|vej(a|am)\s+isso|lev(a|e|em)\s+isso\s+adiante|encaminh(a|e|em)\s+isso|protocol\w+)([^\p{L}]|$)/iu;
+
+/**
+ * **ACUSAR O ADVERSÁRIO NÃO É TRAZER UMA DENÚNCIA — e desconversar com quem faz isso é responder
+ * a quem está do nosso lado como se ela fosse um problema** (04/11/2026).
+ *
+ * Print dele, com o rascunho parado no campo: a contato escreveu 300 caracteres de indignação —
+ * *"não vejo os políticos com autoridade pra fazer esse lula ser destituído... até falar que vai
+ * eliminar a polícia e deixar o território livre para os criminosos, os políticos de direita não
+ * têm liderança?"* — e o rascunho saiu *"Agradeço por compartilhar sua preocupação e as
+ * informações. Estamos atentos e acompanhando esse assunto com responsabilidade."*
+ *
+ * **Medido, e a IA tinha OBEDECIDO:** o texto é, frase por frase, o que a regra 15 manda
+ * (*"Agradeça as informações, diga que estamos atentos e acompanhando, e PARE"*). O erro estava um
+ * passo antes:
+ * ```
+ * desabafoPessoal    -> null
+ * denunciaOuCorrente -> "trouxe denúncia ou acusação política"   <- foi por aqui
+ * perguntaPendente   -> true                                      <- e a regra 15 manda PARAR
+ * semInteresse       -> null
+ * revisarRascunho    -> zero avisos
+ * ```
+ * E a palavra que disparou foi **"criminosos"** — ela falando de bandido solto na rua, lido como
+ * acusação de crime.
+ *
+ * **A REGRA 17 JÁ DIZIA ISSO E NÃO ALCANÇAVA ESTE DETECTOR** (25/09): *"xingar o ADVERSÁRIO é
+ * apoio — quem faz isso está do nosso lado"*, e apoio não se corrige nem se desconversa. O que
+ * faltava era a mesma distinção aqui.
+ *
+ * **O que NÃO muda, e é a razão de a marca ser um campo e não um `return null`:** o caso continua
+ * sendo acusação que ninguém conferiu, então o mérito continua proibido (nada de dizer se é grave,
+ * o que apurar, nem prometer levar adiante) e o formulário continua calado
+ * (`sugestao.rascunhoSemCadastro`). O que sai é o *"agradeço as informações / estamos atentos"* e
+ * o **PARE** — que era o que matava a pergunta dela.
+ *
+ * **Três guardas, e cada uma é um caso que precisa continuar desconversado:** pedir providência
+ * vence (aí é denúncia mesmo contra o adversário), alvo LOCAL vence (há para onde o caso ir), e
+ * acusação contra o NOSSO lado nunca entra aqui — essa é hostilidade, e quem a trata é
+ * `semInteresse`.
+ */
+function contraOAdversario(t) {
+  if (!ADVERSARIO.test(t)) return false;
+  if (new RegExp(`(^|[^\\p{L}])${NOSSO_PARTIDO}([^\\p{L}]|$)`, 'iu').test(t)) return false;
+  if (ALVO_LOCAL.test(t)) return false;
+  if (PEDE_PROVIDENCIA.test(t)) return false;
+  return true;
+}
+
 export function trouxeDenuncia(texto) {
   const t = semAcentos(texto);
   if (!t) return null;
   if (CRIME_CONTRA_ELA.test(t)) return null;
   if (!ACUSACAO_POLITICA.some((re) => re.test(t))) return null;
   if (!ALVO_PUBLICO.test(t)) return null;
-  return { motivo: 'trouxe denúncia ou acusação política' };
+  if (contraOAdversario(t)) {
+    return { motivo: 'desabafou contra o adversário (não é denúncia a apurar)', contraOAdversario: true };
+  }
+  return { motivo: 'trouxe denúncia ou acusação política', contraOAdversario: false };
 }
 
 /**

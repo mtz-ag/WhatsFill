@@ -3452,6 +3452,52 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **O RASCUNHO ERRADO ERA A REGRA 15 SENDO CUMPRIDA — E O ERRO ESTAVA NA CLASSIFICACAO**
+  (04/11/2026, print dele com o rascunho parado no campo e a pergunta *"qual seria sua
+  resposta?"*).
+  A contato escreveu 300 caracteres de indignacao — *"nao vejo os politicos com autoridade pra
+  fazer esse lula ser destituido... ate falar que vai eliminar a policia e deixar o territorio
+  livre para os criminosos, os politicos de direita nao tem lideranca?"* — e saiu *"Agradeco por
+  compartilhar sua preocupacao e as informacoes. Estamos atentos e acompanhando esse assunto com
+  responsabilidade."*
+  **Eu ia culpar a IA, e a medicao desmentiu:** o texto e, frase por frase, o que a **regra 15**
+  manda (*"Agradeca as informacoes, diga que estamos atentos e acompanhando, e PARE"*).
+  ```
+  desabafoPessoal    -> null
+  denunciaOuCorrente -> "trouxe denuncia ou acusacao politica"   <- foi por aqui
+  perguntaPendente   -> true                                      <- e a regra 15 manda PARAR
+  semInteresse       -> null
+  revisarRascunho    -> zero avisos
+  ```
+  **E quem disparou foi a palavra "criminosos"** — ela falando de bandido solto na rua, lida como
+  acusacao de crime por `ACUSACAO_POLITICA`.
+  **A licao que vale alem deste caso: quando o texto que saiu e byte a byte o que uma regra do
+  prompt manda, o defeito nao esta no modelo nem na regra — esta em QUEM mandou aquela regra
+  entrar.** Procure o detector que acendeu a colada antes de reescrever o prompt pela terceira vez
+  (a mesma licao da repeticao de 15/10, onde medir a guarda provou que o texto nao vinha da IA).
+  **A REGRA 17 JA DIZIA A RESPOSTA E NAO ALCANCAVA ESTE DETECTOR** (25/09): *"xingar o ADVERSARIO e
+  apoio — quem faz isso esta do nosso lado"*, e apoio nao se corrige nem se desconversa. Terceira
+  vez neste arquivo que uma decisao escrita num lugar nao alcanca o lugar onde ela decide (a frase
+  do adversario que morava no prompt da ETIQUETA, 25/09; a excecao que so valia onde a regra
+  alcanca, 09/09).
+  **O conserto NAO e devolver `null`, e essa distincao e o desenho inteiro:** o caso continua sendo
+  acusacao que ninguem conferiu, entao o merito continua proibido e o sinal continua VERDADEIRO —
+  e ele que cala o formulario (`sugestao.rascunhoSemCadastro`). O que saiu foi o
+  *"agradeco as informacoes / estamos atentos"* e o **PARE**, que era o que matava a pergunta dela.
+  Virou um campo (`contraOAdversario`) com ramo proprio no prompt.
+  **As tres guardas sao cada uma um caso que precisa continuar desconversado**, senao o conserto
+  vira porta de saida da regra 15 (bastaria citar o adversario na frase): **alvo LOCAL** vence
+  (prefeitura, vereador, secretaria, obra, verba — ha para onde o caso ir), **pedir providencia**
+  vence (*"quero denunciar"*, *"podem apurar?"*), e **acusacao contra o NOSSO lado nunca entra**
+  (isso e hostilidade, e quem trata e `semInteresse`).
+  **E a arena nacional fica de fora do alvo local de proposito** (`politicos`, `governo`,
+  `presidente`, `congresso`, `stf`): quem fala dela esta comentando o pais, nao trazendo um caso.
+  Prova: devolvendo `contraOAdversario: false` sempre, caem 3 assercoes em `cortesia.test.mjs`.
+  **E o detector tem buracos ANTIGOS, medidos e NAO consertados** — `desviou` e `roubou` (o
+  preterito) faltam em `ACUSACAO_POLITICA`, e `comunista`/`esquerda` faltam em `ALVO_PUBLICO`.
+  Alargar faz MAIS gente ser desconversada, que e a direcao oposta a deste conserto: **decisao
+  dele, dita e nao tomada.**
+
 - **O "SEM INTERESSE" MARCARIA UM APOIADOR, E NENHUM DOS DOIS GATILHOS ERA O QUE PARECIA**
   (03/11/2026, achado abrindo 10 conversas na tela dele com a **previsao do fluxo**, sem rodar a
   rodada — que e para isso que ela existe).

@@ -1,4 +1,108 @@
-## 2026-11-03 - v3.260.0 - ESTADO DE AGORA - o "sem interesse" marcaria um apoiador, e as duas guardas
+## 2026-11-04 - v3.261.0 - ESTADO DE AGORA - acusar o adversario nao e trazer uma denuncia
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.261.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.261.0** na linha pequena do topo do painel
+4. Reabra a conversa da print (a de Porto Alegre, com o textao sobre o Lula) e peca o rascunho:
+   ele nao pode mais sair com *"agradeco as informacoes / estamos atentos"*, e tem de responder
+   a pergunta dela (*"os politicos de direita nao tem lideranca?"*)
+
+### O QUE ACONTECEU
+
+Voce mandou a print com o rascunho parado no campo e perguntou qual seria a minha resposta.
+
+**Medido antes de mexer, e a IA tinha OBEDECIDO.** O texto que saiu e, frase por frase, o que a
+**regra 15** manda:
+
+```
+regra 15: "Agradeca as informacoes, diga que estamos atentos e acompanhando, e PARE."
+rascunho: "Agradeco por compartilhar sua preocupacao e as informacoes.
+           Estamos atentos e acompanhando esse assunto com responsabilidade."
+```
+
+O erro estava um passo antes, na classificacao:
+
+```
+desabafoPessoal    -> null
+denunciaOuCorrente -> "trouxe denuncia ou acusacao politica"   <- foi por aqui
+perguntaPendente   -> true                                      <- e a regra 15 manda PARAR
+semInteresse       -> null   (certo: ela ataca o Lula, esta do nosso lado)
+revisarRascunho    -> zero avisos  (nada barraria o envio)
+```
+
+E a palavra que disparou foi **"criminosos"** — ela falando de bandido solto na rua, lido como
+acusacao de crime.
+
+**Ela nao trouxe denuncia:** nao pediu para apurar nada e nao apontou um caso com lugar para onde
+ir. Ela desabafou contra o adversario e fez uma pergunta — e a sua **regra 17** (25/09) ja diz que
+*"xingar o adversario e apoio: quem faz isso esta do nosso lado"*. O que faltava era essa distincao
+alcancar o detector da denuncia.
+
+### O QUE MUDOU
+
+`trouxeDenuncia` passou a separar os dois: a acusacao cujo alvo e SO o adversario, **sem pedido de
+providencia e sem alvo local**, vem marcada como desabafo. O prompt ganhou um ramo proprio para
+ela: acolhe em uma frase, **responde o que ela perguntou**, e nao diz "estamos atentos".
+
+**O que NAO afrouxou, e e a razao de isto ser uma marca e nao um "ignore":** o merito da acusacao
+continua proibido nos dois casos (nada de dizer se e grave, o que apurar, nem prometer levar
+adiante), e o sinal continua **verdadeiro** — e ele que cala o formulario no rascunho.
+
+**Tres guardas, e cada uma e um caso que precisa continuar desconversado:**
+
+- **alvo LOCAL vence** (prefeitura, vereador, secretaria, obra, verba): ha para onde o caso ir;
+- **pedir providencia vence** (*"quero denunciar"*, *"podem apurar?"*): ai e denuncia mesmo contra
+  o adversario;
+- **acusacao contra o NOSSO lado nunca entra aqui** — isso e hostilidade, e quem trata e o
+  `semInteresse`.
+
+Bateria de 15 casos no teste; **devolvendo `contraOAdversario: false` sempre, caem 3 assercoes.**
+
+### A RESPOSTA QUE EU MANDARIA NAQUELA CONVERSA
+
+> Boa tarde! Entendo a sua indignacao, e nao vou dizer que esta tudo bem — nao esta.
+>
+> Sobre a sua pergunta: aqui no Rio Grande do Sul a direita se organizou e venceu a eleicao, e o
+> Zucco assume o governo em janeiro. Lideranca se mostra assim, com cargo e trabalho, nao com
+> discurso.
+>
+> Eu sigo firme no que me cabe. E fico contente de ver a senhora acompanhando e cobrando.
+
+### O QUE ACHEI E NAO CONSERTEI (e decisao sua)
+
+**O detector da denuncia tem buracos antigos, medidos agora:**
+
+```
+"o prefeito daqui desviou a verba da creche"  -> null   (ACUSACAO_POLITICA nao tem "desviou")
+"o prefeito daqui roubou a verba"             -> null   (nem "roubou")
+"esses comunistas ladroes acabaram com o pais"-> null   (ALVO_PUBLICO nao tem "comunista")
+"a esquerda so sabe fazer corrupcao"          -> null   (nem "esquerda")
+```
+
+Sao formas do preterito e dois alvos que faltam nas listas. **Nao acrescentei por conta propria:**
+alargar o detector faz MAIS gente ser desconversada, que e a direcao oposta a deste conserto — e
+essa direcao e sua.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+O painel esvaziar 3 a 4 segundos a cada troca de conversa (medido em 03/11, nao consertado);
+otimizacao do dossie por secao; rascunho manual descartado quando a IA se abstem; medicao de cache;
+consulta exata de etiquetas; cadastro sem mensagem do momento; detector de convite pessoal;
+`seus`/`seu` fora de `DIRIGIDA_A_NOS`.
+
+### O QUE FOI CONFERIDO
+
+42 suites, `checar-modulos` e `checar-referencias` limpos. A medicao usou o texto da print com dado
+ficticio no lugar do contato; **nenhum nome ou telefone de eleitor entrou em arquivo do
+repositorio**, e nenhuma rodada foi iniciada.
+
+## 2026-11-03 - v3.260.0 - Estado anterior - o "sem interesse" marcaria um apoiador, e as duas guardas
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.260.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
