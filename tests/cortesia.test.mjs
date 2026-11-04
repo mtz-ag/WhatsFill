@@ -3781,4 +3781,55 @@ grupo('nome da chapa colado no numero de urna e apoio (16/10/2026)');
   check(!so('o Zucco falou ontem'), 'o nome sozinho continua nao bastando');
 }
 
+grupo('o apoiador que o "sem interesse" marcaria (o Eraldo, 03/11/2026)');
+{
+  /**
+   * Achado abrindo 10 conversas na tela dele com a previsao do fluxo, SEM rodar a rodada: a unica
+   * que nao concluia nem pedia resposta a mao mandava **marcar sem interesse e concluir sem
+   * responder** — e o contato manda video de direita todos os dias.
+   *
+   * Os dois gatilhos foram isolados um a um, e nenhum deles era o que parecia.
+   */
+  const si = (t) => semInteresse([{ texto: t, tipo: 'TEXT' }]);
+
+  /**
+   * **(1) O insulto era o SUJEITO de quem usou o partido.** A janela de 30 caracteres de
+   * `INSULTO_AO_NOSSO_PARTIDO` mede distancia ate a sigla e mais nada: nao sabia que o objeto do
+   * xingamento e *quem usou* o PL. Ele esta DEFENDENDO o partido.
+   */
+  check(!si('Os vagabundos, que usaram o PL, para se eleger , ja comecaram a trair.'),
+    'quem xinga QUEM USOU o partido nao esta xingando o partido');
+  check(!si('essa gente que roubou o PL tem que pagar'), 'nem quem xinga quem o roubou');
+  check(!si('os traidores que venderam o partido liberal'), 'nem quem xinga quem o vendeu');
+
+  /** E a regra que isto nao pode afrouxar: xingar o partido continua marcando. */
+  check(!!si('o PL e um bando de vagabundos'), 'xingar o partido continua sendo sem interesse');
+  check(!!si('esse bando de safados do PL'), 'na ordem inversa tambem');
+  check(!!si('essa gente do Bolsonaro, assassino, bandido, traidor, ladrao'),
+    'e o nome do aliado continua valendo (o Sergio Nunes, 08/09)');
+  check(!si('o PL e bem melhor que o PT, que e um bando de ladroes'), 'o adversario no meio continua desfazendo');
+
+  /**
+   * **(2) O que disparava o "veio hostilizar" era o "voces" de *"voces da direita"*** — ele
+   * falando com os aliados dele, lido como segunda pessoa dirigida a nos. Medido: a MESMA frase
+   * sem a palavra "voces" devolvia null.
+   */
+  check(!si('parabens pra ti Nicolas voces da direita tem que se unir mais pra derrubar esses vagabundos bandidos'),
+    'xingamento colado em "esses" aponta para um terceiro, mesmo com "voces" na frase');
+  check(!si('tem que derrubar esses vagabundos bandidos'), 'e sem "voces" continua fora, como sempre esteve');
+  check(!si('esses petistas sao uns ladroes'), 'apoiador xingando o adversario no plural');
+  check(!si('aqueles bandidos do PT acabaram com o pais'), 'e com outro demonstrativo');
+
+  /**
+   * **A excecao da excecao, sem a qual a guarda vira porta de saida:** bastaria acrescentar
+   * "esses" numa frase para a hostilidade deixar de ser reconhecida.
+   */
+  check(!!si('voces sao uns vagabundos'), 'o xingamento predicado em NOS continua sendo hostilidade');
+  check(!!si('voces da direita sao uns vagabundos'), 'inclusive com o mesmo "voces da direita"');
+  check(!!si('voces sao uns ladroes, igual esses bandidos ai'), 'ter as duas coisas: vence a primeira');
+  check(!!si('tu e um desgracado'), 'a segunda pessoa direta nao mudou');
+  check(!!si('Entao va para o inferno.. desgracado'), 'nem o imperativo (05/09)');
+  check(!si('voces viram? o Lula foi pro inferno'), 'nem o falso positivo que a regra ja protegia');
+}
+
 fim();

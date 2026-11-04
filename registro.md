@@ -1,4 +1,96 @@
-## 2026-11-03 - v3.259.0 - ESTADO DE AGORA - os grupos por cidade sairam, e a promessa que eles faziam
+## 2026-11-03 - v3.260.0 - ESTADO DE AGORA - o "sem interesse" marcaria um apoiador, e as duas guardas
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.260.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.260.0** na linha pequena do topo do painel
+4. Abra a conversa do **Caxias do Sul - Eraldo**: a linha "O fluxo faria" nao deve mais dizer
+   *"marca sem interesse"* — deve mandar responder a mao ou concluir
+
+### DE ONDE ISTO VEIO
+
+Voce pediu para eu simular as respostas de 10 conversas. Abri as 10 na sua aba e li a linha
+**"O fluxo faria"** de cada uma — **sem rodada**: nada enviado, nada concluido, nada gravado, a IA
+nao foi chamada em nenhuma e o console nao teve erro.
+
+**Das 10: seis concluiriam em silencio (tecla 3), tres iriam para voce (tecla 6), e UMA mandaria
+marcar sem interesse.** Nenhuma enviaria mensagem.
+
+A unica fora do padrao era a do **Eraldo**, que manda video de direita todo dia. A ultima mensagem
+dele e *"Os vagabundos, que usaram o PL, para se eleger, ja comecaram a trair."* — ele esta
+**defendendo** o PL — e o fluxo marcaria a etiqueta **permanente** de sem interesse e concluiria
+**sem responder**.
+
+### AS DUAS CAUSAS, ISOLADAS UMA A UMA
+
+**(1) O insulto era o SUJEITO de quem usou o partido.**
+```
+"os vagabundos usaram o PL"                              -> falou mal do nosso partido
+"os vagabundos que ja usaram todo mundo ... o PL" (>30)  -> null
+```
+A janela de 30 caracteres mede **distancia** ate a sigla e mais nada: nao sabia que o objeto do
+xingamento e *quem usou* o PL. Com a oracao relativa no meio (`que` + verbo de agir SOBRE alguem),
+o insulto e o sujeito e o partido e a vitima da frase.
+
+**(2) O que disparava o "veio hostilizar" era a palavra "voces".**
+```
+"parabens ... voces da direita ... derrubar esses vagabundos bandidos"  -> veio hostilizar
+a MESMA frase sem a palavra "voces"                                     -> null
+```
+Ele estava falando com os aliados dele, e o `voces` foi lido como segunda pessoa dirigida a nos.
+**A guarda nao e a palavra: e o OBJETO do xingamento.** *"esses vagabundos"* aponta para longe;
+*"voces sao uns vagabundos"* prediga o xingamento em nos. Entao a neutralizacao exige o
+demonstrativo **colado** no insulto, e so plural e coletivo — *"esse cara"* pode ser o candidato.
+
+**E ha a excecao da excecao:** xingamento predicado em nos vence o demonstrativo. Sem ela bastaria
+escrever "esses" numa frase para a hostilidade deixar de ser reconhecida.
+
+### O QUE ISSO NAO AFROUXOU
+
+Bateria de 25 casos, todos passando: xingar o partido continua marcando, na ordem direta e na
+inversa; o nome do aliado continua valendo (o Sergio Nunes, 08/09); o adversario no meio continua
+desfazendo; segunda pessoa direta e imperativo nao mudaram. **Prova do defeito reintroduzido:**
+tirando a guarda do "esses" cai 1 assercao, tirando a do "que usaram o PL" caem 2.
+
+### O QUE ACHEI E NAO CONSERTEI
+
+- **O painel fica 3 a 4 segundos dizendo "Abra um atendimento na plataforma" a cada troca de
+  conversa.** Medi os dois sinais a cada segundo: o painel da direita ja aponta para a conversa
+  nova enquanto **a linha da fila ainda esta marcada na anterior**; discordando, o estado vira
+  `sessionId: null` e o contato carregado some da tela. A espera de 4s da v3.222 existe so em
+  `openQueueSession`; o laco de 500ms do painel nao a tem, e **joga fora o `ganchoRespondeu` /
+  `so-um-sinal`** que `page-mob` devolve justamente para distinguir "nao sei ainda" de "nao ha
+  conversa". Clicando rapido chega a 16s. Conserto provavel: por a espera no `watchPageState`, ou
+  fazer `applyPageState` calar quando o gancho nao respondeu.
+- **O cabecalho termina alguns segundos depois da barra de status** — ela ja diz "Contato
+  carregado" e o topo ainda diz "Carregando...".
+- **`seus`/`seu` sozinhos nao estao em `DIRIGIDA_A_NOS`** (so `teu`, `tua`, `seu candidato`), entao
+  *"seus vagabundos, nao fazem nada"* nunca foi reconhecido. **Lacuna antiga, nao regressao** — e
+  nao alarguei por conta propria: alargar faz a regra mais destrutiva do projeto disparar MAIS, e
+  essa direcao e sua.
+
+### O QUE FOI CONSERTADO DE QUEBRA
+
+O ponto duplo da linha da previsao (*"conclua e siga.."*): varios motivos ja terminam em ponto e a
+linha acrescentava o dela.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+Otimizacao do dossie por secao; rascunho manual descartado quando a IA se abstem; medicao de cache;
+consulta exata de etiquetas; cadastro sem mensagem do momento; detector de convite pessoal.
+
+### O QUE FOI CONFERIDO
+
+42 suites, `checar-modulos` e `checar-referencias` limpos. A simulacao rodou na sua aba com dados
+reais, **so leitura**; nenhum nome ou telefone de eleitor entrou em arquivo do repositorio (a
+bateria usa frases, nao contatos).
+
+## 2026-11-03 - v3.259.0 - Estado anterior - os grupos por cidade sairam, e a promessa que eles faziam
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.259.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

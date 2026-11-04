@@ -2827,6 +2827,46 @@ const AGRESSAO =
 const DIRIGIDA_A_NOS = /\b(voces|voce|vocês|tu|es igual|teu|tua|seu candidato|sua campanha|de voces)\b/i;
 
 /**
+ * **O XINGAMENTO COLADO NUM DEMONSTRATIVO DE AFASTAMENTO APONTA PARA UM TERCEIRO** (03/11/2026).
+ *
+ * Medido na conversa do Eraldo — apoiador que manda vídeo de direita todo dia. Ele escreveu
+ * *"parabéns pra ti Nicolas **vocês da direita** tem que se unir mais pra derrubar **esses
+ * vagabundos bandidos**"*, e `semInteresse` devolveu *"veio hostilizar"*. Isolei o gatilho:
+ * ```
+ * com "voces da direita"   -> veio hostilizar
+ * a MESMA frase sem "voces" -> null
+ * ```
+ * Ou seja: o que disparou foi o **"vocês"** de *"vocês da direita"* — ele falando com os aliados
+ * dele, lido como segunda pessoa dirigida a nós. O preço seria a etiqueta PERMANENTE de sem
+ * interesse mais a conclusão em silêncio, em cima de quem mais apoia: exatamente o falso positivo
+ * que esta regra tem escrito, desde 01/09, que precisa evitar.
+ *
+ * **A guarda não é a palavra "vocês": é o OBJETO do xingamento.** *"esses vagabundos"* aponta para
+ * longe; *"vocês são uns vagabundos"* prediga o xingamento em nós. Por isso a neutralização exige
+ * o demonstrativo **colado** no insulto, e a lista é só de plural e coletivo — *"esse cara"* pode
+ * ser o candidato, e ali errar custa o mesmo que não ter guarda nenhuma.
+ */
+const XINGAMENTO_EM_TERCEIRO = new RegExp(
+  `\\b(esses|essas|aqueles|aquelas|essa\\s+gente|esse\\s+pessoal|essa\\s+turma|esse\\s+bando)\\b` +
+    `(?:\\s+\\w+){0,2}\\s+${AGRESSAO.source.replace(/\\b/g, '')}`,
+  'i'
+);
+
+/**
+ * **E a exceção da exceção: o xingamento predicado em NÓS vence o demonstrativo.**
+ *
+ * *"vocês são uns vagabundos, igual esses ladrões aí"* tem as duas coisas, e o que decide é a
+ * primeira. Sem isto a guarda de cima viraria porta de saída: bastava acrescentar *"esses"* numa
+ * frase para a hostilidade deixar de ser reconhecida.
+ */
+const PREDICADO_EM_NOS = new RegExp(
+  `(\\b(voces|vcs|voce|vc|tu|senhor|senhora)\\b[^.!?]{0,25}\\b(sao|e|eh|esta|estao|ficou|ficaram|viraram|parece|parecem)\\b)` +
+    `|(\\bseus?\\s+${AGRESSAO.source.replace(/\\b/g, '')})` +
+    `|(\\bsuas?\\s+${AGRESSAO.source.replace(/\\b/g, '')})`,
+  'i'
+);
+
+/**
  * **O xingamento no IMPERATIVO já é segunda pessoa** — print dele (05/09/2026): a contato chegou
  * pelo anúncio, mandou o texto de apoio às 23:38 e, um minuto depois, *"Então vá para o inferno..
  * desgraçado"*. *"chegou hostilizando e extensão não reconheceu"*.
@@ -3887,12 +3927,38 @@ const INSULTO_AO_NOSSO_PARTIDO = [
   ),
 ];
 
+/**
+ * **O INSULTO É O SUJEITO DE QUEM FEZ ALGO AO PARTIDO, E NÃO O PARTIDO** (03/11/2026).
+ *
+ * Medido na conversa do Eraldo, cuja última mensagem é *"Os vagabundos, que usaram o PL, para se
+ * eleger, já começaram a trair."* — ele está **defendendo** o PL, e `semInteresse` devolveu
+ * *"falou mal do nosso partido"*:
+ * ```
+ * "os vagabundos usaram o PL"                              -> falou mal do nosso partido
+ * "os vagabundos que ja usaram todo mundo ... o PL" (>30)  -> null
+ * ```
+ * A janela de 30 caracteres mede **distância** até a sigla e mais nada: ela não sabe que o objeto
+ * do xingamento é *quem usou* o partido. Com a oração relativa no meio (`que` + verbo de agir
+ * SOBRE alguém), o insulto é o sujeito — e o partido é a vítima da frase, não o alvo.
+ *
+ * A lista de verbos é curta e literal de propósito, como a do adversário: `que é`, `que são`,
+ * `que virou` continuam fora dela, porque aí o insulto É predicado do partido (*"o PL, que é um
+ * bando de ladrões"*).
+ */
+const USOU_O_PARTIDO = /\bque\s+(ja\s+|so\s+)?(usa\w*|roub\w*|tra[ií]\w*|vend\w*|destr\w*|acab\w*|mam\w*|entra\w*|sauda\w*|elege\w*|se\s+elege\w*)/i;
+
 function insultouNossoPartido(norm) {
   for (const re of INSULTO_AO_NOSSO_PARTIDO) {
     const m = re.exec(norm);
+    if (!m) continue;
+    const meio = m.groups?.meio || '';
+    const antes = m.groups?.antes || '';
     // Sem esta limpeza, "o PL é melhor que o PT, um bando de ladrões" viraria hostilidade — e é
     // exatamente o oposto do que ele disse.
-    if (m && !ADVERSARIO.test(m.groups?.meio || '') && !ADVERSARIO.test(m.groups?.antes || '')) return true;
+    if (ADVERSARIO.test(meio) || ADVERSARIO.test(antes)) continue;
+    // E sem esta, quem DEFENDE o partido de quem o usou é etiquetado como quem o xingou.
+    if (USOU_O_PARTIDO.test(meio)) continue;
+    return true;
   }
   return false;
 }
@@ -4161,7 +4227,15 @@ function umaMensagemRecusa(msg) {
   const mandouNosEmbora =
     MANDOU_EMBORA_SEM_IMPERATIVO.test(norm) && DIRIGIDA_A_NOS.test(norm) && !ADVERSARIO.test(norm);
 
-  const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora);
+  /**
+   * **O xingamento que aponta para um terceiro não é agressão a nós** — ver
+   * `XINGAMENTO_EM_TERCEIRO` (o Eraldo, 03/11/2026). Fica DEPOIS do imperativo e do "mandou
+   * embora": aqueles dois dizem o alvo por conta própria e não dependem de para onde o insulto
+   * aponta.
+   */
+  const soXingaTerceiro = XINGAMENTO_EM_TERCEIRO.test(norm) && !PREDICADO_EM_NOS.test(norm);
+
+  const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora) && !soXingaTerceiro;
   if (agride || soOImperativo || mandouNosEmbora) return { motivo: 'veio hostilizar, não é público do mandato' };
 
   const negativaVale = !falada && (norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm));

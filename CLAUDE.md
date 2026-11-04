@@ -3452,6 +3452,68 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **O "SEM INTERESSE" MARCARIA UM APOIADOR, E NENHUM DOS DOIS GATILHOS ERA O QUE PARECIA**
+  (03/11/2026, achado abrindo 10 conversas na tela dele com a **previsao do fluxo**, sem rodar a
+  rodada — que e para isso que ela existe).
+  Das 10, nove concluiam ou pediam resposta a mao; a decima mandava **marcar sem interesse e
+  concluir sem responder** — num contato que manda video de direita todos os dias. Ultima mensagem
+  dele: *"Os vagabundos, que usaram o PL, para se eleger, ja comecaram a trair."* — ele esta
+  **DEFENDENDO** o partido.
+  **(1) O insulto era o SUJEITO de quem usou o partido, e a janela so media DISTANCIA:**
+  ```
+  "os vagabundos usaram o PL"                              -> falou mal do nosso partido
+  "os vagabundos que ja usaram todo mundo ... o PL" (>30)  -> null
+  ```
+  A janela de 30 caracteres de `INSULTO_AO_NOSSO_PARTIDO` nao sabia que o objeto do xingamento e
+  *quem usou* o PL. Com oracao relativa no meio (`que` + verbo de agir SOBRE alguem), o insulto e
+  o sujeito e **o partido e a vitima da frase, nao o alvo** (`USOU_O_PARTIDO`). A lista de verbos e
+  curta e literal: `que e`, `que sao`, `que virou` ficam FORA, porque ai o insulto e predicado do
+  partido.
+  **(2) O "veio hostilizar" disparava pela palavra "voces" de *"voces da direita"*:**
+  ```
+  "parabens ... voces da direita ... derrubar esses vagabundos bandidos"  -> veio hostilizar
+  a MESMA frase sem a palavra "voces"                                     -> null
+  ```
+  Ele falando com os ALIADOS dele, lido como segunda pessoa dirigida a nos. **A guarda nao pode ser
+  a palavra "voces": e o OBJETO do xingamento** — *"esses vagabundos"* aponta para longe, *"voces
+  sao uns vagabundos"* prediga o xingamento em nos, e *"voces da direita sao uns vagabundos"* e
+  hostil de verdade. Por isso `XINGAMENTO_EM_TERCEIRO` exige o demonstrativo **colado** no insulto
+  e so aceita plural e coletivo (`esses`, `essas`, `aqueles`, `essa gente`, `esse pessoal`) —
+  *"esse cara"* pode ser o candidato, e ali errar custa o mesmo que nao ter guarda.
+  **E `PREDICADO_EM_NOS` e a excecao da excecao, sem a qual a guarda vira porta de saida:** bastaria
+  acrescentar *"esses"* numa frase para a hostilidade deixar de ser reconhecida.
+  **A licao geral, que este arquivo ja paga desde 01/09:** nesta base o apoiador xinga o adversario
+  o dia inteiro, entao toda regra de hostilidade se decide no FALSO POSITIVO — e o falso positivo
+  nunca vem da palavra obvia. Em 15 de 19 frases medidas em 06/09 o erro estava no termo vago; aqui
+  estava num pronome e numa oracao relativa. **Antes de mexer numa guarda desta regra, isole o
+  gatilho tirando UMA palavra por vez** — foi assim que os dois apareceram.
+  Prova: tirando a guarda do `esses` cai 1 assercao; tirando a do `que usaram o PL`, caem 2.
+  **E foi a LINHA DA PREVISAO que achou isto**, lendo 10 conversas sem a rodada agir. Antes dela o
+  primeiro passo de todo diagnostico custava uma rodada em producao — e foi uma rodada dessas que
+  concluiu cinco atendimentos em 02/11.
+
+- **O PAINEL ESVAZIA DE 3 A 4 SEGUNDOS A CADA TROCA DE CONVERSA, E DIZ "ABRA UM ATENDIMENTO"**
+  (03/11/2026, medido na tela dele com os dois sinais lidos a cada segundo):
+  ```
+  1s linha=00384d46 painel=e64ac482 | Abra um atendimento na plataforma para comecar
+  2s linha=00384d46 painel=e64ac482 | Abra um atendimento na plataforma para comecar
+  3s linha=00384d46 painel=e64ac482 | Abra um atendimento na plataforma para comecar
+  4s linha=e64ac482 painel=e64ac482 | Carregando contato...
+  ```
+  **O painel da direita troca primeiro; a marca `ativa` da LINHA da fila chega ~3s depois.**
+  Discordando, `conversaAberta` nao afirma nada, `sessionId` vem `null`, e `applyPageState` trata
+  isso como *"nao ha conversa"*: apaga o contato carregado e escreve a frase de tela vazia.
+  **A espera de 4s que a v3.222 criou para exatamente isto mora em `openQueueSession`, que e da
+  RODADA — o laco de 500ms do painel nao a tem.** E pior: `page-mob.getState` devolve
+  `ganchoRespondeu` e `porQuantosSinais` justamente para distinguir *"nao sei ainda"* de *"nao ha
+  conversa"*, com o JSDoc dizendo que **o painel precisa distinguir** — e `watchPageState` monta a
+  chave com `sessionId|isPending|hasComposer|dark|conversation` e **nunca le nenhum dos dois**. E a
+  armadilha de *"ao escrever adaptador, leia o CONSUMIDOR"* ao contrario: o produtor cumpre o
+  contrato e quem consome o ignora.
+  Clicando rapido (uma conversa enquanto a anterior ainda carrega) chega a 16s nesse estado.
+  **NAO CONSERTADO** — o conserto mexe no laco que governa toda troca de contato, e a decisao de
+  faze-lo agora e dele.
+
 - **A TABELA VAZIA NAO ERA SO INUTIL: ERA O QUE FAZIA A RESPOSTA DO GRUPO MENTIR** (03/11/2026,
   print do cartao: *"funcao nunca foi utilizada, pode ser removida"*).
   **Medi antes de remover, com o estado que a propria print dele mostra** (tabela por cidade VAZIA,

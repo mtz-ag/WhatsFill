@@ -2747,8 +2747,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (!sugestao) return state.ia?.ligada
       ? 'nenhuma regra decide este caso — iria para a IA escrever um rascunho'
       : 'nenhuma regra decide este caso — aguardaria sua escolha (IA desligada)';
+    /**
+     * O ponto final do MOTIVO sai aqui: vários deles já terminam em ponto (*"conclua e siga."*) e
+     * a linha do cabeçalho acrescenta o dela, produzindo *"conclua e siga.."* — visto na tela em
+     * 03/11/2026. Quem fecha a frase é quem a monta.
+     */
+    const motivo = String(sugestao.motivo || '').replace(/\s*\.\s*$/, '');
     const onde =
-      ` ("${sugestao.id}"` + (sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : '') + ')' + (sugestao.motivo ? ` — ${sugestao.motivo}` : '');
+      ` ("${sugestao.id}"` + (sugestao.caminho ? `, caminho ${sugestao.caminho.join(' > ')}` : '') + ')' + (motivo ? ` — ${motivo}` : '');
     if (sugestao.ia) return `um ramo do seu quadro entrega este caso para a IA${onde}`;
     if (sugestao.resposta) return `manda a resposta pronta "${sugestao.resposta}"${onde}`;
     const tecla = sugestaoLib.TECLAS[sugestao.tecla];
