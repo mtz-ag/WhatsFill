@@ -1,93 +1,102 @@
-## 2026-11-04 - v3.261.0 - ESTADO DE AGORA - acusar o adversario nao e trazer uma denuncia
+## 2026-11-04 - v3.262.0 - ESTADO DE AGORA - o preterito, os dois alvos, e a tecla que contradizia
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.261.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.262.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
 
 ### O QUE VOCE PRECISA FAZER
 
 1. `chrome://extensions` -> **recarregar** a extensao
 2. **F5** na aba do mobiliza.me
-3. Confira **3.261.0** na linha pequena do topo do painel
-4. Reabra a conversa da print (a de Porto Alegre, com o textao sobre o Lula) e peca o rascunho:
-   ele nao pode mais sair com *"agradeco as informacoes / estamos atentos"*, e tem de responder
-   a pergunta dela (*"os politicos de direita nao tem lideranca?"*)
+3. Confira **3.262.0** na linha pequena do topo do painel
+4. Reabra a conversa da print de ontem (a do textao sobre o Lula): o rascunho nao pode sair com
+   *"agradeco as informacoes / estamos atentos"*, e tem de responder a pergunta dela
 
 ### O QUE ACONTECEU
 
-Voce mandou a print com o rascunho parado no campo e perguntou qual seria a minha resposta.
+Na v3.261.0 eu medi quatro buracos no detector de denuncia e os deixei parados, porque tapa-los
+manda MAIS gente para a desconversa — direcao oposta a daquele conserto. Voce respondeu
+**"Sim, alargue"**, e e isso.
 
-**Medido antes de mexer, e a IA tinha OBEDECIDO.** O texto que saiu e, frase por frase, o que a
-**regra 15** manda:
-
-```
-regra 15: "Agradeca as informacoes, diga que estamos atentos e acompanhando, e PARE."
-rascunho: "Agradeco por compartilhar sua preocupacao e as informacoes.
-           Estamos atentos e acompanhando esse assunto com responsabilidade."
-```
-
-O erro estava um passo antes, na classificacao:
+**O que faltava nas listas:**
 
 ```
-desabafoPessoal    -> null
-denunciaOuCorrente -> "trouxe denuncia ou acusacao politica"   <- foi por aqui
-perguntaPendente   -> true                                      <- e a regra 15 manda PARAR
-semInteresse       -> null   (certo: ela ataca o Lula, esta do nosso lado)
-revisarRascunho    -> zero avisos  (nada barraria o envio)
+"o prefeito daqui desviou a verba da creche"   -> null   (a lista nao tinha "desviou")
+"o prefeito daqui roubou a verba"              -> null   (nem "roubou")
+"esses comunistas ladroes acabaram com o pais" -> null   (ALVO_PUBLICO nao tinha "comunista")
+"a esquerda so sabe fazer corrupcao"           -> null   (nem "esquerda")
 ```
 
-E a palavra que disparou foi **"criminosos"** — ela falando de bandido solto na rua, lido como
-acusacao de crime.
+A lista de acusacao era toda de **presente, gerundio e participio**; o preterito, que e como se
+conta o que ja aconteceu, nao estava la. E os dois alvos que esta base mais nomeia tambem nao.
 
-**Ela nao trouxe denuncia:** nao pediu para apurar nada e nao apontou um caso com lugar para onde
-ir. Ela desabafou contra o adversario e fez uma pergunta — e a sua **regra 17** (25/09) ja diz que
-*"xingar o adversario e apoio: quem faz isso esta do nosso lado"*. O que faltava era essa distincao
-alcancar o detector da denuncia.
+### O QUE MUDOU, E O QUE ISSO CUSTA
 
-### O QUE MUDOU
+**Medido: 10 casos novos passaram a casar, e SEIS deles vao para o ramo do DESABAFO** — o ramo
+caloroso da v3.261.0, nao o da desconversa:
 
-`trouxeDenuncia` passou a separar os dois: a acusacao cujo alvo e SO o adversario, **sem pedido de
-providencia e sem alvo local**, vem marcada como desabafo. O prompt ganhou um ramo proprio para
-ela: acolhe em uma frase, **responde o que ela perguntou**, e nao diz "estamos atentos".
+```
+denuncia (desconversa)   o prefeito desviou a verba da creche
+denuncia (desconversa)   o prefeito roubou a verba
+denuncia (desconversa)   o vereador roubou na licitacao da escola
+denuncia (desconversa)   o secretario desviou o convenio do hospital
+DESABAFO (acolhe)        esses comunistas ladroes acabaram com o pais
+DESABAFO (acolhe)        a esquerda so sabe fazer corrupcao
+DESABAFO (acolhe)        o Lula desviou dinheiro do povo
+DESABAFO (acolhe)        o PT roubou o pais inteiro
+DESABAFO (acolhe)        a esquerda e uma quadrilha
+DESABAFO (acolhe)        esses comunistas sao ladroes
+```
 
-**O que NAO afrouxou, e e a razao de isto ser uma marca e nao um "ignore":** o merito da acusacao
-continua proibido nos dois casos (nada de dizer se e grave, o que apurar, nem prometer levar
-adiante), e o sinal continua **verdadeiro** — e ele que cala o formulario no rascunho.
+Entao `comunista`/`esquerda` quase nao aumentam a desconversa — as duas ja estavam em
+`ADVERSARIO`, e e o `contraOAdversario` que responde por elas. **Quem aumenta a desconversa e o
+preterito com alvo local** (prefeitura, vereador, secretaria, obra, verba), que e onde ha de
+verdade para onde o caso ir.
 
-**Tres guardas, e cada uma e um caso que precisa continuar desconversado:**
+### AS DUAS GUARDAS QUE O ALARGAMENTO OBRIGOU
 
-- **alvo LOCAL vence** (prefeitura, vereador, secretaria, obra, verba): ha para onde o caso ir;
-- **pedir providencia vence** (*"quero denunciar"*, *"podem apurar?"*): ai e denuncia mesmo contra
-  o adversario;
-- **acusacao contra o NOSSO lado nunca entra aqui** — isso e hostilidade, e quem trata e o
-  `semInteresse`.
+Nao sao zelo: sem elas o alargamento transformaria em acusacao de corrupcao duas coisas que chegam
+aqui todo dia.
 
-Bateria de 15 casos no teste; **devolvendo `contraOAdversario: false` sempre, caem 3 assercoes.**
+- **DESVIAR DE e desvio de rota, nunca de verba.** *"desviou do buraco da rua e quase bati, a
+  prefeitura nao arruma"* viraria denuncia, com a prefeitura servindo de alvo. A guarda e
+  morfologica e nao uma lista de objetos: na acusacao o verbo leva objeto DIRETO (*"desviou a
+  verba"*); com preposicao e desvio de rota.
+- **Crime contra ELA no preterito.** *"roubou a minha moto na frente da prefeitura"* viraria
+  denuncia politica. A guarda que protegia as outras formas nao conhecia o preterito — nem o
+  artigo no meio (*"roubou o meu celular"* escapava por causa do "o").
 
-### A RESPOSTA QUE EU MANDARIA NAQUELA CONVERSA
+**E `roubou` nao e `rouba` + `ou`: e `roub` + `ou`.** Escrevi a alternancia errada e as duas
+assercoes do preterito cairam na hora — o mesmo escorregao que a lista original tinha.
 
-> Boa tarde! Entendo a sua indignacao, e nao vou dizer que esta tudo bem — nao esta.
->
-> Sobre a sua pergunta: aqui no Rio Grande do Sul a direita se organizou e venceu a eleicao, e o
-> Zucco assume o governo em janeiro. Lideranca se mostra assim, com cargo e trabalho, nao com
-> discurso.
->
-> Eu sigo firme no que me cabe. E fico contente de ver a senhora acompanhando e cobrando.
+### A CONTRADICAO QUE O ALARGAMENTO ACENDEU
+
+Com o detector vendo mais casos, apareceu uma coisa que ja estava la: a **tecla `c`** oferecia
+*"Agradeco as informacoes. Estamos atentos e acompanhando o assunto."* — **byte a byte o texto que
+a v3.261.0 existe para impedir**, agora na frente de bem mais gente.
+
+Era a terceira vez neste projeto em que uma decisao escrita num lugar nao alcanca o lugar onde ela
+decide: ontem o conserto entrou na colada do prompt e **nada mais lia o `contraOAdversario`**.
+Hoje a tecla `c` nao e oferecida no desabafo, e o motivo que trava a tecla 1 diz a verdade de cada
+caso — o antigo mandava procurar um texto encaminhado que, num desabafo, nao existe.
+
+A tecla 1 continua travada nos dois casos: material de campanha em cima de uma acusacao responde ao
+lado venha ela de onde vier.
+
+### O QUE CONTINUA PROIBIDO
+
+O merito da acusacao, nos dois ramos: nada de dizer se e grave, o que precisa ser apurado, nem
+prometer levar adiante. E o sinal continua **verdadeiro** nos dois — e ele que cala o formulario no
+rascunho.
 
 ### O QUE ACHEI E NAO CONSERTEI (e decisao sua)
 
-**O detector da denuncia tem buracos antigos, medidos agora:**
-
-```
-"o prefeito daqui desviou a verba da creche"  -> null   (ACUSACAO_POLITICA nao tem "desviou")
-"o prefeito daqui roubou a verba"             -> null   (nem "roubou")
-"esses comunistas ladroes acabaram com o pais"-> null   (ALVO_PUBLICO nao tem "comunista")
-"a esquerda so sabe fazer corrupcao"          -> null   (nem "esquerda")
-```
-
-Sao formas do preterito e dois alvos que faltam nas listas. **Nao acrescentei por conta propria:**
-alargar o detector faz MAIS gente ser desconversada, que e a direcao oposta a deste conserto — e
-essa direcao e sua.
+**Um falso positivo ANTIGO, que nao e deste alargamento:** *"tive que fazer um desvio por causa da
+obra da prefeitura"* e lido como denuncia. A causa e a palavra `desvio` sozinha, que significa as
+duas coisas — e esta na lista desde 23/09. **Nao mexi de proposito:** consertar isso ESTREITA o
+detector no mesmo commit em que voce mandou alargar, e as duas guardas obvias (exigir o objeto, ou
+olhar o artigo antes) quebram *"o desvio de verba na prefeitura"*, que e o caso para o qual a regra
+existe.
 
 ### PENDENCIAS QUE CONTINUAM ABERTAS
 
@@ -98,9 +107,11 @@ consulta exata de etiquetas; cadastro sem mensagem do momento; detector de convi
 
 ### O QUE FOI CONFERIDO
 
-42 suites, `checar-modulos` e `checar-referencias` limpos. A medicao usou o texto da print com dado
-ficticio no lugar do contato; **nenhum nome ou telefone de eleitor entrou em arquivo do
-repositorio**, e nenhuma rodada foi iniciada.
+42 suites, `checar-modulos` e `checar-referencias` limpos. **A prova de cada peca e o defeito
+reintroduzido:** sem o preterito caem 3 assercoes; sem `comunista`/`esquerda`, 3; sem a guarda do
+DESVIAR DE, 1; sem o preterito em `CRIME_CONTRA_ELA`, 2; com a tecla `c` de volta no desabafo, 1.
+Bateria de 26 frases medida antes e depois: 10 casos novos, **nenhum falso positivo novo**.
+**Nenhuma rodada foi iniciada e nenhum dado de eleitor entrou em arquivo do repositorio.**
 
 ## 2026-11-03 - v3.260.0 - Estado anterior - o "sem interesse" marcaria um apoiador, e as duas guardas
 

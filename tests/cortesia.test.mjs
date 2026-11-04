@@ -14,6 +14,8 @@ import * as cortesia from '../src/lib/cortesia.js';
 import { rajadaDeAnuncios, naoPodeFalarAgora, reclamaSemResposta, pedeLigacao, soCortesia, ehSoReacao, ultimaEhSoReacao, pedeRespostaPessoal, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, ehMensagemDeAnuncio, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ehRepasse, rajadaEhSoRepasse, rajadaFinal, desdeNossaUltima, ehDespedida, ultimaEhDespedida, semInteresse , pedeEmprego, ehMensagemDaPlataforma, deOutroDia, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeRoupa, ehPedidoDeRoupa, pedeColinha, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, pedeFalarComDeputado, respostasApos, falouDeSaude, ofereceEventoPelaCampanha, falouAlgoProprio, trouxeDenuncia, semInterrogacaoColada, disseQueEDeOutroEstado } from '../src/lib/cortesia.js';
 
 const templates = await lib('templates.js');
+/** Só para a tecla `c` do desabafo (04/11/2026) — ver `cabeAgradecerCorrente` no grupo do 25/09. */
+const sugestaoLib = await lib('sugestao.js');
 
 /**
  * Os padrões do anúncio saem do STORE, e não de uma cópia escrita à mão aqui.
@@ -3587,7 +3589,17 @@ grupo('o apoiador que xinga o adversario nao e sem interesse (25/09/2026)');
   const texto = 'Vamos todos juntos a um so objetivo remar juntinho pra todos querem arrumar o nosso Brasil colocar onde ele Deveria estar tirar fora esta cambada de esquerdista Ladroes tche.';
   const ent = [{ de: 'contato', texto, at: '2026-09-24T20:49:00Z' }];
   check(!semInteresse(ent, null), 'xingar a esquerda nao marca sem interesse');
-  check(!trouxeDenuncia(texto), 'e nao e denuncia: nao ha alvo com fato, e raiva politica');
+  /**
+   * **Esta assercao mudou de FORMA em 04/11/2026, com a intencao intacta.** Ela exigia `null`
+   * porque *"nao ha alvo com fato, e raiva politica"* — e continuava verdade enquanto `esquerdista`
+   * nao estava em `ALVO_PUBLICO`. Com o alargamento o detector passa a VER o caso, e responde
+   * exatamente o que ela dizia: nao e denuncia a apurar, e desabafo contra o adversario. O que
+   * importa — nao desconversar com quem esta do nosso lado — e o `contraOAdversario`.
+   */
+  check(trouxeDenuncia(texto)?.contraOAdversario === true,
+    'e nao e denuncia a apurar: nao ha alvo com fato, e raiva politica contra o adversario');
+  check(!sugestaoLib.cabeAgradecerCorrente({ denunciaOuCorrente: trouxeDenuncia(texto) }, false),
+    'e por isso a tecla c nao e oferecida: o texto dela e o "estamos atentos" que foi proibido');
   /** Ele TAMBEM nao casa como apoio — e por isso a regra tem de estar no prompt, nao num detector. */
   check(!soExpressaApoio(ent, null, []), 'e o detector de apoio nao alcanca esta forma');
 }
@@ -3882,6 +3894,55 @@ grupo('acusar o adversario nao e trazer uma denuncia (04/11/2026)');
   check(!d('Bom dia, tudo bem?'), 'e sem acusacao nenhuma nao ha denuncia');
   check(!!d('tem desvio de verba na prefeitura daqui'),
     'o sinal continua VERDADEIRO nos dois casos — e ele que cala o formulario no rascunho');
+}
+
+grupo('o preterito e os dois alvos que faltavam (04/11/2026)');
+{
+  /**
+   * **Decisao dele**, no mesmo dia, depois de eu medir os buracos e deixa-los parados: *"Sim,
+   * alargue"*. A lista de acusacao era toda de presente, gerundio e participio, e `ALVO_PUBLICO`
+   * nao conhecia os dois alvos que esta base mais nomeia.
+   *
+   * **Medido: 10 casos novos passaram a casar, e SEIS deles vao para o ramo do DESABAFO** — ou
+   * seja, alargar `ALVO_PUBLICO` com `comunista`/`esquerda` quase nao aumenta a desconversa, porque
+   * as duas tambem estao em `ADVERSARIO`. Quem aumenta a desconversa e o preterito com alvo local.
+   */
+  const d = (t) => trouxeDenuncia(t);
+
+  check(d('o prefeito daqui desviou a verba da creche')?.contraOAdversario === false,
+    'o preterito com alvo LOCAL e denuncia: era o buraco do "desviou"');
+  check(d('o prefeito daqui roubou a verba')?.contraOAdversario === false, 'e o do "roubou"');
+  check(d('o vereador roubou na licitacao da escola')?.contraOAdversario === false,
+    'vale para o vereador tambem');
+  check(d('o secretario desviou o convenio do hospital')?.contraOAdversario === false,
+    'e para a secretaria');
+
+  check(d('esses comunistas ladroes acabaram com o pais')?.contraOAdversario === true,
+    'comunista entrou em ALVO_PUBLICO e cai no DESABAFO, nao na desconversa');
+  check(d('a esquerda so sabe fazer corrupcao')?.contraOAdversario === true, 'e a esquerda tambem');
+  check(d('o Lula desviou dinheiro do povo')?.contraOAdversario === true,
+    'preterito contra o adversario, sem alvo local: desabafo');
+  check(d('o PT roubou o pais inteiro')?.contraOAdversario === true, 'e o partido dele');
+  check(d('tem um comunista na secretaria desviando verba')?.contraOAdversario === false,
+    'com alvo local junto volta a ser denuncia, como a guarda ja mandava');
+
+  /**
+   * **AS GUARDAS, e as duas primeiras o alargamento CRIOU** — sem elas o preterito transformaria
+   * reclamacao de rua e crime contra ela em acusacao de corrupcao, bastando a palavra "prefeitura"
+   * na mesma mensagem.
+   */
+  check(!d('desviou do buraco da rua e quase bati, a prefeitura nao arruma'),
+    'DESVIAR DE e desvio de rota, nunca de verba — e reclamacao de rua e o que mais chega aqui');
+  check(!d('roubou a minha moto na frente da prefeitura'),
+    'crime contra ELA, agora tambem no preterito');
+  check(!d('roubou o meu celular na praca da prefeitura'),
+    'e com o artigo no meio, que a guarda antiga nao aceitava');
+  check(!d('o motorista desviou e bateu no poste'), 'desviou sem objeto nenhum nao acusa ninguem');
+  check(!d('sou de esquerda e nao voto em voces'),
+    'o alvo novo sozinho nao decide nada: sem palavra de acusacao nao ha denuncia');
+  check(!d('meu vizinho e comunista'), 'nem este');
+  check(!d('o onibus da prefeitura nao passou hoje'), 'nem alvo publico sozinho');
+  check(!d('fui roubado aqui perto da prefeitura'), 'e o participio continua sendo crime contra ela');
 }
 
 fim();

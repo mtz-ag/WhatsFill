@@ -205,13 +205,37 @@ export const rascunhoSemCadastro = (c) => casoDeNegativa(c) || !!c?.denunciaOuCo
 export const TEXTO_AGRADECER_CORRENTE = 'Agradeço as informações. Estamos atentos e acompanhando o assunto.';
 
 export function modeloNaoCabe(c) {
-  return c?.denunciaOuCorrente
-    ? 'é corrente ou denúncia repassada — o conteúdo é do texto encaminhado, não um pedido dela'
-    : '';
+  if (!c?.denunciaOuCorrente) return '';
+  /**
+   * **O MOTIVO depende de quem escreveu, o BLOQUEIO não** (04/11/2026). Mandar material de
+   * campanha em cima de uma acusação é errado nos dois casos; mas num desabafo contra o adversário
+   * ela escreveu aquilo com as próprias palavras, e dizer que *"o conteúdo é do texto
+   * encaminhado"* manda ele procurar um repasse que não existe — o aviso que aponta para o lugar
+   * errado, que neste projeto custa a mesma sessão de diagnóstico que defeito nenhum.
+   */
+  return c.denunciaOuCorrente.contraOAdversario
+    ? 'ela desabafou contra o adversário — material de campanha em cima disso responde ao lado'
+    : 'é corrente ou denúncia repassada — o conteúdo é do texto encaminhado, não um pedido dela';
 }
 
+/**
+ * **A tecla `c` NÃO é oferecida no desabafo contra o adversário** (04/11/2026, no mesmo dia em que
+ * a v3.261.0 separou os dois casos). O texto dela é, byte a byte, o *"Agradeço as informações.
+ * Estamos atentos"* que aquele conserto existe para impedir — quem xinga o adversário está do
+ * nosso lado (regra 17), e desconversar com ele sai como quem não leu o que ele escreveu.
+ *
+ * Alargar `ALVO_PUBLICO` com `comunista`/`esquerda` fez este caso passar a acontecer bem mais, e é
+ * por isso que a correção vem no mesmo commit: seria um alargamento colocando MAIS gente na frente
+ * de uma tecla cujo texto acabamos de considerar errado para ela. **A terceira vez neste arquivo
+ * em que uma decisão escrita num lugar não alcança o lugar onde ela decide** — a v3.261.0 mexeu na
+ * colada do prompt e nada mais lia `contraOAdversario`.
+ *
+ * Ela só RETIRA uma oferta, nunca cria desfecho: nenhuma regra recomenda a `c`, é escolha dele.
+ */
 export function cabeAgradecerCorrente(c, jaAgradecemos) {
-  return !!c?.denunciaOuCorrente && !jaAgradecemos;
+  const d = c?.denunciaOuCorrente;
+  if (!d || jaAgradecemos) return false;
+  return !d.contraOAdversario;
 }
 
 export const REGRAS = [

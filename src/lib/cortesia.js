@@ -3171,17 +3171,53 @@ const ACUSACAO_POLITICA = [
   /(^|[^\p{L}])(denuncia(s|r|ram|ndo)?|denunciei)([^\p{L}]|$)/iu,
   /(^|[^\p{L}])(corrup[cç][aã]o|corrupto?s?|propina|caixa\s*dois|superfatura\w*|lavagem\s+de\s+dinheiro)([^\p{L}]|$)/iu,
   /(^|[^\p{L}])(desvi(o|os|aram|ando)|fraud(e|es|aram|ou|ando)|esquema|m[aá]fia|quadrilha|conluio)([^\p{L}]|$)/iu,
-  /(^|[^\p{L}])(rouba(m|ram|ndo|r)?|ladr(ao|oes|ão|ões)|bandidagem|safade\w+|pilantr\w+)([^\p{L}]|$)/iu,
+  /**
+   * **O PRETÉRITO ENTROU EM 04/11/2026, a pedido dele** — a lista era toda de presente, gerúndio e
+   * particípio, então *"o prefeito desviou a verba"* e *"o prefeito roubou a verba"* devolviam
+   * `null`. É a terceira vez que uma lista deste arquivo não tem a forma verbal mais natural (o
+   * *"queria uma reunião"*, 09/09; o *"podem ir para o inferno"*, 26/09).
+   *
+   * **`desviou` leva guarda própria, porque ele tem outro sentido inteiro: DESVIAR DE.** Sem ela,
+   * *"desviou do buraco da rua e quase bati, a prefeitura não arruma"* — reclamação de rua, o que
+   * mais chega aqui — viraria acusação de corrupção, com a prefeitura servindo de alvo público. A
+   * guarda é morfológica e não uma lista de objetos: na acusação o verbo leva objeto DIRETO
+   * (*"desviou a verba"*, *"desviou dinheiro da saúde"*); com preposição ele é desvio de rota.
+   * `roubou` não precisa de guarda assim — quem rouba, rouba uma coisa —, e o que o protege é
+   * `CRIME_CONTRA_ELA`, alargada no mesmo commit.
+   */
+  /(^|[^\p{L}])desviou\s+(?!(de|do|da|dos|das|pra|para)([^\p{L}]|$))/iu,
+  /(^|[^\p{L}])(rouba(m|ram|ndo|r)?|roubou|ladr(ao|oes|ão|ões)|bandidagem|safade\w+|pilantr\w+)([^\p{L}]|$)/iu,
   /(^|[^\p{L}])(crimes?|criminos\w+|ilegalidades?|ilegal|irregularidades?)([^\p{L}]|$)/iu,
 ];
 
-/** O que está sendo acusado tem que ser PÚBLICO — é o que separa denúncia de crime contra ela. */
+/**
+ * O que está sendo acusado tem que ser PÚBLICO — é o que separa denúncia de crime contra ela.
+ *
+ * **`comunista` e `esquerda` entraram em 04/11/2026, a pedido dele**, e quase tudo o que elas
+ * trazem vai para o ramo do DESABAFO e não para o da desconversa: as duas estão em `ADVERSARIO`,
+ * então sem alvo local e sem pedido de providência `contraOAdversario` já responde por elas.
+ * São mais estreitas aqui que em `ADVERSARIO` de propósito (`esquerd(a|ista)s?`, nunca `esquerd`
+ * puro): *"o pneu esquerdo"* e *"vira na esquerda"* são direção, e neste arquivo basta uma palavra
+ * de acusação na mesma mensagem para a lista decidir.
+ */
 const ALVO_PUBLICO =
-  /(^|[^\p{L}])(governo|governador|prefeit\w+|vereador\w*|deputad\w+|senador\w*|ministr\w+|president\w+|politic\w+|partidos?|pt|pl|stf|tse|tre|justica|juiz|delegad\w+|secretari\w+|camara|assembleia|prefeitura|orgaos?|public[oa]s?|verbas?|licitac(ao|oes)|imprensa|midia|urnas?|elei(cao|coes)|lula|bolsonaro|dilma|xandao|moraes)([^\p{L}]|$)/iu;
+  /(^|[^\p{L}])(governo|governador|prefeit\w+|vereador\w*|deputad\w+|senador\w*|ministr\w+|president\w+|politic\w+|partidos?|pt|pl|stf|tse|tre|justica|juiz|delegad\w+|secretari\w+|camara|assembleia|prefeitura|orgaos?|public[oa]s?|verbas?|licitac(ao|oes)|imprensa|midia|urnas?|elei(cao|coes)|lula|bolsonaro|dilma|xandao|moraes|comunist[ao]s?|esquerd(a|ista)s?)([^\p{L}]|$)/iu;
 
-/** O crime foi contra ELA: é problema pessoal, e a regra 11 é quem atende. */
+/**
+ * O crime foi contra ELA: é problema pessoal, e a regra 11 é quem atende.
+ *
+ * **Ela foi alargada JUNTO com o pretérito de `ACUSACAO_POLITICA` (04/11/2026), e tinha de ser:**
+ * a lista de acusação passou a conhecer `roubou`, e sem o mesmo pretérito aqui *"roubou a minha
+ * moto na frente da prefeitura"* viraria denúncia política. O ARTIGO entrou pelo mesmo motivo —
+ * só `a ` era aceito, então *"roubou o meu celular"* escaparia da guarda por causa do artigo.
+ *
+ * **E `roubou` NÃO é `rouba` + `ou`: é `roub` + `ou`.** Escrevi `rouba(ram|m|ou)?` e as duas
+ * asserções do pretérito caíram na hora — é o mesmo escorregão que a lista de acusação já tinha
+ * (`rouba(m|ram|ndo|r)?`, que nunca cobriu o pretérito). Ao somar forma verbal a uma alternância
+ * destas, confira onde o RADICAL termina.
+ */
 const CRIME_CONTRA_ELA =
-  /(^|[^\p{L}])(rouba(ram|m)?|furtaram|levaram|fraudaram|invadiram|assaltaram)\s+(a\s+)?(minha|meu|meus|minhas|nossa\s+casa)([^\p{L}]|$)|(^|[^\p{L}])(fui|fomos)\s+(roubad\w+|assaltad\w+|furtad\w+|lesad\w+|fraudad\w+)([^\p{L}]|$)|(^|[^\p{L}])(meu|minha)\s+(beneficio|aposentadoria|salario|conta|cartao|inss|pix)\s+\w*\s*(foi|esta)?\s*(fraudad\w+|roubad\w+|clonad\w+)/iu;
+  /(^|[^\p{L}])(roub(aram|am|ou|a)|furt(aram|ou)|lev(aram|ou)|fraud(aram|ou)|invadiram|assalt(aram|ou))\s+((o|a|os|as)\s+)?(minha|meu|meus|minhas|nossa\s+casa)([^\p{L}]|$)|(^|[^\p{L}])(fui|fomos)\s+(roubad\w+|assaltad\w+|furtad\w+|lesad\w+|fraudad\w+)([^\p{L}]|$)|(^|[^\p{L}])(meu|minha)\s+(beneficio|aposentadoria|salario|conta|cartao|inss|pix)\s+\w*\s*(foi|esta)?\s*(fraudad\w+|roubad\w+|clonad\w+)/iu;
 
 /**
  * **ALVO LOCAL: o que o mandato poderia de fato ir olhar.** É o que separa a denúncia que se

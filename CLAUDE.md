@@ -3452,6 +3452,45 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **ALARGAR UMA LISTA ACENDE AS CONTRADICOES QUE JA ESTAVAM NELA — e uma delas era a tecla `c`**
+  (04/11/2026, decisao dele no dia seguinte a medicao: *"Sim, alargue"*). O preterito (`roubou`,
+  `desviou`) entrou em `ACUSACAO_POLITICA` e `comunista`/`esquerda` em `ALVO_PUBLICO`.
+  **Medido antes e depois, 26 frases: 10 casos novos casam e SEIS vao para o ramo do DESABAFO** —
+  ou seja, `comunista`/`esquerda` quase nao aumentam a desconversa, porque as duas ja estao em
+  `ADVERSARIO` e `contraOAdversario` responde por elas. **Quem aumenta a desconversa e o preterito
+  com alvo LOCAL.** Ao alargar lista que alimenta dois ramos, meca por RAMO: o numero total nao diz
+  para onde a gente nova foi.
+  **A contradicao: `cabeAgradecerCorrente` oferecia a tecla `c`, cujo texto e byte a byte o
+  *"Agradeco as informacoes. Estamos atentos"* que a v3.261.0 existe para impedir** — e o
+  alargamento a punha na frente de bem mais gente. **Quarta vez neste arquivo que uma decisao
+  escrita num lugar nao alcanca o lugar onde ela decide:** o conserto da vespera entrou na colada
+  do `ia.js` e **nenhum outro leitor olhava `contraOAdversario`**. Ao criar campo novo num detector,
+  faca `grep` por TODOS os leitores do sinal — sao tres aqui (`rascunhoSemCadastro`,
+  `modeloNaoCabe`, `cabeAgradecerCorrente`) e so um foi tocado.
+  **O BLOQUEIO fica e o MOTIVO e que depende do caso:** material de campanha em cima de acusacao
+  responde ao lado venha de onde vier, entao a tecla 1 continua travada — mas o motivo antigo
+  (*"o conteudo e do texto encaminhado"*) manda procurar um repasse que, no desabafo, nao existe.
+  **DUAS GUARDAS QUE O PROPRIO ALARGAMENTO OBRIGOU, e sem elas ele viraria defeito:**
+  **(1) DESVIAR DE e desvio de ROTA, nunca de verba** — *"desviou do buraco da rua e quase bati, a
+  prefeitura nao arruma"* viraria acusacao de corrupcao, com a prefeitura de alvo, e reclamacao de
+  rua e o que mais chega aqui. A guarda e MORFOLOGICA e nao uma lista de objetos (que nao fecha):
+  na acusacao o verbo leva objeto DIRETO; com preposicao e rota.
+  **(2) `CRIME_CONTRA_ELA` tem de crescer junto** — *"roubou a minha moto na frente da
+  prefeitura"*. A guarda conhecia so as outras formas verbais, e nem o ARTIGO no meio (*"roubou o
+  meu celular"* escapava pelo "o"). **Alargar a acusacao sem alargar a guarda que a limita e
+  alargar so o estrago.**
+  **E `roubou` NAO e `rouba` + `ou`: e `roub` + `ou`.** Escrevi `rouba(ram|m|ou)?` e as duas
+  assercoes do preterito cairam na hora — o mesmo escorregao que a lista original tinha
+  (`rouba(m|ram|ndo|r)?` nunca cobriu o preterito). **Ao somar forma verbal a uma alternancia,
+  confira onde o RADICAL termina.**
+  **E eu ESTREITEI o que ele mandou alargar, e desfiz:** *"tive que fazer um desvio por causa da
+  obra da prefeitura"* e falso positivo ANTIGO (a palavra `desvio` sozinha significa as duas
+  coisas, desde 23/09). As duas guardas obvias quebram *"o desvio de verba na prefeitura"*, que e o
+  caso para o qual a regra existe — e estreitar no commit que alarga e o defeito que este arquivo
+  ja registra. **Dito a ele, nao feito.**
+  Provas: sem o preterito caem 3 assercoes; sem `comunista`/`esquerda`, 3; sem a guarda do DESVIAR
+  DE, 1; sem o preterito em `CRIME_CONTRA_ELA`, 2; com a tecla `c` de volta no desabafo, 1.
+
 - **O RASCUNHO ERRADO ERA A REGRA 15 SENDO CUMPRIDA — E O ERRO ESTAVA NA CLASSIFICACAO**
   (04/11/2026, print dele com o rascunho parado no campo e a pergunta *"qual seria sua
   resposta?"*).
