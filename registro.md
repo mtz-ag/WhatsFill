@@ -1,4 +1,14 @@
-## 2026-11-05 - v3.268.0 - ESTADO DE AGORA - nome valido antes de dispensar formulario
+## 2026-11-05 - v3.269.0 - ESTADO DE AGORA - relato de perda e atendimento neutro
+
+A pedido do usuario, regra 11 e reforco no prompt passam a definir atendimento respeitoso,
+claro e sem finalidade eleitoral. Comentarios com a finalidade anterior foram identificados
+como orientacao substituida. Relato de dano climatico sem solicitacao nem sinais de perigo
+recebe acolhimento breve, sem formulario nem catalogo de orgaos. Pedido explicito e indicios
+de risco nao entram nessa excecao. Testes com texto ficticio, sem chamadas pagas ou envios.
+Detector textual conservador nao substitui avaliacao humana de emergencias. Validacao ao vivo
+pendente. Recarregue extensao e aba para 3.269.0.
+
+## 2026-11-05 - v3.268.0 - Estado anterior - nome valido antes de dispensar formulario
 
 Esclarecimento do usuario: a instrucao de pedir nome protege cadastros com emojis e telefones.
 A verificacao anterior aceitava qualquer trecho com duas letras. Agora reutiliza plausivelNome

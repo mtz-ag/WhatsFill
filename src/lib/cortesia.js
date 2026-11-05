@@ -3495,7 +3495,22 @@ const DESABAFO_DESILUSAO =
 const DESABAFO_POLITICA =
   /(^|[^a-z])(brasil|(o|nosso|este|esse|neste|nesse|do|no)\s+pais|politic[ao]s?|eleic(ao|oes)|eleitor|vot(ar|o|ei|amos|aram)|urna|oposicao|direita|esquerda|pt|lula|governo|congresso|stf|senado|deputad[oa]s?|presidente|o\s+poder|democracia|ladr(ao|oes)|mafia|corrupc\w*|covardes?|frouxos?)([^a-z]|$)/;
 
+/** Relato de dano climático, sem solicitação nem indicação de perigo atual. */
+export function relatoDePerdaSemPedido(entrantes, nossaUltimaAt) {
+  const t = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => !m?.sistema && !m?.anuncio)
+    .map((m) => semAcentos(m?.texto || '').toLowerCase()).join('\n');
+  const evento = /\b(granizo|temporal|enchente|vendaval|chuva|alagamento)\b/.test(t);
+  const perda = /\b(destruiu|destruiram|perdemos|perdi|prejuizo|estragou|danificou|devastou)\b/.test(t);
+  const pedido = /\?|\b(ajud\w*|precis\w*|socorro|solicito|telefone|contato|orient\w*|indeniza\w*|registr\w*|como faco|o que fazer|onde procuro|quem procurar)\b/.test(t);
+  const perigo = /\b(risco|perigo|pres[oa]s?|ilhados?|ferid[oa]s?|desaparecid[oa]s?|soterra\w*|resgate|agua subindo|nao consigo sair|nao conseguimos sair)\b/.test(t);
+  return evento && perda && !pedido && !perigo;
+}
+
 export function desabafoPessoal(entrantes, nossaUltimaAt) {
+  if (relatoDePerdaSemPedido(entrantes, nossaUltimaAt)) {
+    return { motivo: 'desabafo pessoal (relato de perda material)', perdaMaterial: true, politico: false };
+  }
   const t = desdeNossaUltima(entrantes, nossaUltimaAt)
     .filter((m) => !m?.sistema && !m?.anuncio)
     .map((m) => semAcentos(m?.texto || '').toLowerCase())

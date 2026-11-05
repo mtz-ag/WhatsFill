@@ -1792,43 +1792,14 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    confirmar e não escreva número nenhum — número errado manda o eleitor votar em outra pessoa.',
     '    **A colinha NÃO É MATERIAL:** não peça endereço, não fale em equipe de materiais e não',
     '    prometa entrega. A resposta é a lista, e ela cabe na própria mensagem.',
-    /**
-     * **Encaminhou ao órgão certo? PARE.** Regra dele (09/09/2026), com o print da Bia: o rascunho
-     * apontou o SINE e o Emprega Brasil — certo, é o que a resposta pronta dele faz — e **emendou**
-     * *"se quiser, eu anoto aqui que você busca panfletagem e posso te ajudar a montar um currículo
-     * rápido"*. Ele apagou:
-     *
-     * > *"só encaminhe pro órgão responsável, evite oferecer serviços fora da nossa alçada como
-     * > fazer currículo; isso faz a pessoa retornar várias vezes para pedir outras coisas e não é
-     * > nosso foco"*
-     *
-     * **A razão é operacional e é dele:** cada oferta dessas abre uma porta que alguém vai ter de
-     * atender depois, e o atendimento não tem braço. É a irmã do *"procure a coordenação"* (regra 7)
-     * com o sinal trocado — lá a porta prometida não existia, aqui ela existe e custa caro.
-     *
-     * **Fica no PROMPT e não vira trava** porque decidir se uma oferta está dentro da alçada exige
-     * saber qual é a alçada, e isso é julgamento: a disciplina deste arquivo é mecânico → conserto,
-     * verificável → aviso, o resto → prompt. Medido: o rascunho que saiu tinha **um aviso só, não
-     * bloqueante**, e `rascunhoPodeSairSozinho` devolvia **true**.
-     *
-     * **A última linha desta regra SAIU em 10/09/2026, por decisão dele.** Ela dizia *"se ela JÁ
-     * procurou o órgão e NÃO foi atendida, peça que ela conte o que aconteceu"* — eu a tirei da
-     * resposta pronta dele, e ela virou triagem. Print da Irema: uma preocupação com aposentadoria
-     * recebeu, sozinha e com zero avisos, *"você já deu entrada no INSS ou teve o benefício negado?
-     * Está faltando documentação, tem perícia marcada? Se você já tentou e não foi atendida, conte o
-     * que aconteceu que a gente vê como orientar. Fico no aguardo"*. Ele:
-     *
-     * > *"nós não somos um canal de resolução de problemas, a intenção é ganhar votos"*
-     *
-     * O que a mensagem faz agora é o que ele descreveu: a pessoa sai gostando do Capitão Martim, e o
-     * caso vai para quem resolve. **Ele não quis aviso** (*"quero que o comportamento da IA mude"*):
-     * a regra vai aqui, repetida no fim do bloco do contato, e as frases que convidavam a contar o
-     * caso SAÍRAM das respostas prontas que a IA lê como base (`semConviteAoCaso`).
-     */
-    '11. NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS — a conversa existe para a pessoa sair gostando',
-    `    ${ELE_E.de}, não para abrir um atendimento do caso dela. Diante de um problema pessoal`,
-    '    (INSS, aposentadoria, benefício, saúde, emprego, prefeitura): acolha em UMA frase, diga em UMA',
-    '    frase onde aquilo se resolve (INSS, SINE, CRAS, prefeitura, Defensoria) e agradeça a',
+    /** Em 05/11/2026, o usuario esclareceu: este e um canal de atendimento.
+ * A orientacao anterior foi substituida por acolhimento respeitoso, sem finalidade eleitoral.
+ * Encaminhamento depende de solicitacao; relato de dificuldade nao e pedido por si so.
+ */
+    '11. CANAL DE ATENDIMENTO: acolha com respeito e clareza, sem finalidade eleitoral.',
+    '    Diferencie relato de pedido. Relatar uma dificuldade não é solicitar encaminhamento.',
+    '    Se houver pedido de orientação (INSS, benefício, emprego, prefeitura), acolha e indique',
+    '    o serviço pertinente, com informações verificadas, e agradeça a',
     '    confiança. **E PARE.** Nada de perguntas sobre o caso ("já deu entrada?", "foi negado?", "tem',
     '    perícia?"), nada de "conte o que aconteceu", "me explica melhor", "para eu te orientar",',
     '    "fico no aguardo", "a gente vê como resolver". Não ofereça fazer nada por ela: nada de montar',
@@ -2862,6 +2833,7 @@ export function linhaDaDesilusao({ cargoPerguntado = false, candidato = null } =
 }
 
 export function linhaDoDesabafo(d, { cargoPerguntado = false, candidato = null } = {}) {
+  if (d?.perdaMaterial) return 'RELATO DE PERDA, SEM PEDIDO: acolha brevemente e reconheça a dificuldade, sem repetir os detalhes. Não acrescente instruções, órgãos, telefones, links, cadastro ou perguntas. Não tome o relato como solicitação. Se houver evidência de perigo imediato, priorize segurança em vez desta orientação de brevidade.';
   if (d?.politico) return linhaDaDesilusao({ cargoPerguntado, candidato });
   return [
     `DESABAFO PESSOAL (${String(d?.motivo || '').replace(/^desabafo pessoal \(|\)$/g, '')}): responda com CALOR, como quem se importa de verdade — `,
@@ -3503,16 +3475,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'não perguntou disso. Só explique a transição se ela perguntar da secretaria, da posse ou de 2027.'
       : '',
     desabafo ? linhaDoDesabafo(desabafo, { cargoPerguntado, candidato }) : '',
-    /**
-     * **A regra 11, colada no pedido** — print da Irema (10/09/2026): *"nós não somos um canal de
-     * resolução de problemas, a intenção é ganhar votos"*. No sistema ela está a milhares de tokens
-     * daqui, e regra longe do ponto em que o modelo escreve não é cumprida (07/09). Desabafo não
-     * entra: quem conta uma briga recebe carinho, não despacho.
-     */
+    /** Em 05/11/2026, o usuario esclareceu: este e um canal de atendimento.
+ * A orientacao anterior foi substituida por acolhimento respeitoso, sem finalidade eleitoral.
+ * Encaminhamento depende de solicitacao; relato de dificuldade nao e pedido por si so.
+ */
     trouxeProblema && !desabafo
-      ? 'NÃO SOMOS CANAL DE RESOLUÇÃO DE PROBLEMAS: ela trouxe um problema — acolha em uma frase, diga ' +
+      ? 'ATENDIMENTO RESPONSÁVEL: acolha o relato. Só se houver pedido explícito de orientação, diga ' +
         'onde aquilo se resolve e agradeça a confiança, sem perguntas sobre o caso, sem pedir que ela ' +
-        `conte mais e sem "fico no aguardo". A mensagem é para ela sair gostando ${ELE_E.de}.`
+        'conte mais e sem prometer ações fora das atribuições do atendimento.'
       : '',
     /**
      * **SAÚDE: a exceção, colada na regra que a excepciona** (17/09/2026). A linha de cima é a razão de
@@ -3591,7 +3561,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * das três opções mandava variar *"fechar ou não com pergunta"*, e para fechar com pergunta sem ter
      * o que perguntar o modelo inventa uma oferta. Vale nos dois modos, então fica fora do ternário.
      */
-    orgaos
+    orgaos && !desabafo?.perdaMaterial
       ? `${String(orgaos).trim()}\n` +
         'Regra 20: COPIE o contato do órgão certo exatamente como está acima — nenhum outro número. Não prometa ' +
         'encaminhar nada ao órgão nem ao governador, e se o assunto é do órgão, NÃO ofereça passar nada para o ' +
@@ -3845,21 +3815,9 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
   sopraRepeticao: 'o rascunho só repete a nossa última mensagem — não há nada novo nele',
 };
 
-/**
- * **As frases que abrem um atendimento do caso** — print da Irema (10/09/2026). Uma preocupação com
- * aposentadoria recebeu *"você já deu entrada no INSS ou teve o benefício negado?… Se você já tentou e
- * não foi atendida, conte o que aconteceu que a gente vê como orientar. Fico no aguardo"*. Ele: *"nós
- * não somos um canal de resolução de problemas, a intenção é ganhar votos"* — e, perguntado por aviso,
- * *"eu não quero aviso, quero que o comportamento da IA mude"*.
- *
- * **De onde veio, medido:** da última linha da regra 11, escrita por mim (*"peça que ela conte o que
- * aconteceu"*). As respostas prontas `pedido-ajuda` e `pedido-emprego` também terminam com *"me conta o
- * que aconteceu. Aí sim é trabalho nosso"* — mas os exemplos entram cortados em 500 caracteres e essa
- * frase fica DEPOIS do corte: a IA nunca a leu ali. Tirá-la dos exemplos é **garantia**, para o dia em
- * que o corte mudar ou uma resposta pronta curta disser o mesmo; o texto pronto dele fica intocado.
- *
- * **O que fica é o CONVITE, não a pergunta:** *"em que podemos ajudar?"* é a pergunta certa para quem
- * não disse o que quer, e continua lá.
+/** Em 05/11/2026, o usuario esclareceu: este e um canal de atendimento.
+ * A orientacao anterior foi substituida por acolhimento respeitoso, sem finalidade eleitoral.
+ * Encaminhamento depende de solicitacao; relato de dificuldade nao e pedido por si so.
  */
 const CONVIDA_A_CONTAR_O_CASO = [
   /(^|[^\p{L}])trabalho\s+nosso/iu,

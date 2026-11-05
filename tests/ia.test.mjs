@@ -1929,7 +1929,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
 
   const prompt = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
 
-  check(/^11\. NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS/m.test(prompt), 'a regra 11 existe');
+  check(/^11\. CANAL DE ATENDIMENTO/m.test(prompt), 'a regra 11 existe');
   check(/montar\s+currículo/.test(prompt), 'e nomeia o curriculo, que foi o exemplo dele');
   check(/eu anoto aqui/.test(prompt), 'e o "eu anoto aqui" que saiu na mensagem');
   check(/não tem braço/.test(prompt), 'com a razao dele: o atendimento nao tem braco');
@@ -1953,7 +1953,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * ESTRUTURAL, nunca uma fracao do arquivo inteiro.
    */
   const linhas = prompt.split('\n');
-  const onze = linhas.findIndex((l) => /^11\. NÃO SOMOS UM CANAL/.test(l));
+  const onze = linhas.findIndex((l) => /^11\. CANAL DE ATENDIMENTO/.test(l));
   const fimDoPadrao = linhas.findIndex((l) => /item 22 do padrão/.test(l));
   check(onze > 0, 'a regra 11 existe');
   check(onze > linhas.findIndex((l) => /^1\. /.test(l)), 'ela esta dentro do bloco das regras numeradas');
@@ -2296,7 +2296,7 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
   check(/infelizmente não estamos\s+contratando/.test(p), 'e o jeito dele esta escrito como modelo');
   check(/impressão de que existe chance/.test(p), 'e proibe insinuar chance');
   check(/contratações são limitadas/.test(p), 'com a frase do caso escrita');
-  const i11 = p.indexOf('11. NÃO SOMOS UM CANAL');
+  const i11 = p.indexOf('11. CANAL DE ATENDIMENTO');
   const i12 = p.indexOf('12. QUEM QUER TRABALHAR');
   check(i11 >= 0 && i12 > i11 && i12 < p.indexOf('TAMANHO:'), 'a regra 12 vem logo depois da 11, antes do TAMANHO');
 
@@ -2405,11 +2405,11 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
     'Sinto muito. Obrigado pela confianca.', 'sai a frase inteira, e as vizinhas ficam');
 
   /** **A regra, nos dois lugares:** no sistema e colada no pedido, onde o modelo escreve. */
-  check(/NÃO SOMOS UM CANAL DE RESOLUÇÃO DE PROBLEMAS/.test(p), 'o prompt de sistema diz com as palavras dele');
-  check(/gostando\s+do Capitão Martim/.test(p), 'e para que a conversa serve');
+  check(/CANAL DE ATENDIMENTO/.test(p), 'o prompt de sistema diz com as palavras dele');
+  check(p.includes('sem finalidade eleitoral'), 'objetivo é atendimento, sem finalidade eleitoral');
   const c = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'estou preocupada com a aposentadoria' }] });
   const linhas = c.split('\n');
-  const regra = linhas.findIndex((l) => l.startsWith('NÃO SOMOS CANAL'));
+  const regra = linhas.findIndex((l) => l.startsWith('ATENDIMENTO RESPONSÁVEL'));
   // Colada no pedido: entre ela e o pedido pode haver outras regras do fim do bloco (a de NAO OFERECER
   // entrou ali em 16/09/2026) — o que se protege e a distancia do ponto em que o modelo escreve.
   // Medido contra a linha do PEDIDO, e nao contra o fim do arquivo (a licao do teste de proporcao).
@@ -3286,13 +3286,13 @@ grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
   const sistema = montarSistemaRascunho({});
   check(/EXCEÇÃO — SAÚDE/.test(sistema), 'a excecao esta no sistema');
   const linhas11 = sistema.split('\n');
-  const regra11 = linhas11.findIndex((l) => /^11\. NÃO SOMOS UM CANAL/.test(l));
+  const regra11 = linhas11.findIndex((l) => /^11\. CANAL DE ATENDIMENTO/.test(l));
   const excecao = linhas11.findIndex((l) => /EXCEÇÃO — SAÚDE/.test(l));
   check(regra11 >= 0 && excecao > regra11 && excecao - regra11 <= 10, 'e COLADA na regra que ela excepciona');
 
   const doente = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Boa tarde, estou doente e preciso de ajuda' }] });
   const l = doente.split('\n');
-  const iCanal = l.findIndex((x) => x.startsWith('NÃO SOMOS CANAL'));
+  const iCanal = l.findIndex((x) => x.startsWith('ATENDIMENTO RESPONSÁVEL'));
   const iSaude = l.findIndex((x) => x.startsWith('SAÚDE — EXCEÇÃO'));
   check(iCanal >= 0 && iSaude === iCanal + 1, 'no bloco do contato a excecao vem logo depois da regra');
   check(/PERGUNTE o que está acontecendo/.test(doente), 'e manda perguntar o que ela tem');
@@ -3344,9 +3344,9 @@ grupo('a janta pela campanha nao recebe CRAS (17/09/2026)');
   check(/NADA de CRAS, assistência social, Cadastro Único/.test(janta), 'e proibe o CRAS com todas as letras');
   check(/não temos como contribuir com isso — sem citar lei/.test(janta.replace(/\s+/g, ' ')), 'e diz o que responder');
   check(/passo o convite para o responsável pela agenda/.test(janta), 'o repasse do convite e a unica promessa que cabe');
-  check(!/NÃO SOMOS CANAL/.test(janta), 'e a regra 11 NAO entra: apoio nao e problema pessoal');
+  check(!/ATENDIMENTO RESPONSÁVEL/.test(janta), 'e a regra 11 NAO entra: apoio nao e problema pessoal');
   check(!/DINHEIRO —/.test(janta), 'nem a regra do dinheiro');
-  check(/NÃO SOMOS CANAL/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim' }] })),
+  check(/ATENDIMENTO RESPONSÁVEL/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'faz um pix pra mim' }] })),
     'quem pede dinheiro de verdade continua com a regra 11');
 }
 

@@ -185,4 +185,17 @@ const APROVADA =
     check(ia.pedidoDeCadastroDoRascunho([], { Nome, Cidade: 'Canoas' }) === '', `preserva nome válido: ${Nome}`);
   }
 }
+{
+  grupo('relato de prejuízo climático não é pedido de orientação');
+  const relato = 'Aqui no interior o granizo destruiu muitas parreiras e lavouras e nos municípios vizinhos também';
+  check(cortesia.desabafoPessoal(so(relato), null)?.perdaMaterial, 'relato é desabafo de perda material');
+  const prompt = ia.montarContatoRascunho({ mensagens: [{ de: 'contato', texto: relato }], pedirDados: true, orgaos: 'CATALOGO_DE_TESTE' });
+  check(prompt.includes('RELATO DE PERDA, SEM PEDIDO'), 'orienta acolhimento breve');
+  check(!prompt.includes('CATALOGO_DE_TESTE'), 'não oferece catálogo de órgãos sem solicitação');
+  check(!prompt.includes(ia.PEDIDO_DE_DADOS_NO_RASCUNHO), 'não inclui formulário no desabafo');
+  for (const extra of ['Como faço para registrar os danos?', 'Preciso de ajuda', 'A água está subindo e não consigo sair', 'Há pessoas feridas', 'Estamos em perigo']) {
+    check(!cortesia.relatoDePerdaSemPedido(so(relato, extra), null), `preserva orientação ou segurança: ${extra}`);
+  }
+  check(!cortesia.relatoDePerdaSemPedido(so(relato), at('15:30')), 'relato antigo não controla a resposta atual');
+}
 fim();
