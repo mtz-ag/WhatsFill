@@ -1,4 +1,86 @@
-## 2026-11-05 - v3.270.0 - ESTADO DE AGORA - titulo da conversa no cadastro do rascunho
+## 2026-11-05 - v3.271.0 - ESTADO DE AGORA - desejar sucesso tambem e carinho
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.271.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.271.0** na linha pequena do topo do painel
+4. Abra uma conversa de felicitacao pelo cargo novo: a previsao nao pode mais dizer que a IA nao
+   achou o que responder
+
+### A SUA PERGUNTA: POR QUE A IA NAO ACHOU ALGO NUMA MENSAGEM DE AGRADECER
+
+**Porque nao era um agradecimento**, e eu medi antes de consertar:
+
+```
+soAgradeceOuElogia ... null   <- NULL ate cortando o texto em 200 caracteres
+soExpressaApoio ...... null       nenhuma das cinco formas de agradecer casa
+desabafoPessoal ...... null
+semInteresse ......... null
+falouAlgoProprio ..... casou  <- o unico, e e ele que leva a tecla 6
+```
+
+A mensagem **nunca diz "obrigado" nem "parabens"**. Ela diz *"tenho plena confianca"*, *"sucesso
+nessa nova missao"*, *"um forte abraco"* — **voto de bem**, e o projeto inteiro nao tinha nada
+para essa classe. **Ela ficou comum agora:** o anuncio da Defesa Civil (29/10) passou a trazer
+felicitacao pelo cargo todos os dias.
+
+**E a IA cumpriu a regra ao pe da letra.** A regra 16 diz *"quando a fala dela nao pede nada E nao
+da para saber a que se refere"* — e **felicitacao cumpre a primeira metade sempre**. Nada dizia
+que carinho tem resposta.
+
+### O QUE MUDOU
+
+| o caso | antes | agora |
+|---|---|---|
+| felicitacao pelo cargo | a IA se abstem, vai para a sua mao | carinho: a IA escreve um obrigado curto |
+| desejar sucesso, torcer, "bem merecido" | nao contava | conta |
+| o corte de 200 caracteres | descartava toda felicitacao | **saiu** — felicitacao e longa |
+| *"nao tive sucesso no INSS"* | — | continua fora: e exito, nao voto |
+
+**O teto de 200 era a guarda errada.** O que ele protegia de verdade era o desabafo que abre
+agradecendo (a Cris, 02/09), e isso tem detector proprio. No lugar entraram tres guardas que
+dizem o que o tamanho so insinuava: desabafo, denuncia/corrente e hostilidade.
+
+**E o detector de APOIO nao foi alargado**, de proposito: la o desfecho e agradecer o apoio **e
+concluir**, e a sua medicao de 06/09 (15 falsos em 19) continua valendo. Aqui o sinal **nunca
+envia e nunca conclui** — ele so impede a mensagem do dia e pede um obrigado curto. A mesma
+palavra decide num lugar e nao no outro porque o preco de errar e outro.
+
+### O QUE ACHEI E NAO FIZ (e decisao sua)
+
+- **Elogio ironico** (*"Parabens mesmo, voces so aparecem na eleicao"*) entra como carinho — e
+  **ja entrava antes desta mudanca**. Nao mexi: detectar ironia por texto e a lista que nao
+  fecha, e o detector de hostilidade devolve null nela (criticar NOS nao e hostilidade pelas
+  guardas de 01/09). O custo e limitado: o sinal nao envia e nao conclui.
+
+### E UMA COISA DESTA PASTA
+
+Havia uma **v3.270.0 pronta e nao commitada** de outra sessao aqui, escrita as 10:48 (o titulo da
+conversa respondendo a cidade no rascunho). Voce mandou commitar, e ela esta no ar. **Eu conferi
+as 43 suites, os dois verificadores e a cadeia do campo novo ate o painel — nao revisei linha a
+linha**, e a entrada dela diz que a hipotese do caso real nao foi validada ao vivo.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+A validacao ao vivo do titulo da conversa (da v3.270.0); o painel esvaziar 3 a 4 segundos a cada
+troca de conversa; o falso positivo antigo do `desvio` (rota x verba); conversa sem `contato_id`
+fora da fila; otimizacao do dossie por secao; consulta exata de etiquetas.
+
+### O QUE FOI CONFERIDO
+
+**43 suites**, `checar-modulos` e `checar-referencias` limpos. **Bateria de 17 casos: 16 certas**
+(a que sobra e o elogio ironico, que ja errava). **A prova de cada peca e o defeito
+reintroduzido:** com o teto de 200 de volta caem 2 assercoes; sem os votos de bem, 5; sem a
+guarda do "sucesso" de exito, 2; sem a do desabafo, 1; sem a da denuncia, 1.
+**Nenhuma rodada foi iniciada, nenhuma mensagem saiu, nenhuma chamada paga de IA foi feita e
+nenhum nome ou telefone de eleitor entrou em arquivo do repositorio** — o teste usa nome ficticio.
+
+## 2026-11-05 - v3.270.0 - Estado anterior - titulo da conversa no cadastro do rascunho
 
 A correcao anterior olhava apenas o nome de base_dados. O titulo da conversa e outra fonte:
 mob.conversaDoBanco lia nome, mas api-mob.getSession o descartava. Agora contactDisplayName
