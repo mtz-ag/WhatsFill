@@ -16582,6 +16582,13 @@ const CONTATOS_POR_PAGINA = 200;
       const casa = iaLib.NOME_DO_PROVEDOR[iaLib.provedorDoModelo(modeloDoRascunho())];
       return { ok: false, enviado: false, motivo: `não há chave da ${casa} (modelo do rascunho: ${modeloDoRascunho()}) na aba Config` };
     }
+    // Reutiliza o parser de cidade do cadastro; serve para evitar perguntas repetidas,
+    // sem confirmar nem gravar a cidade inferida no CRM.
+    const cadastroSeparado = await cities.splitCidadeNome(state.contact?.name || '');
+    const camposCadastroRascunho = {
+      Nome: valueNamed('Nome') || cadastroSeparado?.nome || state.contact?.name || '',
+      Cidade: valueNamed('Cidade') || cadastroSeparado?.cidade || '',
+    };
     const dela = mensagensParaIA();
     if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
@@ -16670,7 +16677,7 @@ const CONTATOS_POR_PAGINA = 200;
          * O nome vai para a IA **saber que já o tem**, não para usar: a regra de não chamar a
          * pessoa pelo nome continua no prompt de sistema, e é decisão dele de 10/08.
          */
-        campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
+        campos: camposCadastroRascunho,
         pedirDados: pedirDadosNoRascunho,
         /**
          * **Ela declarou apoio?** (05/11/2026, o Paulo César: compartilhou um post político e
@@ -16917,7 +16924,7 @@ const CONTATOS_POR_PAGINA = 200;
      */
     const pedidoCadastro = iaLib.pedidoDeCadastroDoRascunho(
       conversaParaIA(),
-      { Cidade: valueNamed('Cidade') },
+      camposCadastroRascunho,
       { cidadeNoTexto: state.cidadeInformada?.confidence === 'exata' }
     );
     if (!escolhida?.naoCabePedirOCadastro && pedidoCadastro !== iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO) {

@@ -167,4 +167,12 @@ const APROVADA =
   const templates = await lib('templates.js');
   check(templates.ehPedidoDeDados(ia.pedidoDeCadastroDoRascunho(conversa)), 'pedido parcial continua reconhecível no histórico');
 }
+{
+  grupo('cadastro existente dispensa repetir dados');
+  const campos = { Nome: 'Carlos Almeida [Evento]', Cidade: 'Canoas' };
+  check(ia.pedidoDeCadastroDoRascunho([], campos) === '', 'nome e cidade do cadastro dispensam formulário');
+  check(ia.pedidoDeCadastroDoRascunho([], { Nome: 'Carlos Almeida' }).includes('qual cidade'), 'nome cadastrado: pede só cidade');
+  check(ia.pedidoDeCadastroDoRascunho([], { Nome: '5551999999999', Cidade: 'Canoas' }).includes('seu nome'), 'telefone não é nome');
+  check(ia.pedidoDeCadastroDoRascunho([{ de: 'contato', texto: 'Estou com o telefone do Carlos' }], campos).includes('seu nome'), 'titular não substitui identidade de quem pegou telefone emprestado');
+}
 fim();

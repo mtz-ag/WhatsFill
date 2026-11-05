@@ -1,4 +1,12 @@
-## 2026-11-05 - v3.266.0 - ESTADO DE AGORA - a fila de "Novos" voltava vazia com gente esperando
+## 2026-11-05 - v3.267.0 - ESTADO DE AGORA - cadastro no pedido de dados
+
+A verificacao ignorava campos.Nome e o piso recebia apenas Cidade. Prompt e complemento
+agora compartilham Nome e Cidade, com leitura do formato Cidade - Nome pelo parser existente.
+Essa leitura nao grava cidade no CRM. Nome numerico nao basta; indicacao de telefone emprestado
+impede usar o titular como identidade do interlocutor. Testes com dados ficticios.
+Recarregue extensao e aba do Mobiliza. Validacao ao vivo ainda pendente; nenhum envio executado.
+
+## 2026-11-05 - v3.266.0 - Estado anterior - a fila de "Novos" voltava vazia com gente esperando
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.266.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma

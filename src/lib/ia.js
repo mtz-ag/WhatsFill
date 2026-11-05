@@ -2455,7 +2455,12 @@ const PEDIDO_SO_DO_NOME =
 
 export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}, { cidadeNoTexto = false } = {}) {
   const temCidade = !!String(campos.Cidade || '').trim() || !!cidadeNoTexto;
-  if (!nomeApresentado(mensagens)) return temCidade ? PEDIDO_SO_DO_NOME : PEDIDO_DE_DADOS_NO_RASCUNHO;
+  const outroFalante = mensagens.some((m) => m.de !== 'nos' &&
+    /(?:usando|com) (?:o )?(?:telefone|celular) (?:do|da|de)|(?:telefone|celular) do meu marido/i.test(m.texto || ''));
+  const nomeCadastro = String(campos.Nome || '').replace(/\[[^\]]*\]/g, '').trim();
+  const temNomeCadastro = !outroFalante && /\p{L}{2}/u.test(nomeCadastro) &&
+    !/^(?:sem nome|desconhecido|contato|novo|cliente)$/i.test(nomeCadastro);
+  if (!nomeApresentado(mensagens) && !temNomeCadastro) return temCidade ? PEDIDO_SO_DO_NOME : PEDIDO_DE_DADOS_NO_RASCUNHO;
   return temCidade ? '' : PEDIDO_SO_DA_CIDADE;
 }
 
@@ -3254,9 +3259,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     pedirDados && pedidoDeCadastroDoRascunho(lista, campos, { cidadeNoTexto })
       ? [
           'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
-          'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
-          'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
-          'reconhece que o pedido saiu.',
+          'mensagem com este bloco, copiado exatamente assim (sem reescrever). Ele pede somente os',
+          'dados faltantes. Não acrescente pedido de nome ou cidade que já constam no cadastro.',
           '',
           pedidoDeCadastroDoRascunho(lista, campos, { cidadeNoTexto }),
           '',

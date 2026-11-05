@@ -749,12 +749,12 @@ grupo('o rascunho nao pode se apresentar de novo (05/09/2026)');
   const conversa = [{ de: 'contato', texto: 'Sou policial militar da reserva' }];
 
   const pedindo = montarContatoRascunho({ mensagens: conversa, campos: { Nome: 'Vacenton Salinas' }, agora, pedirDados: true });
-  check(pedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO), 'o prompt manda copiar o formulario, literal');
-  check(/copie-o inteiro mesmo/.test(pedindo.replace(/\s+/g, ' ')),
-    'e diz para copiar mesmo com o nome conhecido -- senao os dois blocos se contradizem');
+  check(!pedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO) && pedindo.includes('de qual cidade você é.'), 'nome cadastrado: prompt pede somente cidade');
+  check(/dados faltantes/.test(pedindo.replace(/\s+/g, ' ')),
+    'orienta a pedir apenas dados faltantes');
 
   // O treino saiu (18/09/2026): o rascunho e um so, e o bloco do cadastro e obrigatorio nele.
-  check(pedindo.includes(PEDIDO_DE_DADOS_NO_RASCUNHO) && !/PELO MENOS UMA|das três/.test(pedindo),
+  check(pedindo.includes('de qual cidade você é.') && !/PELO MENOS UMA|das três/.test(pedindo),
     'o bloco do cadastro e obrigatorio, sem ressalva de tres opcoes');
   check(/Depois de responder o que ela escreveu, FECHE a/.test(pedindo), 'com o texto de antes');
 
