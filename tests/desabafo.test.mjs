@@ -10,7 +10,7 @@
  * Rode: node tests/desabafo.test.mjs
  */
 import { readFileSync } from 'node:fs';
-import { check, grupo, fim, lib } from './_harness.mjs';
+import { check, grupo, fim, lib, mem } from './_harness.mjs';
 
 const ia = await lib('ia.js');
 const cortesia = await lib('cortesia.js');
@@ -197,5 +197,20 @@ const APROVADA =
     check(!cortesia.relatoDePerdaSemPedido(so(relato, extra), null), `preserva orientação ou segurança: ${extra}`);
   }
   check(!cortesia.relatoDePerdaSemPedido(so(relato), at('15:30')), 'relato antigo não controla a resposta atual');
+}
+{
+  grupo('cidade só no título da conversa chega ao pedido de cadastro');
+  mem.municipios = Object.keys(JSON.parse(ler('src/data/coredes-rs.json')).municipios);
+  const cities = await lib('cities.js');
+  const campos = await cities.cadastroParaRascunho({ nome: 'Carlos Almeida [Evento]', nomeContato: 'Carlos Almeida [Evento]', tituloConversa: 'Viamão – Carlos Almeida [Evento]' });
+  check(campos.Cidade === 'Viamão', 'recupera cidade do título quando contato só tem nome');
+  check(ia.pedidoDeCadastroDoRascunho([], campos) === '', 'caminho completo não pede cidade nem nome');
+  const completo = await cities.cadastroParaRascunho({ nome: 'Carlos Almeida', cidade: 'Canoas', tituloConversa: 'Viamão – Carlos Almeida' });
+  check(completo.Cidade === 'Canoas', 'campo explícito prevalece sobre título');
+  const semCidade = await cities.cadastroParaRascunho({ nomeContato: 'Carlos Almeida', tituloConversa: 'Evento – Carlos Almeida' });
+  check(!semCidade.Cidade, 'não trata qualquer prefixo como município');
+  const adaptador = ler('src/lib/api-mob.js');
+  check(adaptador.includes('contactDisplayName: c.nome'), 'adaptador preserva título da conversa');
+  check(ler('src/panel/panel.js').includes("tituloConversa: state.session?.contactDisplayName || ''"), 'painel entrega título ao parser');
 }
 fim();

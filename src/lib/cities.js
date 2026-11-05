@@ -1173,3 +1173,14 @@ export async function linkFor(city) {
     reason: 'Sem link do grupo — preencha "Link do grupo" na aba Config.',
   };
 }
+
+/** Dados disponíveis para evitar repetir perguntas; não confirma nem grava cadastro. */
+export async function cadastroParaRascunho({ nome = '', cidade = '', nomeContato = '', tituloConversa = '' } = {}) {
+  const doContato = await splitCidadeNome(nomeContato);
+  const daConversa = doContato?.cidade ? null : await splitCidadeNome(tituloConversa);
+  const separado = doContato || daConversa;
+  return {
+    Nome: nome || separado?.nome || nomeContato || '',
+    Cidade: cidade || separado?.cidade || '',
+  };
+}

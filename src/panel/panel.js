@@ -16584,11 +16584,12 @@ const CONTATOS_POR_PAGINA = 200;
     }
     // Reutiliza o parser de cidade do cadastro; serve para evitar perguntas repetidas,
     // sem confirmar nem gravar a cidade inferida no CRM.
-    const cadastroSeparado = await cities.splitCidadeNome(state.contact?.name || '');
-    const camposCadastroRascunho = {
-      Nome: valueNamed('Nome') || cadastroSeparado?.nome || state.contact?.name || '',
-      Cidade: valueNamed('Cidade') || cadastroSeparado?.cidade || '',
-    };
+    const camposCadastroRascunho = await cities.cadastroParaRascunho({
+      nome: valueNamed('Nome'),
+      cidade: valueNamed('Cidade'),
+      nomeContato: state.contact?.name || '',
+      tituloConversa: state.session?.contactDisplayName || '',
+    });
     const dela = mensagensParaIA();
     if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };

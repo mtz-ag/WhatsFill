@@ -1,4 +1,14 @@
-## 2026-11-05 - v3.269.0 - ESTADO DE AGORA - relato de perda e atendimento neutro
+## 2026-11-05 - v3.270.0 - ESTADO DE AGORA - titulo da conversa no cadastro do rascunho
+
+A correcao anterior olhava apenas o nome de base_dados. O titulo da conversa e outra fonte:
+mob.conversaDoBanco lia nome, mas api-mob.getSession o descartava. Agora contactDisplayName
+preserva o titulo e o rascunho usa Cidade - Nome dele como fallback, com municipio validado.
+Campo explicito prevalece. Nao grava nem confirma cidade no CRM. Teste com titulo contendo
+Viamão e contato sem cidade percorre composicao ate decidir nao pedir formulario.
+Sem envio ou chamada paga. Hipotese do caso real baseada na diferenca visivel entre titulos;
+validacao ao vivo pendente. Recarregue extensao e aba para 3.270.0.
+
+## 2026-11-05 - v3.269.0 - Estado anterior - relato de perda e atendimento neutro
 
 A pedido do usuario, regra 11 e reforco no prompt passam a definir atendimento respeitoso,
 claro e sem finalidade eleitoral. Comentarios com a finalidade anterior foram identificados

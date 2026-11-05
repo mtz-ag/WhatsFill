@@ -82,6 +82,7 @@ export async function getSession(conversaId) {
   return {
     id: c.id,
     contactId: c.contatoId,
+    contactDisplayName: c.nome,
     channelId: c.canalId,
     status: c.status,
     userId: c.atendenteId,
