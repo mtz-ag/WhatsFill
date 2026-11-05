@@ -23,7 +23,9 @@ import {
   conversaDoBanco,
   ehGrupo,
   filtroDaAba,
+  SO_PESSOAS,
 } from '../src/lib/mob.js';
+import { readFileSync } from 'node:fs';
 
 grupo('a sessao do Supabase: so o que da para trabalhar');
 {
@@ -267,6 +269,84 @@ grupo('converter DUAS vezes APAGA a conversa — e a guarda que faz isso esta ce
   check(ehGrupo({}) === true, 'endereco de chat ilegivel conta como grupo, de proposito');
   check(ehGrupo({ external_chat_id: '123@g.us' }) === true, 'e @g.us e grupo de verdade');
   check(ehGrupo({ external_chat_id: '123@s.whatsapp.net' }) === false, 'pessoa nao e');
+}
+
+grupo('so PESSOA entra na fila, e quem peneira e a CONSULTA (05/11/2026)');
+{
+  /**
+   * **A fila de "Novos" voltava VAZIA com 27 pessoas escritas no botao da propria tela.**
+   *
+   * O grupo era descartado DEPOIS da leitura, e a consulta pedia uma janela de 49 linhas
+   * ordenada por `ultima_mensagem_em`. Medido na base dele:
+   *
+   * ```
+   * status=aberto .... 360   ->   @g.us 145 | @lid 206 | @s.whatsapp.net 8 | @newsletter 1
+   * das 49 primeiras: 48 eram grupo, sobrava 1
+   * ```
+   *
+   * **Aumentar a folga so adia:** grupo e a conversa mais barulhenta que existe, e sao 145.
+   */
+  const tenantId = 't-1';
+  const consulta = url('conversas', {
+    tenantId,
+    filtros: { ...SO_PESSOAS, ...filtroDaAba('Novos').filtros },
+    ordem: 'ultima_mensagem_em.desc.nullslast',
+    limite: 49,
+  });
+
+  check(consulta.includes(encodeURIComponent('not.like.*@g.us')), 'grupo fica de fora na propria consulta');
+  check(consulta.includes(encodeURIComponent('not.like.*@newsletter')), 'canal de transmissao tambem');
+  check(consulta.includes('contato_id=' + encodeURIComponent('not.is.null')), 'e so conversa COM cadastro entra');
+  check(consulta.includes('status=' + encodeURIComponent('eq.aberto')), 'o filtro da aba continua valendo por cima');
+
+  /**
+   * **O `@lid` e o endereco NOVO do WhatsApp, e `ehGrupo` o deixa passar — de proposito.**
+   * Pelo endereco ele e PESSOA. Quem o tira da fila e o `contato_id`, porque medido: 205 das 206
+   * conversas `@lid` da base dele nao tem cadastro nenhum, `ultima_direcao` e saida ou nula, e
+   * **nenhuma delas aparece na tela dele**. Sem essa segunda metade, consertar so a ordem poria
+   * 206 conversas que ele nunca viu na fila da rodada.
+   */
+  check(ehGrupo({ external_chat_id: '12345@lid' }) === false, '@lid nao e grupo: pelo endereco e pessoa');
+  check(SO_PESSOAS.contato_id === 'not.is.null', 'e e o contato_id que o tira da fila, nao o ehGrupo');
+
+  /**
+   * **A regra do `contato_id` nao foi deduzida: e a que a plataforma usa.** O modulo da fila dela
+   * monta a consulta com `...contato_id_fkey!inner(...)` — junta INTERNA com `base_dados` —, e a
+   * contagem reproduziu a RPC da tela campo a campo (aberto 9, em atendimento 268, minhas 50).
+   */
+  const campos = Object.keys(SO_PESSOAS).sort().join(',');
+  check(campos === 'contato_id,external_chat_id', 'sao duas condicoes e so duas: endereco e cadastro');
+
+  /**
+   * **O `ehGrupo` NAO saiu de `fila`**, e nao sai: a consulta e texto numa URL, e protecao que o
+   * servidor passou a fazer nao se apaga do cliente. Ele e a segunda linha do "na duvida, e grupo".
+   */
+  const fonte = readFileSync(new URL('../src/lib/mob.js', import.meta.url), 'utf8');
+  const corpoDaFila = fonte.slice(fonte.indexOf('export async function fila('));
+  const ateOFim = corpoDaFila.slice(0, corpoDaFila.indexOf('\n}'));
+  check(ateOFim.includes('...SO_PESSOAS'), 'a fila leva SO_PESSOAS na consulta');
+  check(ateOFim.includes("filter((c) => !c.grupo)"), 'e continua peneirando por ehGrupo depois de ler');
+}
+
+grupo('o MESMO campo com duas condicoes: lista no filtro');
+{
+  /**
+   * Objeto nao tem chave repetida, e `external_chat_id` precisa de DUAS negacoes. O PostgREST
+   * recebe o par repetido na query — e e assim que a propria plataforma monta.
+   */
+  const tenantId = 't-1';
+  const u = url('conversas', { tenantId, filtros: { external_chat_id: ['not.like.*@g.us', 'not.like.*@newsletter'] } });
+  const quantos = (u.match(/external_chat_id=/g) || []).length;
+  check(quantos === 2, 'uma lista de duas condicoes vira DOIS pares na consulta');
+
+  const comVazio = url('conversas', { tenantId, filtros: { external_chat_id: ['not.like.*@g.us', '', null] } });
+  check((comVazio.match(/external_chat_id=/g) || []).length === 1, 'item vazio da lista nao entra, como ja valia para o valor solto');
+
+  check(!url('conversas', { tenantId, filtros: { instance_id: [] } }).includes('instance_id'),
+    'lista vazia e o mesmo que filtro nenhum: a fila inteira, nunca a fila de canal nenhum');
+
+  const solto = url('conversas', { tenantId, filtros: { status: 'eq.aberto' } });
+  check(solto.includes('status=' + encodeURIComponent('eq.aberto')), 'e o valor solto continua entrando como sempre entrou');
 }
 
 fim();

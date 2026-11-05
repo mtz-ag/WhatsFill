@@ -1,8 +1,85 @@
-## 2026-11-05 - v3.265.0 - ESTADO DE AGORA - o que a simulacao de 10 conversas encontrou
+## 2026-11-05 - v3.266.0 - ESTADO DE AGORA - a fila de "Novos" voltava vazia com gente esperando
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
-> **3.265.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> **3.266.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
 > segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.266.0** na linha pequena do topo do painel
+4. Aperte **"Comecar pelos Novos"**: a fila tem de trazer o mesmo numero que o botao **Novos** da
+   plataforma escreve ao lado
+
+### O QUE ESTAVA ERRADO, MEDIDO NA SUA BASE ANTES DE MEXER
+
+A rodada encerrava com *"a fila de Novos veio VAZIA"* **com a sua tela escrevendo Novos 27**.
+
+```
+status=aberto ...... 360   ->  @g.us 145 | @lid 206 | @s.whatsapp.net 8 | @newsletter 1
+das 49 primeiras linhas (a janela que a rodada le): 48 eram GRUPO, sobrava 1
+```
+
+**A guarda do grupo estava certa; errada era a ORDEM.** Ela roda depois de ler, e a consulta vem
+ordenada pela ultima mensagem — grupo e a conversa mais barulhenta que existe. Com 145 deles, a
+folga de 40 linhas nao alcanca ninguem. Aumentar a folga so adiaria.
+
+**E consertar so a ordem teria sido pior que o defeito.** O `@lid` e o endereco NOVO do WhatsApp:
+pelo endereco e pessoa, entao a guarda o deixa passar e a fila passaria a ter **206 conversas que
+voce nunca viu na tela** — e a regra de "a ultima mensagem ja era minha" as concluiria em silencio,
+uma a uma. Medido no que elas sao: ultima direcao de SAIDA ou nenhuma, sem prazo de atendimento e
+**205 de 206 sem cadastro**.
+
+### O QUE MUDOU
+
+| | antes | agora |
+|---|---|---|
+| quem peneira o grupo | o painel, depois de ler 49 linhas | a **consulta**, no servidor |
+| o que entra na fila | tudo o que nao e grupo | **pessoa com cadastro**, como na sua tela |
+| a fila de "Novos" hoje | 1 (ou 0) | **9** — o mesmo numero da plataforma |
+
+**A regra nao foi deduzida: e a que a plataforma usa.** O modulo da fila dela faz junta INTERNA com
+o cadastro (`contato_id`) mais as duas negacoes de endereco, e a contagem bateu campo a campo com a
+dela — aberto **9 = 9**, em atendimento **268 = 268**, minhas **50 = 50**.
+
+**A guarda antiga nao saiu**: ela virou a segunda linha. Protecao que o servidor passou a fazer nao
+se apaga do cliente, porque a consulta e texto numa URL.
+
+### O PRECO, E ELE E REAL
+
+**Conversa sem cadastro sai da fila da rodada.** Ela tambem nao aparece na sua tela — a plataforma
+a descarta pela mesma regra —, entao a rodada percorre o que voce ve, que e o que se quer. Mas no
+dia em que a plataforma criar a conversa ANTES do cadastro, essa pessoa fica de fora **sem nada
+avisar**. Se voce vir alguem na tela que a rodada nao abre, e aqui que se olha.
+
+### O QUE ACHEI E NAO FIZ (e decisao sua)
+
+- **As 206 conversas `@lid`**, que ninguem ve. Elas ficaram de fora da fila. Se um dia a plataforma
+  passar a mostra-las, elas voltam a ser assunto — e ai a pergunta e se concluir em silencio uma
+  conversa em que so nos falamos e o certo.
+- **Grupos**: continuam fora, como sempre. Sao 145 abertos.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+Da v3.265.0: o item 8 (o campo de mensagem so existe depois de Assumir, medido em 28/10 e nao e
+defeito da extensao); o desastre nao ser reconhecido como desabafo; `semInteresse` ser chamado sem
+a hora da nossa ultima mensagem; briga de familia sem o nome no vocativo. De antes: o painel
+esvaziar 3 a 4 segundos a cada troca de conversa; o falso positivo antigo do `desvio` (rota x
+verba); otimizacao do dossie por secao; rascunho manual descartado quando a IA se abstem; consulta
+exata de etiquetas; `seus`/`seu` fora de `DIRIGIDA_A_NOS`.
+
+### O QUE FOI CONFERIDO
+
+**43 suites**, `checar-modulos` e `checar-referencias` limpos. **A prova de cada peca e o defeito
+reintroduzido:** tirando `...SO_PESSOAS` da fila cai 1 assercao; devolvendo o filtro de valor unico
+ao montador de consulta, caem 2.
+**A medicao foi SO LEITURA, numa aba separada da sua**: nenhuma rodada foi iniciada, nenhuma
+mensagem saiu, nada foi escrito no banco, nenhuma chamada paga de IA foi feita e **nenhum nome ou
+telefone de eleitor entrou em arquivo do repositorio** — o que saiu da medicao foram contagens e
+nomes de coluna.
+
+## 2026-11-05 - v3.265.0 - Estado anterior - o que a simulacao de 10 conversas encontrou
 
 ### O QUE VOCE PRECISA FAZER
 

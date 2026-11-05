@@ -206,6 +206,46 @@ mudaram as maos, nao a cabeca.
   **Na duvida, e grupo**: `external_chat_id` ilegivel fica de fora da fila, porque deixar de
   atender alguem custa uma passada e mandar para um grupo nao tem volta.
 
+- **PENEIRAR O GRUPO DEPOIS DE LER ESVAZIAVA A FILA, E A CULPA ERA DA ORDEM** (05/11/2026, print
+  dele: *"Rodada encerrada: 0 enviado(s), 0 pulado(s). A fila de 'Novos' veio VAZIA"* com a propria
+  tela escrevendo **Novos 27** ao lado). Medido na base dele, antes de mexer:
+  ```
+  status=aberto ...... 360   ->  @g.us 145 | @lid 206 | @s.whatsapp.net 8 | @newsletter 1
+  das 49 primeiras linhas (a janela que a rodada le): 48 eram GRUPO, sobrava 1
+  ```
+  `ehGrupo` sempre esteve certo; o que estava errado era ele rodar **depois** de uma consulta
+  ordenada por `ultima_mensagem_em`. **Grupo e a conversa mais barulhenta que existe**, e com 145
+  deles a folga de 40 linhas de `queuePreview` nao alcanca ninguem. **Aumentar a folga so adia** —
+  e a fila vazia e indistinguivel de *"nao ha quem atender"*.
+  **O `@lid` E O ENDERECO NOVO DO WHATSAPP, e consertar so a ordem teria sido pior que o defeito.**
+  Pelo endereco ele e PESSOA, entao `ehGrupo` o deixa passar: a fila passaria a ter **206 conversas
+  que ele nunca viu na tela**, e `ultima-e-nossa` as concluiria em silencio, uma a uma, contra a
+  API. Medido no que elas sao: `ultima_direcao` **saida ou nula**, `sla_status` nulo e **205 de 206
+  sem `contato_id`**.
+  **Quem separa e o `contato_id`, e isso nao e deducao: e o que a plataforma faz.** O modulo da
+  fila dela monta `...contato_id_fkey!inner(...)` — **junta INTERNA** com `base_dados` — mais
+  `.not("external_chat_id","like","%@g.us")` e `.not(...,"%@newsletter")`. A contagem reproduziu a
+  RPC da tela campo a campo:
+  ```
+                          a RPC da tela     a consulta com esta regra
+  pessoas aberto .............  9                    9
+  pessoas em_atendimento .... 268                  268
+  minhas .....................  50                   50
+  ```
+  Hoje `mob.SO_PESSOAS` vai na CONSULTA e `ehGrupo` **fica como segunda linha** — protecao que o
+  servidor passou a fazer nao se apaga do cliente, porque a consulta e texto numa URL.
+  **O preco esta dito a ele:** conversa sem `contato_id` sai da fila. Ela tambem nao aparece na
+  tela dele (a junta interna a descarta), entao a rodada percorre o que ele ve — mas no dia em que
+  a plataforma criar a conversa antes do cadastro, essa pessoa fica de fora **em silencio**.
+  **E isto corrige o que este arquivo dizia em 26/10** (*"metade das conversas nao tem contato
+  nenhum: contato vazio e o caso NORMAL"*): hoje sao 215 sem cadastro em 1.189 nao-grupo, e **206
+  delas sao `@lid`** — o "normal" de entao era, em boa parte, este endereco novo.
+  **A licao geral: guarda que erra para o lado seguro vira apagador silencioso quando a ORDEM da
+  consulta a alimenta mal** — a familia da conversao dupla de 28/10, com a causa na janela e nao no
+  dado. **Ao peneirar lista lida do servidor, pergunte o que ordena o que voce leu.**
+  Provas: tirando `...SO_PESSOAS` de `fila` cai 1 assercao; devolvendo o filtro de valor unico ao
+  `url()`, caem 2.
+
 - **MULTI-TENANT e a coisa nova mais facil de errar.** Toda consulta do app carrega
   `tenant_id=eq.<id>`, e na sessao dele apareceram DOIS tenants. **Consulta sem `tenant_id` le a
   base de outra campanha; escrita sem ele a contamina.** E o irmao da separacao por CANDIDATO do

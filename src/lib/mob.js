@@ -182,8 +182,13 @@ export function url(tabela, { tenantId, select = '*', filtros = {}, ordem = '', 
 
   const partes = [`select=${encodeURIComponent(select)}`, `tenant_id=eq.${encodeURIComponent(tenantId)}`];
   for (const [campo, valor] of Object.entries(filtros)) {
-    if (valor == null || valor === '') continue;
-    partes.push(`${encodeURIComponent(campo)}=${encodeURIComponent(valor)}`);
+    // **Lista = o MESMO campo com mais de uma condicao.** Duas negacoes em `external_chat_id`
+    // (fora grupo, fora newsletter) nao cabem num objeto, que nao tem chave repetida — e o
+    // PostgREST as recebe como o par repetido na query, que e como a propria plataforma monta.
+    for (const v of Array.isArray(valor) ? valor : [valor]) {
+      if (v == null || v === '') continue;
+      partes.push(`${encodeURIComponent(campo)}=${encodeURIComponent(v)}`);
+    }
   }
   if (ordem) partes.push(`order=${encodeURIComponent(ordem)}`);
   if (limite > 0) partes.push(`limit=${Math.floor(limite)}`);
@@ -442,13 +447,66 @@ export function filtroDaAba(aba, usuarioId) {
   return { filtros: monta(usuarioId) };
 }
 
+/**
+ * **QUEM E "PESSOA" PARA A PLATAFORMA — e peneirar DEPOIS de ler esvaziava a fila** (medido na
+ * base dele em 05/11/2026, relato: *"Rodada encerrada: 0 enviado(s), 0 pulado(s). A fila de Novos
+ * veio VAZIA"* com a propria tela escrevendo **Novos 27** ao lado).
+ *
+ * O grupo sempre foi descartado **depois** da leitura, por `ehGrupo`. A consulta pedia uma janela
+ * de 49 linhas ordenada por `ultima_mensagem_em`, e **grupo e a conversa mais barulhenta que
+ * existe**. Medido:
+ *
+ * ```
+ * status=aberto .................... 360
+ *   @g.us .......................... 145     <- grupo
+ *   @lid ........................... 206     <- pessoa pelo endereco, e invisivel na tela dele
+ *   @s.whatsapp.net ................   8     <- as pessoas de verdade esperando
+ *   @newsletter ....................   1
+ * das 49 primeiras (a janela da rodada): 48 eram grupo, sobrava 1
+ * ```
+ *
+ * **O defeito nao e o limite: e a ORDEM.** Com 145 grupos recebendo mensagem o dia inteiro, a
+ * folga de 40 linhas que `queuePreview` da nao alcanca ninguem — e a fila volta vazia, que e
+ * indistinguivel de *"nao ha quem atender"*. Aumentar a folga so adia.
+ *
+ * **O `@lid` e o endereco NOVO do WhatsApp, e ele quase derrubou a conta pelo outro lado.**
+ * `ehGrupo` o deixa passar (nao termina em `@g.us`), entao consertar so a ordem poria **206
+ * conversas na fila que ele nunca viu na tela** — e `ultima-e-nossa` as concluiria em silencio,
+ * uma a uma, contra a API. Medido no que elas sao: `ultima_direcao` **saida ou nula**, `sla_status`
+ * nulo e **205 de 206 sem `contato_id`**.
+ *
+ * **Quem separa e o `contato_id`, e isso nao e deducao: e o que a plataforma faz.** O modulo da
+ * fila dela monta a consulta com `...contato_id_fkey!inner(...)` — **junta INTERNA** com
+ * `base_dados` —, mais as duas negacoes de endereco. A contagem reproduziu a dela campo a campo:
+ *
+ * ```
+ *                       a RPC da tela     a consulta com esta regra
+ * pessoas aberto ..............  9                  9
+ * pessoas em_atendimento ..... 268                268
+ * minhas ......................  50                 50
+ * ```
+ *
+ * **O preco esta dito e e real:** conversa SEM `contato_id` sai da fila da rodada. Ela tambem nao
+ * aparece na tela dele — a junta interna da plataforma a descarta —, entao a rodada percorre o que
+ * ele ve, que e o que se quer; mas no dia em que a plataforma passar a criar a conversa antes do
+ * cadastro, essa pessoa fica de fora **em silencio**.
+ *
+ * **`ehGrupo` NAO sai de `fila`.** Ele passou a ser a segunda linha e continua valendo o *"na
+ * duvida, e grupo"*: endereco ilegivel que escape da consulta morre aqui. Protecao que o servidor
+ * passou a fazer nao se apaga do cliente — e a consulta e texto numa URL.
+ */
+export const SO_PESSOAS = Object.freeze({
+  external_chat_id: ['not.like.*@g.us', 'not.like.*@newsletter'],
+  contato_id: 'not.is.null',
+});
+
 export async function fila({ canalId = '', limite = 100, aba = '', usuarioId = undefined } = {}) {
   const quem = usuarioId === undefined ? meuUsuarioId() : usuarioId;
   const daAba = filtroDaAba(aba, quem);
   if (daAba.erro) throw new Error(daAba.erro);
 
   const linhas = await buscar('conversas', {
-    filtros: { ...daAba.filtros, instance_id: canalId ? 'eq.' + canalId : '' },
+    filtros: { ...SO_PESSOAS, ...daAba.filtros, instance_id: canalId ? 'eq.' + canalId : '' },
     ordem: 'ultima_mensagem_em.desc.nullslast',
     limite,
   });

@@ -519,6 +519,10 @@ export async function queuePreview(max = 50, { aba = '', fila = mob.fila } = {})
    * linha é um grupo — e grupo recebe mensagem o tempo todo, então é comum ser a mais nova —
    * o que volta é lista vazia, e a rodada encerra como se não houvesse ninguém esperando.
    * A folga é lida e descartada aqui; quem chama continua recebendo no máximo `pedido`.
+   *
+   * **A folga NÃO é mais o que segura isso, e nunca deu conta** (05/11/2026): com 145 grupos
+   * ativos, as 49 linhas da janela vinham 48 de grupo. Quem peneira agora é a CONSULTA
+   * (`mob.SO_PESSOAS`); a folga fica por causa do `ehGrupo`, que continua rodando depois.
    */
   const linhas = await fila({ limite: Math.min(200, pedido + 40), aba });
   return (linhas || []).slice(0, pedido);
