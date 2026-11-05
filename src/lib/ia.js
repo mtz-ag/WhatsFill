@@ -1,3 +1,4 @@
+import { plausivelNome } from './extract.js';
 /**
  * ia.js — a avaliação de contexto, para escolher entre as respostas que já existem.
  *
@@ -2458,7 +2459,7 @@ export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}, { cidade
   const outroFalante = mensagens.some((m) => m.de !== 'nos' &&
     /(?:usando|com) (?:o )?(?:telefone|celular) (?:do|da|de)|(?:telefone|celular) do meu marido/i.test(m.texto || ''));
   const nomeCadastro = String(campos.Nome || '').replace(/\[[^\]]*\]/g, '').trim();
-  const temNomeCadastro = !outroFalante && /\p{L}{2}/u.test(nomeCadastro) &&
+  const temNomeCadastro = !outroFalante && plausivelNome(nomeCadastro) &&
     !/^(?:sem nome|desconhecido|contato|novo|cliente)$/i.test(nomeCadastro);
   if (!nomeApresentado(mensagens) && !temNomeCadastro) return temCidade ? PEDIDO_SO_DO_NOME : PEDIDO_DE_DADOS_NO_RASCUNHO;
   return temCidade ? '' : PEDIDO_SO_DA_CIDADE;

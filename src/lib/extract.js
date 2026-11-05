@@ -451,7 +451,7 @@ function semConectorSolto(parte) {
   return s;
 }
 
-function plausivelNome(parte) {
+export function plausivelNome(parte) {
   if (!parte) return false;
   const s = parte.trim();
   if (s.length < 3 || s.length > 40) return false;

@@ -175,4 +175,14 @@ const APROVADA =
   check(ia.pedidoDeCadastroDoRascunho([], { Nome: '5551999999999', Cidade: 'Canoas' }).includes('seu nome'), 'telefone não é nome');
   check(ia.pedidoDeCadastroDoRascunho([{ de: 'contato', texto: 'Estou com o telefone do Carlos' }], campos).includes('seu nome'), 'titular não substitui identidade de quem pegou telefone emprestado');
 }
+{
+  grupo('identificadores de perfil não dispensam o nome');
+  for (const Nome of ['😀🙏', '+55 (51) 99999-9999', 'AB123', '@perfil', 'Sem nome', 'Cliente', 'João 123']) {
+    check(ia.pedidoDeCadastroDoRascunho([], { Nome, Cidade: 'Canoas' }).includes('o seu nome'), `pede nome para identificador: ${Nome}`);
+    check(ia.pedidoDeCadastroDoRascunho([], { Nome }) === ia.PEDIDO_DE_DADOS_NO_RASCUNHO, `pede formulário completo sem cidade: ${Nome}`);
+  }
+  for (const Nome of ['Ana', 'João da Silva', "Maria D'Ávila", 'Carlos Almeida [Evento]']) {
+    check(ia.pedidoDeCadastroDoRascunho([], { Nome, Cidade: 'Canoas' }) === '', `preserva nome válido: ${Nome}`);
+  }
+}
 fim();

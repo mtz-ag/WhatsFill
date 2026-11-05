@@ -1,4 +1,13 @@
-## 2026-11-05 - v3.267.0 - ESTADO DE AGORA - cadastro no pedido de dados
+## 2026-11-05 - v3.268.0 - ESTADO DE AGORA - nome valido antes de dispensar formulario
+
+Esclarecimento do usuario: a instrucao de pedir nome protege cadastros com emojis e telefones.
+A verificacao anterior aceitava qualquer trecho com duas letras. Agora reutiliza plausivelNome
+do parser: rejeita numeros misturados, identificadores, emojis e textos genericos conhecidos.
+Nome plausivel + cidade dispensa formulario; nome invalido pede nome, ou nome/cidade se ambos
+faltarem. Isto e validacao sintatica, nao comprovacao de identidade. Sem escrita no CRM.
+Recarregue extensao e aba para ver 3.268.0.
+
+## 2026-11-05 - v3.267.0 - Estado anterior - cadastro no pedido de dados
 
 A verificacao ignorava campos.Nome e o piso recebia apenas Cidade. Prompt e complemento
 agora compartilham Nome e Cidade, com leitura do formato Cidade - Nome pelo parser existente.
