@@ -282,7 +282,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, expressouApoio = null, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -304,7 +304,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
    */
   const contato = montarContatoRascunho({
-    mensagens, campos, agora, pedirDados, jaNosConhece, anterior, candidato, provas, fase, orgaos,
+    mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   });
   const lidoPelaIA = {
@@ -395,6 +395,11 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
         nossaUltima, jaFalamosHoje, candidato, nome: campos?.Nome || '', fase,
         /** Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes. */
         jaAgradecemosADenuncia: jaAgradecemosADenuncia(mensagens),
+        /**
+         * **Ela declarou apoio?** (05/11/2026, o Paulo César) — liga a trava do agradecimento
+         * genérico. `null` deixa a trava CALADA: sem medicao nao se afirma nem o contrario.
+         */
+        ...(expressouApoio === null ? {} : { expressouApoio: !!expressouApoio }),
         /** Desabafo e pergunta de cargo (31/10/2026) — as travas de `travasDoEscopo`. */
         desabafo: !!desabafoDela,
         /** Desilusão com a política (31/10/2026) — ver `ia.linhaDaDesilusao`. */

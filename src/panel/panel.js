@@ -38,7 +38,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia } from '../lib/cortesia.js';
 import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -11005,7 +11005,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const sinaisDoContato = {
         // Recusou ou veio hostilizar: a regra mais alta da tabela, porque continuar mandando
         // mensagem para quem pediu para parar é o que gera denúncia.
-        semInteresse: semInteresse(state.entrantes),
+        /**
+         * **O NOME DO TITULAR entra como guarda** (05/11/2026, o Adriano): xingamento com o nome
+         * dele no vocativo é a esposa falando com ele no aparelho dele, não hostilidade contra
+         * nós — ver `cortesia.xingouOTitular`. É dado do cadastro, não lista de palavras.
+         */
+        semInteresse: semInteresse(state.entrantes, null, { nomeDoTitular: state.contact?.name }),
         // Perguntamos e ela respondeu: a resposta precisa de gente, nunca de modelo.
         respondeuComoAjudar,
         /**
@@ -11241,6 +11246,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         cortesiaDeFechamento: cortesiaDeFechamento(state.entrantes, state.nossaUltimaAt, {
           janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,
         }),
+        /**
+         * **Emoji de tristeza e agradecimento/elogio** (05/11/2026, as prints da Rosicler, da
+         * Clarice, do Glenio e da Maria Luiza). Os dois existem para a MESMA coisa: impedir que a
+         * abstenção da IA vire a mensagem do dia, e tirar o formulário da frente de quem respondeu
+         * com um 😢. Nenhum dos dois envia nem conclui por conta própria — ver
+         * `sugestao.abstencaoNaoCabe`.
+         */
+        reacaoDeTristeza: reacaoDeTristeza(state.entrantes, state.nossaUltimaAt),
+        soAgradeceOuElogia: soAgradeceOuElogia(state.entrantes, state.nossaUltimaAt),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
@@ -11800,9 +11814,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * A escolha é aplicada mais abaixo, junto da automação do fluxo, para reusar o MESMO caminho
          * de envio da tecla 5 — duas cópias do "manda e conclui" divergem na primeira semana.
          */
-        semOQueResponder = !!rascunho.naoHaOQueResponder;
+        /**
+         * **MAS NÃO EM AGRADECIMENTO, ELOGIO OU REAÇÃO** (05/11/2026) — ver
+         * `sugestao.abstencaoNaoCabe`. Barrada a abstenção, quem decide volta a ser o FLUXO, que
+         * nas três prints já tinha decidido certo (tecla 3 na reação, tecla 6 no elogio).
+         */
+        const abstencaoBarrada = rascunho.naoHaOQueResponder
+          ? sugestaoLib.abstencaoNaoCabe(state.sinais)
+          : null;
+        semOQueResponder = !!rascunho.naoHaOQueResponder && !abstencaoBarrada;
 
-        escalouParaVoce = semOQueResponder
+        escalouParaVoce = abstencaoBarrada
+          ? `${porQue} — a IA disse que não há o que responder, e aqui isso não vale: ${abstencaoBarrada.motivo}`
+          : semOQueResponder
           ? `${porQue} — a IA não achou o que responder nisso; o desfecho é a mensagem do momento (tecla 5)`
           : rascunho.ok
           ? `${porQue} — a IA escreveu um rascunho no campo de mensagem; leia e mande${barrado}`
@@ -16649,6 +16673,24 @@ const CONTATOS_POR_PAGINA = 200;
         campos: { Nome: valueNamed('Nome') || state.contact?.name || '', Cidade: valueNamed('Cidade') },
         pedirDados: pedirDadosNoRascunho,
         /**
+         * **Ela declarou apoio?** (05/11/2026, o Paulo César: compartilhou um post político e
+         * recebeu *"Obrigado pelo apoio"*). Vem dos sinais já medidos deste contato; sem sinais
+         * (rascunho pedido fora da rodada) vai `null`, e a trava fica calada.
+         */
+        expressouApoio: state.sinais ? !!state.sinais.soExpressaApoio : null,
+        /**
+         * **A cidade que ELA acabou de escrever** (05/11/2026, o sergio) — ver
+         * `ia.pedidoDeCadastroDoRascunho`. Separada do campo do cadastro de propósito: aqui a
+         * cidade ainda não foi gravada (o popup está pedindo o clique dele, e isso não muda), e
+         * mesmo assim pedi-la de novo é pedir o que está escrito na tela.
+         *
+         * **Confiança `exata` é o corte**, o mesmo do formulário (28/10) e de `cidadeNoCadastro`:
+         * no modo generoso o parser devolve qualquer palavra solta como cidade.
+         */
+        cidadeNoTexto: state.cidadeInformada?.confidence === 'exata',
+        /** Agradecimento ou elogio (05/11/2026): a IA escreve um obrigado curto em vez de abster-se. */
+        soAgradeceOuElogia: !!state.sinais?.soAgradeceOuElogia,
+        /**
          * **A chapa, para a trava de cargo e número** — print da Nara (08/09/2026).
          *
          * Vem do dossiê, que é a fonte, e **não passa por `dossieAtivo`**: a tabela pode não estar
@@ -16868,7 +16910,16 @@ const CONTATOS_POR_PAGINA = 200;
      * texto é ditado por nós palavra por palavra, então tirá-lo é mecânico (`ia.semOFormulario`) e
      * não é reescrever no lugar dela. Paráfrase continua passando, de propósito.
      */
-    const pedidoCadastro = iaLib.pedidoDeCadastroDoRascunho(conversaParaIA(), { Cidade: valueNamed('Cidade') });
+    /**
+     * **O PISO leva a MESMA conta do prompt** — inclusive a `cidadeNoTexto` (05/11/2026). Sem ela
+     * o prompt pediria só o nome e o piso colaria o formulário inteiro: duas redações do mesmo
+     * pedido, que é o defeito que esta constante existe para não ter.
+     */
+    const pedidoCadastro = iaLib.pedidoDeCadastroDoRascunho(
+      conversaParaIA(),
+      { Cidade: valueNamed('Cidade') },
+      { cidadeNoTexto: state.cidadeInformada?.confidence === 'exata' }
+    );
     if (!escolhida?.naoCabePedirOCadastro && pedidoCadastro !== iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO) {
       texto = texto.split(iaLib.PEDIDO_DE_DADOS_NO_RASCUNHO).join(pedidoCadastro).trim();
     }

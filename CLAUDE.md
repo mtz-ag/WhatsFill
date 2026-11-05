@@ -3452,6 +3452,114 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **A ABSTENCAO DA IA VIRAVA A MENSAGEM DO DIA EM CIMA DE UM ELOGIO** (05/11/2026, simulacao dele
+  em 10 conversas, sem enviar). Tres prints com a mesma forma: *"Muito obrigada por zelar pela
+  nossa seguranca!"*, um 🙏 e *"Parabens Capitao Martim!"* — o painel decidia tecla 6 ou 3, a IA
+  marcava `naoHaOQueResponder`, e o desfecho de 24/09 mandava a tecla 5.
+  **Medido antes de mexer: dos doze detectores, so `falouAlgoProprio` casava** — nenhum sabia que
+  aquilo era agradecimento. `soExpressaApoio` NAO foi alargado: *"parabens"* e voto de boa vontade
+  e so conta como a mensagem inteira (a medicao de 06/09, 15 falsos em 19).
+  **Isto ESTREITA a regra dele de 24/09, a pedido dele e so nos casos que ele nomeou.** Aquela
+  regra nasceu para o rabisco ininteligivel, onde o texto do dia e melhor que o silencio; em cima
+  de um elogio ele e a resposta ao lado — e a mensagem do momento e a coisa mais facil de o eleitor
+  reconhecer como automatica. **Barrada a abstencao, quem decide volta a ser o FLUXO**, que nas
+  tres prints ja tinha decidido certo. E o mecanismo de `absteveNoDesabafo` (31/10) com uma
+  condicao a mais, nunca um caminho novo.
+  **A ASSIMETRIA e o que permite um detector simples, e ela e o desenho:** `soAgradeceOuElogia`
+  NUNCA envia e NUNCA conclui — ele so impede a tecla 5 e pede a IA um obrigado curto. Falso
+  positivo custa ele ler o caso; falso negativo devolve o comportamento de hoje. **Ao escrever
+  detector novo, escreva a assimetria antes da lista: ela e que diz de quanta precisao voce
+  precisa.**
+  **E O `de !== 'nos'` NAO E ZELO: sem ele a NOSSA mensagem conta.** Peguei medindo — chamada sem
+  `nossaUltimaAt`, `desdeNossaUltima` devolve a lista inteira e o *"Obrigado pelo apoio!"* que NOS
+  mandamos ligava o detector. **E chamada sem o corte e o caso real:** o painel chama
+  `semInteresse(state.entrantes)` assim. Todo detector que le "o que ELA disse" filtra o remetente.
+
+- **EMOJI DE SOFRIMENTO NAO E CORTESIA, E RECEBIA O FORMULARIO** (05/11/2026, print da Rosicler:
+  😢 depois da nossa mensagem recebeu *"me diga seu Nome, Cidade"*).
+  **Medido: `ehSoReacao` e `cortesiaDeFechamento` davam os DOIS verdadeiros** — o projeto tratava o
+  😢 como quem *"so agradeceu ou retribuiu o cumprimento"* (31/10). **O 👍 fecha a conversa; o 😢 a
+  abre**, e concluir em silencio ali e virar as costas para quem disse, do unico jeito que deu, que
+  nao esta bem.
+  **A guarda fica na TECLA e nao na condicao** (a licao da Noeli, 06/09): barrando a condicao o
+  caso escorrega para a caixa de baixo, e varias delas ENVIAM. O desfecho e a tecla 6.
+  **A lista e curta e so do que nao tem leitura dupla**, e e isso que a mantem util: 😅 e 😭 de
+  riso, ❤️ e o 😔 de *"que pena, nao vou poder ir"* (que e recusa de presenca e tem caminho
+  proprio) ficam de fora. E emoji de tristeza no MEIO de um texto nao decide nada — ali quem atende
+  e `desabafoPessoal`.
+
+- **A CIDADE QUE ELA ACABOU DE ESCREVER ERA PEDIDA DE NOVO** (05/11/2026, print do sergio:
+  *"Bom dia"* / *"Aqui do cacequi"* recebeu a tecla 4 — nome E cidade — com o popup *"Cidade a
+  gravar: Cacequi"* aberto ao lado).
+  **O parser acertou:** medido, `extract(['Bom dia','Aqui do cacequi'])` devolve Cacequi com
+  confianca **exata**. O que faltava era `pedidoDeCadastroDoRascunho` olhar so o CAMPO do cadastro,
+  que continua vazio porque cidade de palpite espera o clique dele — **e essa regra, de 31/08, nao
+  muda**: o popup esta certo, o que estava errado era pedir na mensagem o que esta escrito na tela.
+  Entao o pedido tem **TRES formas e nao duas**: tudo, so a cidade, e agora **so o nome**.
+  **`cidadeNoTexto` e separado de `campos.Cidade` de proposito** — um e o que esta gravado, o outro
+  e o que ela escreveu nesta conversa, e junta-los faria o popup perder sentido. **E o PISO do
+  painel leva a MESMA conta**: sem isso o prompt pediria so o nome e o piso colaria o formulario
+  inteiro — duas redacoes do mesmo pedido, que e o defeito que aquela constante existe para nao ter.
+
+- **A TROCA DE SAUDACAO FUNCIONAVA, E ERAM DOIS BURACOS NELA** (05/11/2026, print da Iraci:
+  mensagem as 14:17 e o rascunho abrindo com *"Bom dia!"*).
+  **Medi antes de consertar e o diagnostico obvio era o errado:** `revisarRascunho('Bom dia! Eu que
+  agradeco...', 14:17)` devolve *"Boa tarde!"* nas quatro formas de contexto. O conserto de 04/09
+  esta de pe; o que havia eram dois caminhos em que ele nao e alcancado.
+  **(1) TIRAR e TROCAR eram `if`/`else if`.** `semSaudacao` devolve `null` quando a abertura e tudo
+  o que ha no texto (*"Bom dia!"*), e com `jaFalamosHoje` verdadeiro o `else if` **nem era
+  alcancado** — a saudacao do periodo errado ficava. **A troca e o PISO:** nao deu para tirar, pelo
+  menos acerta a palavra.
+  **(2) O padrao ancorava em `^`**, entao *"Ola! Bom dia"* escapava dos dois — e o modelo abre
+  assim com frequencia. A interjeicao entrou na lista (curta e literal); alargar para "em qualquer
+  posicao" faria a troca mexer numa saudacao que a PESSOA escreveu e o rascunho esta citando.
+  **A licao: `if`/`else if` entre duas correcoes do mesmo texto deixa um buraco onde a primeira
+  nao se aplica.** Ao escrever a segunda, pergunte o que acontece quando a primeira desiste.
+
+- **O TOM JURIDICO JA ERA PROIBIDO PELA REGRA 14, E SO AGORA TEM TRAVA** (05/11/2026, print da
+  Noeli: fotos do desastre, o marido tirando gente da agua, e o rascunho respondeu *"Nao tenho como
+  confirmar essa informacao, entao prefiro nao afirmar"*).
+  **A regra 14 (22/09) diz, com estas palavras, que *"nao tenho essa informacao" NAO e a
+  resposta***, e a regra dele para acusacao (23/09) e *"agradecemos e desconversamos sem entrar em
+  detalhes"* — anunciar que nao da para confirmar e entrar no merito pela porta da negacao.
+  Medido: zero avisos e `rascunhoPodeSairSozinho` **true**.
+  **A trava BARRA em qualquer contexto, e e isso que dispensa um detector de "desastre"** — que
+  seria a lista de texto que nao fecha, registrada seis vezes neste arquivo. Medido: `desabafoPessoal`
+  devolve **null** para o texto da Noeli, entao uma trava condicionada ao desabafo ficaria calada
+  exatamente na print que a originou. **Ao condicionar uma trava a um sinal, meca o sinal no caso
+  que a motivou.**
+  **As guardas sao as frases que CONTINUAM certas:** *"vou verificar isso"* (que a regra 5 da como
+  exemplo do que se pode dizer com verdade) e encaminhar para fora.
+
+- **"OBRIGADO PELO APOIO" A QUEM NAO DECLAROU APOIO** (05/11/2026, print do Paulo Cesar: ele
+  compartilhou um post politico e recebeu *"Obrigado pelo apoio e por compartilhar. Seguimos
+  firmes…"*). E a familia do `afirmouAcao` (06/09) e do `desculpaInexistente` (09/09): **uma
+  afirmacao sobre o que a PESSOA fez**, e dessas quem le sabe que ninguem leu.
+  Mecanica de verdade — "apoio" e palavra, e quem responde se ela apoiou e o detector que ja
+  existe. **`expressouApoio` ausente deixa a trava CALADA:** sem o sinal medido, afirmar que ela
+  nao apoiou e o mesmo erro na direcao oposta. E agradecer o COMPARTILHAMENTO continua livre.
+
+- **O CONSERTO DA v3.263 NAO ALCANCAVA `semInteresse` — e ele decide ANTES da IA** (05/11/2026,
+  print do Adriano: a esposa falando no celular do marido, chamando o MARIDO de *"babaca"* e
+  *"mentiroso"*; a rodada ofereceu a tecla `s`).
+  Aquela versao ensinou o PROMPT a distinguir titular, interlocutor e alvo do insulto. **`semInteresse`
+  e a PRIMEIRA regra da tabela e nunca chega a consultar a IA:** o desfecho era etiqueta permanente
+  de sem interesse mais conclusao em silencio, em cima de um apoiador, por uma briga de casal.
+  **Quinta vez neste arquivo que uma decisao escrita num lugar nao alcanca o lugar onde ela decide**
+  (a frase do adversario no prompt da ETIQUETA, 25/09; a excecao que so valia onde a regra alcanca,
+  09/09; a tecla `c` de ontem). **Ao ensinar algo ao prompt, pergunte quem decide ANTES de o prompt
+  existir.**
+  **A guarda e um DADO e nao uma lista: o nome do proprio contato.** Vocativo com o nome do titular
+  colado no pronome (*"Adriano voce e um babaca"*) diz que o "voce" e ele. Por lista de palavras que
+  abrem frase (*"Olha voce e um mentiroso"*) seria a lista que nao fecha, e errar aqui custa o mesmo
+  que nao ter guarda. O nome vai por argumento OPCIONAL: sem ele, todo chamador antigo decide
+  exatamente como antes.
+  **Limite escrito: ela le UMA mensagem**, como toda esta regra. Nome numa mensagem e insulto na
+  seguinte, a guarda nao alcanca.
+  Provas: sem `reacaoDeTristeza` caem 2 assercoes; sem `soAgradeceOuElogia`, 4; sem
+  `abstencaoNaoCabe`, 1; sem a guarda do vocativo, 2; sem a trava do tom juridico, 4; sem a do
+  apoio, 1; sem a cidade do texto, 2; com o `else if` da saudacao de volta, 1; sem a interjeicao, 1.
+
 - **ALARGAR UMA LISTA ACENDE AS CONTRADICOES QUE JA ESTAVAM NELA — e uma delas era a tecla `c`**
   (04/11/2026, decisao dele no dia seguinte a medicao: *"Sim, alargue"*). O preterito (`roubou`,
   `desviou`) entrou em `ACUSACAO_POLITICA` e `comunista`/`esquerda` em `ALVO_PUBLICO`.
@@ -7637,7 +7745,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 42 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 43 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu:** em 03/11/2026 ela tinha 30 nomes e o diretório já tinha
 > 39 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -7646,7 +7754,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 42 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

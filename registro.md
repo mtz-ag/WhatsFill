@@ -1,4 +1,104 @@
-## 2026-11-04 - v3.264.0 - ESTADO DE AGORA - finalidade do pedido de dados
+## 2026-11-05 - v3.265.0 - ESTADO DE AGORA - o que a simulacao de 10 conversas encontrou
+
+> **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
+> **3.265.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
+> segunda.
+
+### O QUE VOCE PRECISA FAZER
+
+1. `chrome://extensions` -> **recarregar** a extensao
+2. **F5** na aba do mobiliza.me
+3. Confira **3.265.0** na linha pequena do topo do painel
+4. Reabra as conversas da sua lista e peca a previsao / o rascunho: o 😢 nao pode mais receber
+   formulario, o elogio nao pode mais receber a mensagem do dia, e a saudacao tem de ser a do
+   horario
+
+### O QUE ESTAVA ERRADO, MEDIDO ANTES DE MEXER
+
+**Duas familias, e os oito itens da sua lista caem nelas.**
+
+**(1) A abstencao da IA virava a mensagem do dia.** A Clarice (*"Muito obrigada por zelar pela
+nossa seguranca!"*), o Glenio (🙏) e a Maria Luiza (*"Parabens Capitao Martim!"*) tinham o painel
+decidindo certo — tecla 3 ou 6 — e a IA respondendo *"nao ha o que responder"*, o que pela sua
+regra de 24/09 manda a tecla 5.
+
+```
+dos doze detectores, so falouAlgoProprio casava no agradecimento e no elogio
+soExpressaApoio -> null  (e NAO foi alargado: "parabens" e voto de boa vontade, medido em 06/09)
+```
+
+**(2) O tom.** O 😢 da Rosicler recebendo formulario, *"Bom dia!"* as 14:17, *"nao tenho como
+confirmar"* em cima do desastre da Noeli, *"obrigado pelo apoio"* a quem nao declarou apoio, e a
+briga de casal no celular do Adriano lida como hostilidade contra o mandato.
+
+### O QUE MUDOU
+
+| o caso | antes | agora |
+|---|---|---|
+| agradecimento, elogio | tecla 5 (mensagem do dia) | o fluxo decide; a IA escreve um obrigado curto |
+| 😢 depois da nossa | tecla 4 (pede nome e cidade) | tecla 6 — acolhimento |
+| cidade no texto | pede nome **e** cidade | pede **so o nome** |
+| saudacao as 14:17 | *"Bom dia!"* sobrevivia em dois casos | trocada sempre |
+| *"nao posso confirmar"* | saia sozinho | barra o envio e voce le |
+| *"obrigado pelo apoio"* sem apoio | saia sozinho | barra o envio e voce le |
+| xingamento ao titular | tecla `s`, etiqueta permanente | nao e hostilidade contra nos |
+
+### AS TRES COISAS QUE A MEDICAO DESMENTIU, E ELAS MUDAM O DIAGNOSTICO
+
+**(a) A troca de saudacao JA FUNCIONAVA.** O conserto de 04/09 esta de pe — eu ia refaze-lo. O que
+havia eram dois caminhos em que ele nao e alcancado: a abertura ser tudo o que ha no texto (*"Bom
+dia!"*) com voce ja tendo falado hoje, e a saudacao vir depois de *"Ola!"*.
+
+**(b) O PARSER ACERTOU a cidade do sergio** — Cacequi, confianca exata. O popup *"Cidade a gravar"*
+tambem esta certo e **nao foi mexido**: cidade de palpite espera o seu clique desde 31/08. O que
+estava errado era pedir na mensagem o que estava escrito na tela.
+
+**(c) O CONSERTO DE ONTEM (v3.263) NAO ALCANCAVA O CASO DO ADRIANO.** Ele ensinou o PROMPT a
+distinguir quem fala de quem e o titular — e `semInteresse` e a PRIMEIRA regra da tabela e **nunca
+chega a consultar a IA**. A guarda nova e um dado e nao uma lista: o nome do proprio contato no
+vocativo (*"Adriano voce e um babaca"*) diz que o "voce" e ele.
+
+### O QUE NAO AFROUXOU
+
+A hostilidade de verdade continua sendo reconhecida (*"voces sao uns vagabundos"* marca, com nome
+no cadastro ou sem), o fecho por cortesia continua concluindo o 👍, o formulario continua saindo
+para quem nao deu cidade nenhuma, e *"vou verificar isso"* continua passando limpo.
+
+### O QUE ACHEI E NAO FIZ (e decisao sua)
+
+- **Item 8, o Assumir.** A plataforma **so cria o campo de mensagem depois de assumir** — isso esta
+  medido desde 28/10 e nao e defeito da extensao. A previsao do fluxo (03/11) ja le sem assumir; o
+  rascunho nao, porque o texto nao teria onde ser inserido. Mudar isso e desenho novo.
+- **O desastre nao e reconhecido como desabafo.** Medido: `desabafoPessoal` devolve **null** para o
+  texto da Noeli, e o que a levou para a IA foi `falouAlgoProprio`. Reconhecer "desastre" exige uma
+  lista de texto, e este arquivo registra seis vezes que lista de texto nao fecha. **A trava do tom
+  juridico cobre o estrago sem depender disso**; o acolhimento em si continua sendo a IA e voce.
+- **`semInteresse` e chamado sem a hora da nossa ultima mensagem** no painel
+  (`semInteresse(state.entrantes)`), entao ele le a conversa inteira em vez da rajada. Nao mexi:
+  muda o alcance da regra mais destrutiva do projeto e isso e decisao sua.
+- **Briga de familia sem o nome no vocativo** continua indo para a tecla `s`. Fazer
+  `desabafoPessoal` vencer `semInteresse` seria uma porta de saida larga (bastaria citar a esposa
+  numa mensagem hostil), e preferi a guarda estreita que resolve a print.
+
+### PENDENCIAS QUE CONTINUAM ABERTAS
+
+O painel esvaziar 3 a 4 segundos a cada troca de conversa (medido em 03/11, nao consertado); o
+falso positivo antigo do `desvio` (rota x verba, de 23/09); otimizacao do dossie por secao;
+rascunho manual descartado quando a IA se abstem; consulta exata de etiquetas; `seus`/`seu` fora de
+`DIRIGIDA_A_NOS`.
+
+### O QUE FOI CONFERIDO
+
+**43 suites** (a nova e `tests/acolhimento.test.mjs`), `checar-modulos` e `checar-referencias`
+limpos. **A prova de cada peca e o defeito reintroduzido:** sem `reacaoDeTristeza` caem 2
+assercoes; sem `soAgradeceOuElogia`, 4; sem `abstencaoNaoCabe`, 1; sem a guarda do vocativo, 2; sem
+a trava do tom juridico, 4; sem a do apoio, 1; sem a cidade do texto, 2; com o `else if` da
+saudacao de volta, 1; sem a interjeicao, 1.
+**Nenhuma rodada foi iniciada, nenhuma mensagem saiu, nenhuma chamada paga de IA foi feita, e
+nenhum nome ou telefone de eleitor entrou em arquivo do repositorio** — os testes usam nomes
+ficticios.
+
+## 2026-11-04 - v3.264.0 - Estado anterior - finalidade do pedido de dados
 
 Pedido de cidade e formulario completo agora explicam: salvar o contato e melhorar o atendimento.
 A selecao dos dados faltantes permanece. O reconhecimento do pedido parcial aceita a redacao

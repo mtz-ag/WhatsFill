@@ -257,8 +257,16 @@ export function saudacaoDeAgora(agora) {
   return 'Boa noite';
 }
 
-/** As três, para reconhecer a errada no começo do rascunho. */
-const SAUDACAO_NO_COMECO = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite)\b/i;
+/**
+ * As três, para reconhecer a errada no começo do rascunho.
+ *
+ * **A INTERJEIÇÃO ANTES ENTROU EM 05/11/2026** (print dele: *"Bom dia!"* às 14:17). O padrão
+ * ancorava em `^` e a saudação errada sobrevivia escrita como *"Olá! Bom dia"* — o modelo abre
+ * assim com frequência, e ali ela continua sendo a ABERTURA. A lista é curta e literal de
+ * propósito: alargar para "em qualquer posição" faria a troca mexer numa saudação que a pessoa
+ * escreveu e o rascunho está citando.
+ */
+const SAUDACAO_NO_COMECO = /^\s*(?:(?:ol[áa]|oi|e\s*a[íi])[\s,!.:;–—-]*)?(bom\s+dia|boa\s+tarde|boa\s+noite)\b/i;
 
 export function montarContato({ mensagens = [], campos = {}, etiquetas = [], agora } = {}) {
   /**
@@ -2426,9 +2434,29 @@ export function nomeApresentado(mensagens = []) {
   });
 }
 
-export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}) {
-  if (!nomeApresentado(mensagens)) return PEDIDO_DE_DADOS_NO_RASCUNHO;
-  return String(campos.Cidade || '').trim() ? '' : 'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, de qual cidade você é.';
+/**
+ * **NÃO SE PEDE A CIDADE QUE ELA ACABOU DE ESCREVER** (05/11/2026, print do sergio: *"Bom dia"* /
+ * *"Aqui do cacequi"* recebeu a tecla 4 — nome E cidade — com o popup *"Cidade a gravar: Cacequi"*
+ * aberto ao lado).
+ *
+ * **Medido: o parser acertou.** `extract(['Bom dia','Aqui do cacequi'])` devolve Cacequi com
+ * confiança **exata**; o que faltava era a escolha do que pedir olhar só o CAMPO do cadastro, que
+ * ainda está vazio porque cidade de palpite espera o clique dele (a regra de 31/08, que não muda).
+ *
+ * Então o pedido tem TRÊS formas e não duas: tudo, só a cidade, e agora **só o nome**.
+ *
+ * `cidadeNoTexto` é separado de `campos.Cidade` de propósito — um é o que já está gravado, o outro
+ * é o que ela escreveu nesta conversa, e juntá-los faria o popup de confirmação perder sentido.
+ */
+const PEDIDO_SO_DA_CIDADE =
+  'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, de qual cidade você é.';
+const PEDIDO_SO_DO_NOME =
+  'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, o seu nome.';
+
+export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}, { cidadeNoTexto = false } = {}) {
+  const temCidade = !!String(campos.Cidade || '').trim() || !!cidadeNoTexto;
+  if (!nomeApresentado(mensagens)) return temCidade ? PEDIDO_SO_DO_NOME : PEDIDO_DE_DADOS_NO_RASCUNHO;
+  return temCidade ? '' : PEDIDO_SO_DA_CIDADE;
 }
 
 /**
@@ -2735,6 +2763,19 @@ export function marcaDeMidia(m) {
 export const AGRADECEU_A_DENUNCIA =
   /(estamos|seguimos|sigo|estou|fico|ficamos|vamos\s+seguir)\s+(atent[oa]s?|acompanhando)|acompanhando\s+(o\s+assunto|a\s+situa|as\s+informa|de\s+perto|situa)|agrade[cç]\p{L}*\s+(as|pelas|a|pela|por)\s+(informa|compartilh|trazer|avisar|essa\s+informa)|obrigad[oa]\s+(pelas?|por)\s+(informa|compartilh|trazer|avisar)/iu;
 
+/**
+ * **O TOM JURÍDICO** — ver `AVISOS_QUE_IMPEDEM_ENVIO.tomJuridico` (05/11/2026, a Noeli).
+ *
+ * A lista é de FORMAS de anunciar que não se vai afirmar, e é curta de propósito. Ela não barra
+ * dizer que vamos verificar (*"vou verificar isso"* é a frase que a regra 5 dá como exemplo do que
+ * se PODE dizer com verdade) nem encaminhar para fora.
+ */
+const TOM_JURIDICO =
+  /n[ãa]o\s+(tenho|temos|da|d[áa])\s+(como\s+)?(confirmar|verificar|atestar|comprovar|afirmar)|prefiro\s+n[ãa]o\s+(afirmar|comentar|opinar|me\s+manifestar)|n[ãa]o\s+(posso|poderia|vou)\s+(confirmar|afirmar|atestar|comprovar)|sem\s+(como\s+)?confirmar|n[ãa]o\s+(me\s+)?cabe\s+(afirmar|confirmar|opinar)/i;
+
+/** **O agradecimento do apoio** — ver `AVISOS_QUE_IMPEDEM_ENVIO.agradeceuApoioQueNaoHouve`. */
+const AGRADECEU_O_APOIO = /(obrigad[oa]|agrade[cç]\p{L}*|gratid[ãa]o)[^.!?]{0,20}\bapoio\b/iu;
+
 export function jaAgradecemosADenuncia(mensagens = []) {
   const lista = (mensagens || [])
     .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
@@ -2873,7 +2914,7 @@ function linhaDoGenero(nome) {
   return '';
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '' } = {}) {
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '' } = {}) {
   /** Ver `FASE_PADRAO`. As linhas deste bloco que falavam de campanha seguem a mesma chave. */
   const EM_CAMPANHA = emCampanha(fase);
   /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
@@ -3210,14 +3251,14 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * (`sugestao.pedirDadosNaoCabe`): duas definições divergiriam, e a que ninguém olha é a que
      * pede o cadastro de quem já o deu.
      */
-    pedirDados && pedidoDeCadastroDoRascunho(lista, campos)
+    pedirDados && pedidoDeCadastroDoRascunho(lista, campos, { cidadeNoTexto })
       ? [
           'O cadastro desta pessoa está incompleto. Depois de responder o que ela escreveu, FECHE a',
           'mensagem com este bloco, copiado exatamente assim (sem reescrever) — copie-o inteiro mesmo',
           'que o nome já apareça acima: é o formulário padrão do gabinete, e é por ele que o sistema',
           'reconhece que o pedido saiu.',
           '',
-          pedidoDeCadastroDoRascunho(lista, campos),
+          pedidoDeCadastroDoRascunho(lista, campos, { cidadeNoTexto }),
           '',
           /**
            * **A licença de NÃO pedir, colada na ordem de pedir** — print dele de 24/09/2026: uma
@@ -3282,6 +3323,20 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       (desabafo
         ? 'Num DESABAFO isto não vale: ela sempre tem o que ouvir. NÃO marque naoHaOQueResponder — ' +
           'acolha o que há de novo no sentimento dela, sem repetir a nossa última fala.'
+        /**
+         * **AGRADECIMENTO E ELOGIO também não admitem abstenção** (05/11/2026, três prints). A IA
+         * marcava `naoHaOQueResponder` em *"Muito obrigada por zelar pela nossa segurança!"* e o
+         * desfecho de 24/09 mandava a mensagem do dia em cima de um elogio.
+         *
+         * **Aqui o pedido é POSITIVO e diz o tamanho**, porque "não marque o campo" sozinho deixa o
+         * modelo escrever outra coisa qualquer — e o que cabe é uma linha. A trava mecânica
+         * (`sugestao.abstencaoNaoCabe`) continua do outro lado: esta reduz a frequência, aquela
+         * garante o desfecho.
+         */
+        : soAgradeceOuElogia
+        ? 'Ela só AGRADECEU ou ELOGIOU, e isso tem resposta: NÃO marque naoHaOQueResponder. ' +
+          'Escreva UMA linha de obrigado, na primeira pessoa, sem repetir as palavras dela, sem ' +
+          'pergunta no fim e sem puxar outro assunto — e não acrescente formulário nem oferta.'
         : 'Marque o campo naoHaOQueResponder e o atendimento manda a mensagem do dia no seu lugar.'),
     /**
      * **A regra do anúncio, colada no pedido, e só quando há clique na conversa** — print da Leonir
@@ -3637,6 +3692,31 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
   /** Perguntou só o cargo e o rascunho explicou a secretaria / 2027 / Zucco (31/10/2026). */
   explicouATransicao: 'explica secretaria, 2027 ou o governo do Zucco a quem só perguntou o cargo — responda só o cargo de hoje',
   repetiuOAgradecimento: 'agradece a denúncia de novo ("estamos atentos") — isso já foi dito nesta conversa',
+  /**
+   * **O TOM JURÍDICO** (05/11/2026, print da Noeli: fotos do desastre, o marido tirando gente da
+   * água, e o rascunho respondeu *"Não tenho como confirmar essa informação, então prefiro não
+   * afirmar"*).
+   *
+   * **Isto já era regra do projeto e não estava sendo cumprido:** a **regra 14** (22/09) diz, com
+   * estas palavras, que *"não tenho essa informação" NÃO é a resposta* — falta o dado, responde-se
+   * o TEMA. E a regra dele para acusação (23/09) é *"agradecemos e desconversamos sem entrar em
+   * detalhes"*; anunciar que não dá para confirmar é entrar no mérito pela porta da negação.
+   *
+   * **Barra em qualquer contexto, e não só no desabafo.** Medido: a frase é fria em todos — e o
+   * escopo ser o contexto todo é o que dispensa inventar um detector de "desastre", que seria a
+   * lista de texto que não fecha. Ele barra o envio sozinho; ele lê e decide.
+   */
+  tomJuridico: 'diz que não pode confirmar ou que prefere não afirmar — isso soa jurídico; responda o que dá para responder',
+  /**
+   * **"OBRIGADO PELO APOIO" A QUEM NÃO DECLAROU APOIO** (05/11/2026, print do Paulo César: ele
+   * compartilhou um post político e recebeu *"Obrigado pelo apoio e por compartilhar. Seguimos
+   * firmes…"*).
+   *
+   * É a família do `afirmouAcao` e do `desculpaInexistente`: **uma afirmação sobre o que a PESSOA
+   * fez**, e dessas quem lê sabe que ninguém leu. Mecânica de verdade — "apoio" é palavra, e quem
+   * responde se ela apoiou é o detector que já existe.
+   */
+  agradeceuApoioQueNaoHouve: 'agradece um "apoio" que ela não declarou — responda o que ela trouxe, sem agradecimento genérico',
   prometeuChegarAEle: 'promete que o recado chega ao deputado ou que ele vai ler — quem lê é a equipe',
   prometeuOrgao: 'promete encaminhar o pedido ao governador ou a outro órgão — o certo é dar o contato oficial',
   telefoneForaDoDossie: 'tem um telefone que não está no dossiê de órgãos nem na conversa — confira o número',
@@ -4123,6 +4203,19 @@ export function travasDoEscopo(texto, contexto = {}) {
   if (contexto?.jaAgradecemosADenuncia && AGRADECEU_A_DENUNCIA.test(t)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.repetiuOAgradecimento);
   }
+  /**
+   * **O tom jurídico** (05/11/2026, a Noeli) — ver `AVISOS_QUE_IMPEDEM_ENVIO.tomJuridico`. Vale em
+   * todo contexto, porque a regra 14 vale em todo contexto.
+   */
+  if (TOM_JURIDICO.test(semAcentoIA(t))) avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.tomJuridico);
+  /**
+   * **O agradecimento do apoio que não houve** (05/11/2026, o Paulo César). `expressouApoio`
+   * ausente deixa a trava CALADA: sem o sinal medido não há como saber, e afirmar que ela não
+   * apoiou é o mesmo erro na direção oposta.
+   */
+  if (contexto?.expressouApoio === false && AGRADECEU_O_APOIO.test(semAcentoIA(t))) {
+    avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.agradeceuApoioQueNaoHouve);
+  }
   const L = String.raw`(^|[^\p{L}])`;
 
   const URGENCIA = [
@@ -4253,14 +4346,20 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * confere nada: fora da rodada não há conversa medida, e tirar a saudação de um rascunho pedido à
    * mão seria decidir sem saber.
    */
-  if (abertura && contexto?.jaFalamosHoje === true) {
-    const sem = semSaudacao(texto);
-    if (sem) {
-      texto = sem;
-      avisos.push('nós já falamos com ela hoje — tirei a saudação repetida da abertura');
-    }
+  /**
+   * **TIRAR E TROCAR ERAM `if`/`else if`, E QUANDO TIRAR NÃO DAVA A ERRADA FICAVA** (05/11/2026).
+   * `semSaudacao` devolve `null` quando a abertura é tudo o que há no texto (*"Bom dia!"*) — e com
+   * `jaFalamosHoje` verdadeiro o `else if` nem era alcançado: o rascunho saía com a saudação do
+   * período errado, que é justamente o defeito que esta função existe para consertar.
+   * **A troca é o PISO**: não deu para tirar, pelo menos acerta a palavra.
+   */
+  const tirarPorquePelaSegundaVez = !!abertura && contexto?.jaFalamosHoje === true;
+  const semAAbertura = tirarPorquePelaSegundaVez ? semSaudacao(texto) : null;
+  if (semAAbertura) {
+    texto = semAAbertura;
+    avisos.push('nós já falamos com ela hoje — tirei a saudação repetida da abertura');
   } else if (abertura && abertura[1].toLowerCase() !== certa.toLowerCase()) {
-    texto = texto.replace(SAUDACAO_NO_COMECO, certa);
+    texto = texto.replace(SAUDACAO_NO_COMECO, (inteiro, errada) => inteiro.replace(errada, certa));
     avisos.push(`a IA abriu com "${abertura[1]}" e agora é ${certa.toLowerCase()} — troquei`);
   }
 

@@ -190,7 +190,34 @@ export function momentoDeNovoNaoCabe(c) {
  * "não". Só o rascunho da IA lê esta; o formulário da rodada segue com `pedirDadosNaoCabe`.
  * Desabafo entra pelo mesmo motivo: formulário no fim de um acolhimento soa como máquina.
  */
-export const rascunhoSemCadastro = (c) => casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal;
+export const rascunhoSemCadastro = (c) =>
+  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza;
+
+/**
+ * **A ABSTENÇÃO DA IA NÃO VIRA A MENSAGEM DO DIA EM AGRADECIMENTO, ELOGIO OU REAÇÃO**
+ * (05/11/2026, três prints: *"Muito obrigada por zelar pela nossa segurança!"*, um 🙏 e
+ * *"Parabéns Capitão Martim!"* — nos três o painel decidiu uma coisa, a IA se absteve, e o
+ * desfecho foi a tecla 5).
+ *
+ * **Isto ESTREITA a regra dele de 24/09** (*"não há o que responder → manda a mensagem do
+ * momento"*), a pedido dele e nos casos que ele nomeou. Aquela regra nasceu para o rabisco
+ * ininteligível, onde o texto do dia é melhor que o silêncio; em cima de um elogio ele é a
+ * resposta ao lado — e a mensagem do momento é a coisa mais fácil de o eleitor reconhecer como
+ * automática.
+ *
+ * **Barrada a abstenção, quem decide volta a ser o FLUXO** — que nas três prints já tinha
+ * decidido certo: tecla 3 para a reação (conclui sem enviar) e tecla 6 para o elogio. É o
+ * mecanismo de `absteveNoDesabafo` (31/10) com uma condição a mais, e não um caminho novo.
+ *
+ * O desabafo continua tratado lá, por identidade de aviso; aqui ficam os três casos novos.
+ */
+export function abstencaoNaoCabe(c) {
+  if (!c) return null;
+  if (c.soAgradeceOuElogia) return { motivo: 'ela só agradeceu ou elogiou — a mensagem do dia aqui responde ao lado' };
+  if (c.reacaoDeTristeza) return { motivo: 'ela respondeu com um emoji de tristeza — aqui cabe acolher, não o texto do dia' };
+  if (c.cortesiaDeFechamento) return { motivo: 'ela só reagiu depois da nossa resposta — o fluxo conclui sem enviar' };
+  return null;
+}
 
 /**
  * **Corrente ou denúncia repassada SEM a IA** (31/10/2026). O texto encaminhado casa palavras de
@@ -953,8 +980,18 @@ export const REGRAS = [
      * `momentoJaEnviado` passa a valer e a caixa volta a pedir nome e cidade — que é a mesma
      * mecânica de `contexto-de-outro-dia`.
      */
+    /**
+     * **EMOJI DE TRISTEZA NUNCA RECEBE O FORMULARIO** (05/11/2026, a Rosicler: 😢 depois da nossa
+     * mensagem recebeu *"me diga seu Nome, Cidade"*). A guarda fica na TECLA e nao na condicao,
+     * pela licao da Noeli (06/09): barrando a condicao o caso escorrega para a caixa de baixo, e
+     * varias delas ENVIAM. Aqui o desfecho e a tecla 6 — acolher e trabalho de gente ou da IA.
+     */
     tecla: (c) =>
-      c.veioDeAnuncio && !c.anuncioReconhecido && c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '4',
+      c.reacaoDeTristeza
+        ? '6'
+        : c.veioDeAnuncio && !c.anuncioReconhecido && c.podeMandarMomento && !c.momentoJaEnviado
+        ? '5'
+        : '4',
     /**
      * Veio do anúncio, não tem cidade, e **o formulário nunca saiu para ele**.
      *

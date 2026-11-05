@@ -619,8 +619,97 @@ function mensagemDeFecho(msg) {
   return !resto;
 }
 
+/**
+ * **EMOJI DE SOFRIMENTO NÃO É CORTESIA, E MUITO MENOS MOTIVO PARA PEDIR CADASTRO** (05/11/2026,
+ * print da Rosicler: ela respondeu 😢 à nossa mensagem e a rodada ofereceu a tecla 4 — *"me diga
+ * seu Nome, Cidade"*).
+ *
+ * Medido antes de mexer: `ehSoReacao` e `cortesiaDeFechamento` davam os dois VERDADEIROS para o
+ * 😢 — ou seja, o projeto o tratava como quem *"só agradeceu ou retribuiu o cumprimento"* (a
+ * regra de 31/10). **Não é a mesma coisa:** o 👍 e o 🙏 fecham a conversa, e o 😢 a abre.
+ *
+ * A lista é **curta e só do que não tem leitura dupla**. Fora dela de propósito: 😅 e 😭 de riso,
+ * ❤️, e o 😔 em *"que pena, não vou poder ir"*, que é recusa de presença e tem caminho próprio.
+ */
+const EMOJI_DE_SOFRIMENTO =
+  /[\u{1F622}\u{1F62D}\u{1F61E}\u{1F614}\u{1F628}\u{1F630}\u{1F97A}\u{1F915}\u{1F494}]/u;
+
+/**
+ * A fala dela desde a nossa última mensagem é **só reação, e ela carrega sofrimento**.
+ *
+ * Duas coisas e não uma: o emoji sozinho não diz nada sobre o que fazer (`ehSoReacao` já responde
+ * isso), e emoji de sofrimento no MEIO de um texto é o texto que decide — ali quem atende é
+ * `desabafoPessoal`.
+ */
+export function reacaoDeTristeza(entrantes, nossaUltimaAt) {
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt).filter((m) => !m?.sistema);
+  if (!dela.length) return null;
+  if (!dela.every((m) => ehSoReacao(m))) return null;
+  if (!dela.some((m) => EMOJI_DE_SOFRIMENTO.test(String(m?.texto || '')))) return null;
+  return { motivo: 'ela respondeu com um emoji de tristeza — isso pede acolhimento, não formulário' };
+}
+
+/**
+ * **AGRADECIMENTO E ELOGIO: a IA se abstinha e saía a MENSAGEM DO MOMENTO** (05/11/2026, três
+ * prints). *"Muito obrigada por zelar pela nossa segurança!"* e *"Parabéns Capitão Martim! O
+ * Zucco está escolhendo ótimos auxiliares!"* caíam na tecla 6, a IA respondia *"não há o que
+ * responder"*, e o desfecho de 24/09 mandava o texto do dia em cima de um elogio.
+ *
+ * **Medido: dos doze detectores, só `falouAlgoProprio` casava** — nenhum sabia que aquilo era
+ * agradecimento. `soExpressaApoio` não serve e não foi alargado: *"parabéns"* é voto de boa
+ * vontade e só conta como a mensagem inteira (a medição de 06/09, 15 falsos em 19).
+ *
+ * **A ASSIMETRIA é o que permite um detector simples, e ela é a razão do desenho:** este sinal
+ * NUNCA envia e NUNCA conclui. Ele só (1) impede a abstenção de virar a mensagem do momento e
+ * (2) diz à IA para escrever um obrigado curto. Falso positivo custa ele ler o caso; falso
+ * negativo devolve o comportamento de hoje.
+ *
+ * As guardas: nada de pergunta (quem pergunta é respondido), nada de pedido, e fala curta — elogio
+ * e agradecimento são curtos, e texto longo é conversa, que tem caminho próprio.
+ */
+const AGRADECE_OU_ELOGIA = [
+  /(^|[^\p{L}])(muito\s+)?(obrigad[oa]|brigad[oa]|agradec\p{L}*|gratid[ãa]o|grat[oa])([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(parab[ée]ns|felicitac\p{L}*)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(excelente|[óo]tim[oa]|maravilhos[oa]|orgulho|admir\p{L}*)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(bom|[óo]tim[oa]|excelente)\s+trabalho([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])continu\p{L}*\s+assim([^\p{L}]|$)/iu,
+];
+
+/** Marcas de PEDIDO: havendo uma, não é só agradecimento — e o pedido vem primeiro. */
+const PEDIDO_NO_AGRADECIMENTO =
+  /(^|[^\p{L}])(preciso|precisava|quero|queria|gostaria|pode\s+me|podem\s+me|me\s+manda|me\s+mande|me\s+ajud\p{L}*|me\s+liga|cad[êe]|quando|como\s+fa[çc]o|onde)([^\p{L}]|$)/iu;
+
+export function soAgradeceOuElogia(entrantes, nossaUltimaAt) {
+  /**
+   * **O `de !== 'nos'` não é zelo: sem ele a nossa própria mensagem conta.** Peguei isto medindo —
+   * chamada sem `nossaUltimaAt`, `desdeNossaUltima` devolve a lista inteira, e o *"Obrigado pelo
+   * apoio!"* que NÓS mandamos ligava o detector. E chamada sem o corte é o caso real: o painel
+   * chama `semInteresse(state.entrantes)` assim.
+   */
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => m?.de !== 'nos' && !m?.sistema && !m?.geradaPeloAnuncio);
+  const comTexto = dela.filter((m) => String(m?.texto || '').trim());
+  if (!comTexto.length) return null;
+
+  let achou = false;
+  for (const m of comTexto) {
+    const t = String(m.texto || '');
+    if (t.includes('?') || t.length > 200) return null;
+    if (PEDIDO_NO_AGRADECIMENTO.test(t)) return null;
+    if (AGRADECE_OU_ELOGIA.some((re) => re.test(t))) achou = true;
+  }
+  if (!achou) return null;
+  return { motivo: 'ela só agradeceu ou elogiou — isso pede um obrigado curto, nunca a mensagem do dia' };
+}
+
 export function cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras = 48 } = {}) {
   if (!nossaUltimaAt) return null;
+  /**
+   * **O fecho por cortesia NÃO fecha em cima de sofrimento** (05/11/2026) — ver
+   * `reacaoDeTristeza`. Concluir em silêncio aqui é virar as costas para quem acabou de dizer,
+   * do único jeito que deu, que não está bem.
+   */
+  if (reacaoDeTristeza(entrantes, nossaUltimaAt)) return null;
   const nossa = new Date(nossaUltimaAt).getTime();
   if (!Number.isFinite(nossa)) return null;
   const dela = desdeNossaUltima(entrantes, nossaUltimaAt).filter((m) => !m?.sistema);
@@ -2867,6 +2956,40 @@ const PREDICADO_EM_NOS = new RegExp(
 );
 
 /**
+ * **O "VOCÊ" PODE SER O PRÓPRIO TITULAR, E AÍ O XINGAMENTO NÃO É CONTRA NÓS** (05/11/2026, print
+ * do Adriano: a esposa dele falando no celular do marido, chamando o MARIDO de *"babaca"* e
+ * *"mentiroso"*). A rodada ofereceu a tecla `s` — etiqueta permanente de sem interesse mais
+ * conclusão em silêncio, em cima de um apoiador, por uma briga de casal.
+ *
+ * **Medido: o conserto de 3.263 não alcançava isto.** Aquela versão ensinou o PROMPT a distinguir
+ * titular, interlocutor e alvo do insulto — e `semInteresse` decide ANTES de a IA ser consultada,
+ * em primeiro lugar na tabela. É a quinta vez neste projeto em que uma decisão escrita num lugar
+ * não chega ao lugar onde ela decide.
+ *
+ * **A guarda é um DADO e não uma lista:** o nome do próprio contato. Vocativo com o nome do
+ * titular colado no pronome (*"Adriano você é um babaca"*) diz que o "você" é ele, e quem fala é
+ * outra pessoa no aparelho dele. Tentar isto por lista de palavras que abrem frase (*"Olha você
+ * é um mentiroso"*) seria a lista que não fecha, e errar aqui custa o mesmo que não ter guarda.
+ *
+ * **Limite escrito:** ela lê UMA mensagem, como todo o resto desta regra. Vindo o nome numa
+ * mensagem e o insulto na seguinte, a guarda não alcança — e o desfecho volta a ser o de hoje.
+ */
+function xingouOTitular(norm, nomeDoTitular) {
+  const primeiro = String(nomeDoTitular || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .split(/\s+/)[0] || '';
+  if (primeiro.length < 3 || !/^[a-z]+$/i.test(primeiro)) return false;
+  const nome = primeiro.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pronome = `(voce|vc|tu|senhor|senhora)`;
+  return (
+    new RegExp(`\\b${nome}\\b[\\s,!:;-]{0,3}\\b${pronome}\\b`, 'i').test(norm) ||
+    new RegExp(`\\b${pronome}\\b[^.!?]{0,40}[\\s,]\\b${nome}\\b`, 'i').test(norm)
+  );
+}
+
+/**
  * **O xingamento no IMPERATIVO já é segunda pessoa** — print dele (05/09/2026): a contato chegou
  * pelo anúncio, mandou o texto de apoio às 23:38 e, um minuto depois, *"Então vá para o inferno..
  * desgraçado"*. *"chegou hostilizando e extensão não reconheceu"*.
@@ -4142,7 +4265,7 @@ const VENDA_NEGADA =
 /** A negativa que desfaz: quem diz que o voto não se vende está do lado contrário. */
 const NAO_VENDE_O_VOTO = /(^|[^\p{L}])(meu|nosso)\s+votos?\s+(nao\s+(se\s+)?(compra|vende|tem\s+preco|esta\s+a\s+venda)|e\s+de\s+graca)/u;
 
-export function semInteresse(entrantes, nossaUltimaAt) {
+export function semInteresse(entrantes, nossaUltimaAt, opcoes = {}) {
   /**
    * **A RAJADA, e não só a última mensagem** — anotação da susana (03/09/2026), a segunda vez que
    * ela apareceu: *"segunda vez que ela vem e eu já tinha especificado que era hostil, por que não
@@ -4237,7 +4360,7 @@ export function semInteresse(entrantes, nossaUltimaAt) {
     const texto = String(comTexto[i]?.texto || '');
     // A recusa é testada ANTES da retratação: "não quero receber nada" tem "receber" dentro, e
     // pela ordem inversa a própria recusa se cancelava. Medido — três asserções caíram de uma vez.
-    const achado = umaMensagemRecusa(comTexto[i]);
+    const achado = umaMensagemRecusa(comTexto[i], opcoes);
     if (achado) return achado;
     if (PEDIDO_DE_MATERIAL.test(texto) || EXPRESSOES_DE_APOIO.some((padrao) => padrao.test(texto))) return null;
   }
@@ -4245,7 +4368,7 @@ export function semInteresse(entrantes, nossaUltimaAt) {
 }
 
 /** Uma mensagem só, com todas as guardas — é aqui que mora a regra. */
-function umaMensagemRecusa(msg) {
+function umaMensagemRecusa(msg, opcoes = {}) {
   /**
    * **A transcrição só decide pelo caminho FORTE** — pedido dele (08/09/2026), print do Sergio
    * Nunes: dois áudios chamando o mandato e os aliados de *"assassino, bandido, traidor, ladrão"*
@@ -4339,7 +4462,15 @@ function umaMensagemRecusa(msg) {
    */
   const soXingaTerceiro = XINGAMENTO_EM_TERCEIRO.test(norm) && !PREDICADO_EM_NOS.test(norm);
 
-  const agride = AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora) && !soXingaTerceiro;
+  /**
+   * **O vocativo com o nome do titular desfaz a segunda pessoa** — ver `xingouOTitular`. Fica ao
+   * lado de `soXingaTerceiro` porque as duas respondem a MESMA pergunta: para onde o insulto
+   * aponta. Sem `nomeDoTitular` ela é falsa e nada muda, que é o caminho de todo chamador antigo.
+   */
+  const xingaOTitular = xingouOTitular(norm, opcoes?.nomeDoTitular);
+
+  const agride =
+    AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora) && !soXingaTerceiro && !xingaOTitular;
   if (agride || soOImperativo || mandouNosEmbora) return { motivo: 'veio hostilizar, não é público do mandato' };
 
   const negativaVale = !falada && (norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm));
