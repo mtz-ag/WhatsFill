@@ -1972,6 +1972,11 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    ela) e o atendimento manda a mensagem do dia no seu lugar. Isto NÃO vale quando ela pergunta',
     '    ou pede alguma coisa e falta o dado — aí é a regra 14 —, nem quando o assunto é difícil,',
     '    **nem quando o que você não entendeu é uma GÍRIA — aí vale a regra 18.**',
+    // 05/11/2026, print do Maurício: 462 caracteres felicitando pela nova missão, e a IA marcou o
+    // campo. "Não pede nada" é metade da condição, e felicitação cumpre essa metade sempre.
+    '    **E NÃO VALE QUANDO ELA MANDOU CARINHO:** agradecer, elogiar, parabenizar, desejar sucesso',
+    '    ou torcer pelo Capitão não pede nada — e mesmo assim TEM resposta, que é um obrigado curto.',
+    '    Não pedir nada é METADE da condição; a outra metade é não dar para saber a que ela se refere.',
     '    **E vale também no caso oposto, em que você entendeu bem demais:** ela só REFORÇA o que nós',
     '    já respondemos e não há nada novo na fala dela. Aí a segunda mensagem só pode ser outro',
     '    agradecimento com outras palavras — e é essa a repetição que denuncia a máquina. Marque o',
@@ -3311,7 +3316,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
          * garante o desfecho.
          */
         : soAgradeceOuElogia
-        ? 'Ela só AGRADECEU ou ELOGIOU, e isso tem resposta: NÃO marque naoHaOQueResponder. ' +
+        ? 'Ela só mandou CARINHO (agradeceu, elogiou, parabenizou ou desejou bem), e isso tem ' +
+          'resposta: NÃO marque naoHaOQueResponder. ' +
           'Escreva UMA linha de obrigado, na primeira pessoa, sem repetir as palavras dela, sem ' +
           'pergunta no fim e sem puxar outro assunto — e não acrescente formulário nem oferta.'
         : 'Marque o campo naoHaOQueResponder e o atendimento manda a mensagem do dia no seu lugar.'),

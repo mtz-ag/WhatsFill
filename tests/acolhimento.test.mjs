@@ -259,4 +259,90 @@ grupo('xingamento ao titular nao e hostilidade contra o mandato (05/11/2026)');
   );
 }
 
+grupo('desejar sucesso tambem e carinho, e felicitacao e LONGA (05/11/2026)');
+{
+  /**
+   * **Print do Mauricio: 462 caracteres felicitando pela nova missao, e a rodada mandou para a
+   * mao dele** — a IA marcou `naoHaOQueResponder` e o painel escreveu *"a IA nao achou o que
+   * responder nisso"*. Pergunta dele: *"por que a IA nao achou algo quando era uma questao de
+   * agradecer?"*.
+   *
+   * **Medido antes de mexer, e o diagnostico obvio era o errado.** A guarda que barrava nao era
+   * so o teto de 200: o texto **nao casa NENHUMA** das cinco formas de agradecer/elogiar, nem
+   * cortado em 200 — ele nunca diz "obrigado" nem "parabens". Diz *"tenho plena confianca"*,
+   * *"sucesso nessa nova missao"*, *"um forte abraco"*.
+   *
+   * ```
+   * soAgradeceOuElogia .... null      <- nao e agradecimento nem elogio
+   * soExpressaApoio ....... null      <- voto de boa vontade, a medicao de 06/09
+   * desabafoPessoal ....... null
+   * semInteresse .......... null
+   * falouAlgoProprio ...... casou     <- o unico, e ele leva a tecla 6
+   * ```
+   *
+   * **E a classe e NOVA:** o anuncio da Defesa Civil (29/10) passou a trazer felicitacao pelo
+   * cargo todo dia, e nenhum detector a conhecia.
+   */
+  const AT = '2026-11-05T10:47:00-03:00';
+  const NOSSA = '2026-11-05T09:00:00-03:00';
+  const um = (t) => [{ texto: t, tipo: 'TEXT', at: AT, de: 'contato' }];
+  const carinho = (t) => !!cortesia.soAgradeceOuElogia(um(t), NOSSA);
+
+  const felicitacao = [
+    'Bom dia, Capitao!',
+    '',
+    'Tenho plena confianca de que voce sabera conduzir e superar os novos desafios que surgirao em sua trajetoria.',
+    '',
+    'Suas competencias profissionais, experiencia e capacidade de lideranca sao qualidades que certamente farao a diferenca nessa nova etapa.',
+    '',
+    'Sucesso nessa nova missao! Voce esta preparado para esse novo desafio.',
+    '',
+    'Um forte abraco!',
+  ].join('\n');
+
+  check(felicitacao.length > 200, 'a felicitacao da print passa de 200 caracteres — e por isso o teto antigo a descartava');
+  check(carinho(felicitacao), 'felicitacao longa pela nova missao e carinho, e tem resposta');
+
+  check(carinho('Sucesso sempre!'), 'desejar sucesso conta');
+  check(carinho('Estamos torcendo pelo senhor nessa nova etapa.'), 'torcer conta');
+  check(carinho('Muito merecido! Boa sorte na nova funcao.'), 'merecido e boa sorte contam');
+  check(carinho('Muito obrigada por zelar pela nossa seguranca!'), 'e o agradecimento de ontem continua contando');
+
+  /**
+   * **"nao tive sucesso no INSS" e EXITO, nao voto** — a forma mais comum de "sucesso" nesta
+   * base. Sem esta guarda, quem conta que nao conseguiu resolver recebia instrucao de obrigado.
+   */
+  check(!carinho('Fiz de tudo e nao tive sucesso no INSS, ja sao oito meses esperando a pericia.'),
+    'sucesso de EXITO nao e voto de bem');
+  check(!carinho('Tentei sem sucesso falar com a prefeitura sobre a rua aqui do bairro.'),
+    'e "sem sucesso" tambem nao');
+
+  /**
+   * **As tres guardas que substituiram o teto de tamanho.** O teto protegia de verdade o
+   * desabafo que abre agradecendo (a Cris, 02/09) — e isso tem detector proprio, que diz o que
+   * o tamanho so insinuava.
+   */
+  const desabafo = 'Oi. Bom dia, obrigada por responder. Eu estou passando por um momento muito dificil, perdi meu emprego, minha mae esta doente e eu nao sei mais o que fazer da vida. Chorei a noite inteira e nao tenho ninguem para conversar.';
+  check(desabafo.length > 200 && !carinho(desabafo), 'desabafo que abre agradecendo continua fora — mas agora por SER desabafo, nao por ser longo');
+  check(!carinho('URGENTE repassem para todos os grupos. Estao desviando verba da merenda na prefeitura e ninguem faz nada. Boa sorte a quem ainda confia nesses politicos.'),
+    'corrente com "boa sorte" dentro continua fora');
+
+  check(!carinho('Obrigada pelo retorno! Queria saber se voces conseguem me mandar o material.'),
+    'pedido educado continua sendo pedido');
+  check(!carinho('Parabens pela nomeacao! O senhor vai continuar como deputado?'),
+    'quem pergunta e respondido, nao agradecido');
+
+  /**
+   * **A ASSIMETRIA continua sendo o desenho, e e ela que permite a lista alargada:** este sinal
+   * NUNCA envia e NUNCA conclui — ele so impede a abstencao de virar a mensagem do dia e pede a
+   * IA um obrigado curto. **E por isso que as mesmas palavras que a medicao de 06/09 tirou de
+   * `soExpressaApoio` podem decidir aqui:** la o desfecho e agradecer o apoio E CONCLUIR.
+   */
+  check(cortesia.soExpressaApoio(um('Sucesso nessa nova missao! Um forte abraco!'), NOSSA, []) === null,
+    'e soExpressaApoio NAO foi alargado: voto de boa vontade continua nao sendo declaracao de apoio');
+
+  check(!!sugestao.abstencaoNaoCabe({ soAgradeceOuElogia: cortesia.soAgradeceOuElogia(um(felicitacao), NOSSA) }),
+    'com o sinal aceso, a abstencao da IA nao vira a mensagem do dia');
+}
+
 fim();

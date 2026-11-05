@@ -664,16 +664,50 @@ export function reacaoDeTristeza(entrantes, nossaUltimaAt) {
  * (2) diz à IA para escrever um obrigado curto. Falso positivo custa ele ler o caso; falso
  * negativo devolve o comportamento de hoje.
  *
- * As guardas: nada de pergunta (quem pergunta é respondido), nada de pedido, e fala curta — elogio
- * e agradecimento são curtos, e texto longo é conversa, que tem caminho próprio.
+ * As guardas: nada de pergunta (quem pergunta é respondido), nada de pedido, e nada que já tenha
+ * caminho próprio — desabafo, denúncia e hostilidade. **O tamanho NÃO é guarda** (ver o corpo da
+ * função): felicitação é longa, e foi o teto de 200 que deixou a print de 05/11 passar batido.
  */
 const AGRADECE_OU_ELOGIA = [
   /(^|[^\p{L}])(muito\s+)?(obrigad[oa]|brigad[oa]|agradec\p{L}*|gratid[ãa]o|grat[oa])([^\p{L}]|$)/iu,
-  /(^|[^\p{L}])(parab[ée]ns|felicitac\p{L}*)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(parab[ée]ns|felicitac\p{L}*|felicito)([^\p{L}]|$)/iu,
   /(^|[^\p{L}])(excelente|[óo]tim[oa]|maravilhos[oa]|orgulho|admir\p{L}*)([^\p{L}]|$)/iu,
   /(^|[^\p{L}])(bom|[óo]tim[oa]|excelente)\s+trabalho([^\p{L}]|$)/iu,
   /(^|[^\p{L}])continu\p{L}*\s+assim([^\p{L}]|$)/iu,
 ];
+
+/**
+ * **VOTO DE BEM: desejar sucesso é carinho, e não havia detector nenhum para isso** (05/11/2026,
+ * print do Maurício — 462 caracteres felicitando pela nova missão, e a rodada mandou para a mão
+ * dele depois de a IA dizer que não havia o que responder).
+ *
+ * **Medido: a mensagem não casa NENHUMA das cinco formas acima** — ela nunca diz "obrigado" nem
+ * "parabéns". Ela diz *"tenho plena confiança"*, *"sucesso nessa nova missão"*, *"um forte
+ * abraço"*. Não é agradecimento nem elogio: é **voto de bem**, a classe que o anúncio da Defesa
+ * Civil (29/10) passou a trazer todo dia.
+ *
+ * **Isto NÃO contradiz a medição de 06/09**, que tirou estas mesmas palavras de
+ * `soExpressaApoio`: lá o desfecho é AGRADECER O APOIO E CONCLUIR — manda mensagem e fecha o
+ * atendimento —, e 15 de 19 frases plausíveis desta base davam apoio sem ser apoio. **Aqui o
+ * desfecho é outro**: este sinal nunca envia e nunca conclui (ver `soAgradeceOuElogia`). A mesma
+ * palavra pode decidir aqui e não lá, porque o preço de errar é outro — e é por isso que a
+ * assimetria está escrita antes da lista.
+ */
+const VOTOS_DE_BEM = [
+  /(^|[^\p{L}])(muito\s+|todo\s+o\s+)?sucesso([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(boa\s+sorte|felicidades|boa\s+(caminhada|jornada))([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(torcendo|torcemos|tor[çc]o)([^\p{L}]|$)/iu,
+  /(^|[^\p{L}])(plena\s+)?confian[çc]a\s+(de\s+que|em\s+(voc[êe]|ti|o\s+senhor|seu))/iu,
+  /(^|[^\p{L}])(bem\s+)?merecid[oa]([^\p{L}]|$)/iu,
+];
+
+/**
+ * **"não tive sucesso no INSS" é ÊXITO, não voto** — e é a forma mais comum de "sucesso" nesta
+ * base. Sem esta guarda, quem conta que não conseguiu resolver recebia instrução de obrigado.
+ * Medido: dois falsos positivos viraram zero.
+ */
+const SUCESSO_DE_EXITO =
+  /(^|[^\p{L}])(n[ãa]o\s+(tive|teve|tivemos|tiveram|obtive|obteve|consegui)|sem|nenhum|pouco|algum)\s+(sucesso|[êe]xito)/iu;
 
 /** Marcas de PEDIDO: havendo uma, não é só agradecimento — e o pedido vem primeiro. */
 const PEDIDO_NO_AGRADECIMENTO =
@@ -691,15 +725,33 @@ export function soAgradeceOuElogia(entrantes, nossaUltimaAt) {
   const comTexto = dela.filter((m) => String(m?.texto || '').trim());
   if (!comTexto.length) return null;
 
+  /**
+   * **O TETO DE 200 CARACTERES SAIU, e ele era a guarda errada** (05/11/2026). Felicitação é
+   * LONGA — a do Maurício tem 462 —, e cortar por tamanho descartava exatamente a classe que o
+   * anúncio da Defesa Civil trouxe. O que o teto protegia de verdade era o desabafo que abre
+   * agradecendo (a Cris, 02/09, 437 caracteres), e isso tem detector próprio.
+   *
+   * **As três guardas que entraram no lugar dizem o que o tamanho só insinuava:** desabafo tem
+   * caminho próprio (sempre há o que ouvir), denúncia e corrente se desconversam (23/09) e quem
+   * veio hostilizar não recebe obrigado. Medido numa bateria de 17: 16 certas, e a que sobra —
+   * elogio irônico — **já erra hoje**, antes desta mudança.
+   */
+  if (desabafoPessoal(entrantes, nossaUltimaAt)) return null;
+  if (denunciaOuCorrente(entrantes, nossaUltimaAt)) return null;
+  if (semInteresse(entrantes, nossaUltimaAt)) return null;
+
   let achou = false;
   for (const m of comTexto) {
     const t = String(m.texto || '');
-    if (t.includes('?') || t.length > 200) return null;
+    if (t.includes('?')) return null;
     if (PEDIDO_NO_AGRADECIMENTO.test(t)) return null;
-    if (AGRADECE_OU_ELOGIA.some((re) => re.test(t))) achou = true;
+    const votoDeBem = VOTOS_DE_BEM.some((re) => re.test(t)) && !SUCESSO_DE_EXITO.test(t);
+    if (AGRADECE_OU_ELOGIA.some((re) => re.test(t)) || votoDeBem) achou = true;
   }
   if (!achou) return null;
-  return { motivo: 'ela só agradeceu ou elogiou — isso pede um obrigado curto, nunca a mensagem do dia' };
+  return {
+    motivo: 'ela só mandou carinho (agradeceu, elogiou ou desejou bem) — isso pede um obrigado curto, nunca a mensagem do dia',
+  };
 }
 
 export function cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras = 48 } = {}) {

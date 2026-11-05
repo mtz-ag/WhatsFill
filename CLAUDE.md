@@ -3492,6 +3492,48 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **DESEJAR SUCESSO E CARINHO, E NENHUM DETECTOR CONHECIA ISSO** (05/11/2026, print do Mauricio:
+  462 caracteres felicitando pela nova missao, e a rodada mandou para a mao dele depois de a IA
+  marcar `naoHaOQueResponder`. Pergunta dele: *"por que a IA nao achou algo quando era uma questao
+  de agradecer?"*).
+  **Medido primeiro, e o diagnostico obvio — o teto de 200 da vespera — era so metade:**
+  ```
+  soAgradeceOuElogia ... null   <- e NULL ate cortando o texto em 200: nenhuma das 5 formas casa
+  soExpressaApoio ...... null       o texto nunca diz "obrigado" nem "parabens"
+  desabafoPessoal ...... null
+  semInteresse ......... null
+  falouAlgoProprio ..... casou  <- o unico, e e ele que leva a tecla 6
+  ```
+  **Nao e agradecimento nem elogio: e VOTO DE BEM** — *"tenho plena confianca"*, *"sucesso nessa
+  nova missao"*, *"um forte abraco"*. **E a classe e NOVA:** o anuncio da Defesa Civil (29/10)
+  passou a trazer felicitacao pelo cargo todo dia, e o projeto inteiro nao tinha nada para ela.
+  **A REGRA 16 FOI CUMPRIDA AO PE DA LETRA, e e por isso que ela precisava da fronteira:** a
+  condicao dela e *"nao pede nada E nao da para saber a que se refere"* — e **felicitacao cumpre a
+  primeira metade sempre**. Hoje a regra diz, com estas palavras, que carinho tem resposta e que
+  nao pedir nada e METADE da condicao. E a familia de 24/09 (*"nao entendi" vira a saida facil*) e
+  de 08/09 (*regra sem escopo e cumprida ate onde ela nao devia ir*).
+  **ISTO NAO CONTRADIZ A MEDICAO DE 06/09, que tirou estas mesmas palavras de `soExpressaApoio`**
+  (15 falsos em 19): la o desfecho e **agradecer o apoio E CONCLUIR** — manda mensagem e fecha o
+  atendimento. Aqui o sinal **nunca envia e nunca conclui**: ele so impede a abstencao de virar a
+  mensagem do dia e pede a IA um obrigado curto. **A mesma palavra pode decidir num lugar e nao no
+  outro, porque o PRECO DE ERRAR e outro** — e e por isso que a assimetria se escreve antes da
+  lista. `soExpressaApoio` **nao foi alargado**, e ha teste exigindo isso.
+  **E O TETO DE 200 SAIU: ele era a guarda errada.** Felicitacao e LONGA, entao cortar por tamanho
+  descartava exatamente a classe nova. O que o teto protegia de verdade era o desabafo que abre
+  agradecendo (a Cris, 02/09, 437 caracteres) — **e isso tem detector proprio**. No lugar entraram
+  tres guardas que dizem o que o tamanho so insinuava: `desabafoPessoal`, `denunciaOuCorrente` e
+  `semInteresse`. **Ao usar TAMANHO como guarda, pergunte que propriedade voce esta medindo por
+  tabela — quase sempre ela tem nome, e o nome envelhece melhor.**
+  **A guarda que a medicao obrigou: *"nao tive sucesso no INSS"* e EXITO, nao voto** — a forma mais
+  comum de "sucesso" nesta base. Sem `SUCESSO_DE_EXITO`, quem conta que nao conseguiu resolver
+  recebia instrucao de escrever um obrigado.
+  **Bateria de 17: 16 certas.** A que sobra — **elogio ironico** (*"Parabens mesmo, voces so
+  aparecem na eleicao"*) — **ja erra hoje, antes desta mudanca**, e nao foi consertada de
+  proposito: detectar ironia por texto e a lista que nao fecha, e `semInteresse` devolve null
+  nela (criticar NOS nao e hostilidade pelas guardas de 01/09). O custo e limitado pela assimetria.
+  Provas: com o teto de 200 de volta caem 2 assercoes; sem `VOTOS_DE_BEM`, 5; sem a guarda do
+  sucesso de EXITO, 2; sem a guarda do desabafo, 1; sem a da denuncia, 1.
+
 - **A ABSTENCAO DA IA VIRAVA A MENSAGEM DO DIA EM CIMA DE UM ELOGIO** (05/11/2026, simulacao dele
   em 10 conversas, sem enviar). Tres prints com a mesma forma: *"Muito obrigada por zelar pela
   nossa seguranca!"*, um 🙏 e *"Parabens Capitao Martim!"* — o painel decidia tecla 6 ou 3, a IA
