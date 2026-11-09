@@ -736,7 +736,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     try {
       setStatus('Carregando contato…');
-      state.session = await api.getSession(sessionId);
+      // Leituras independentes: a ponte do canal nao precisa esperar a API da sessao.
+      const [session, numeroDoCanal] = await Promise.all([
+        api.getSession(sessionId),
+        Promise.resolve().then(() => page.numeroDoCanal()).catch(() => ''),
+      ]);
+      state.session = session;
       /**
        * **De quem é esta conversa** — pelo CANAL, que é dado (escolha dele, 24/09/2026).
        *
@@ -749,11 +754,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * chamada direta seria `ReferenceError` no meio do `load()` de todo contato. Falhar aqui não
        * pode custar o atendimento: sem o número, sobra o `channelId`.
        */
-      try {
-        state.numeroDoCanal = (await page.numeroDoCanal()) || '';
-      } catch {
-        state.numeroDoCanal = '';
-      }
+      state.numeroDoCanal = numeroDoCanal || '';
       /**
        * **O canal só AVISA** (decisão dele, 25/09/2026, o modelo de login): quem escolhe o
        * candidato é ele, e trocar sozinho por baixo foi exatamente o que ele recusou.
@@ -765,9 +766,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       recalcularCanalDoAtendimento();
 
-      const [contact, classify] = await Promise.all([
+      // Comeca a ler as mensagens junto com o cadastro, antes de etiquetas e memoria.
+      // Promise.all observa tambem as falhas: nenhuma leitura fica rejeitada sem tratamento.
+      const [contact, classify, conversa] = await Promise.all([
         api.getContact(state.session.contactId),
         fieldsLib.classifyFields(),
+        api.getConversation(sessionId),
       ]);
       state.contact = contact;
       state.classify = classify;
@@ -804,7 +808,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         state.draft[nomeField.id] = { value: contact.name, from: 'crm' };
       }
 
-      const conversa = await api.getConversation(sessionId);
       /**
        * **O texto que a PLATAFORMA escreveu não conta como mensagem dela — aqui também.**
        *

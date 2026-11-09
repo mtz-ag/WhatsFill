@@ -1,4 +1,17 @@
-## 2026-11-05 - v3.271.0 - ESTADO DE AGORA - desejar sucesso tambem e carinho
+## 2026-11-09 - v3.272.0 - ESTADO DE AGORA - leitura do contato em paralelo
+
+A leitura das mensagens agora comeca junto com cadastro e campos, antes de etiquetas e memoria.
+A sessao e o numero do canal tambem sao consultados em paralelo; falha na ponte continua sem
+impedir o carregamento. Nenhuma alteracao nas pausas de envio ou nas verificacoes do campo.
+
+A insercao no composer ja usa uma operacao para o texto inteiro, seguida da verificacao de
+persistencia apos o redesenho. O tempo da geracao pela IA continua separado e nao foi alterado.
+Ganho depende da latencia das consultas; nao houve medicao ao vivo nem envio de mensagens.
+
+Validacao: teste de concorrencia com cadastro pendente, preservacao dos resultados e falhas
+sincronas/assincronas da ponte. Para usar: recarregar a extensao e dar F5 no CRM; conferir 3.272.0.
+
+## 2026-11-05 - v3.271.0 - HISTORICO - desejar sucesso tambem e carinho
 
 > **Esta e a entrada de passagem de contexto.** Se a versao do `manifest.json` for maior que
 > **3.271.0**, ela envelheceu: confira antes de confiar e **reescreva-a**, nao acrescente uma
