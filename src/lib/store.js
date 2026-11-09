@@ -453,13 +453,13 @@ export const DEFAULT_TEMPLATES = [
     text:
       '{{saudacao}}! Que bom ter você aqui!\n\n' +
       'Em que posso ajudar?\n\n' +
-      'E, se puder, me informe para eu atender melhor:\n\n' +
+      'Para eu salvar seu contato e melhorar o atendimento, me informe, por favor:\n\n' +
       'Nome , Cidade\n\n' +
       '(exemplo: Pedro Silva , Porto Alegre)',
     variantes: [
       '{{saudacao}}! Que bom ter você por aqui!\n\n' +
         'Em que posso ajudar?\n\n' +
-        'E, se puder, me informe para eu atender melhor:\n\n' +
+        'Para eu salvar seu contato e melhorar o atendimento, me informe, por favor:\n\n' +
         'Nome , Cidade\n\n' +
         '(exemplo: Pedro Silva , Porto Alegre)',
     ],

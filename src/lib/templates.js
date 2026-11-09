@@ -48,6 +48,7 @@ export async function list({ perfil } = {}) {
     await migrarGabineteParaEquipe();
     await migrarBoasVindasPrimeiraPessoa();
     await migrarBoasVindasNeutras();
+    await migrarFinalidadeCadastro();
   }
   return doPerfil(perfil);
 }
@@ -247,7 +248,30 @@ export function saudacaoNeutra(texto) {
     return pre + comMaiusculaSePrecisa('que bom ter você aqui!', palavra);
   });
   s = s.replace(/para(?:\s+eu)?\s+melhor\s+atend(?:ê|e)-l[oa]/giu, 'para eu atender melhor');
-  return s;
+  return finalidadeCadastro(s);
+}
+
+// Troca somente a frase antiga conhecida; preserva personalizacoes e o formulario.
+export function finalidadeCadastro(texto) {
+  return String(texto || '').replace(/E, se puder, me informe para eu atender melhor:/g,
+    'Para eu salvar seu contato e melhorar o atendimento, me informe, por favor:');
+}
+
+export async function migrarFinalidadeCadastro() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.finalidadeCadastro) return [];
+  const templates = await store.get('templates');
+  const mudadas = [];
+  const novos = templates.map(t => {
+    const text = finalidadeCadastro(t.text);
+    const variantes = (t.variantes || []).map(finalidadeCadastro);
+    if (text === t.text && variantes.every((v, i) => v === t.variantes[i])) return t;
+    mudadas.push(t.id);
+    return { ...t, text, ...(t.variantes ? { variantes } : {}) };
+  });
+  if (mudadas.length) await store.set('templates', novos);
+  await store.set('migracoes', { ...migracoes, finalidadeCadastro: true });
+  return mudadas;
 }
 
 export function falaComoEquipe(texto) {

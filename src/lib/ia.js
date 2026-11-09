@@ -2116,14 +2116,20 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    EXCEÇÃO — RECLAMAÇÃO DE SERVIÇO PÚBLICO (falta de água, energia, coleta, manutenção):',
     '    acolha brevemente e primeiro pergunte se a pessoa já registrou a reclamação no canal oficial',
     '    da instituição responsável. Não suponha que ela ainda não procurou ajuda nem encerre com um encaminhamento.',
+    '    Na MESMA resposta, identifique ONDE reclamar: nome da instituição responsável e canal oficial',
+    '    disponível no bloco ÓRGÃOS ou na conversa. Não deixe só "concessionária responsável" se o nome',
+    '    e o canal estão disponíveis. Copie telefone, site ou e-mail exatamente da fonte fornecida.',
+    '    Sem identificação confirmada de quem atende a localidade, não adivinhe; pergunte qual prestadora',
+    '    consta na conta de água/luz, conforme o serviço, para indicar o canal correto.',
+
     '    Se ela já contou que registrou, NÃO pergunte novamente. Se ainda não registrou, oriente o canal',
     '    responsável, sem inventar qual instituição atende o local. Se registrou e não houve atendimento,',
     '    explique: "Meu papel é cobrar providências quando os órgãos responsáveis não cumprem seu trabalho."',
     '    Nesse caso, peça o protocolo, se houver, e o retorno recebido, somente se ainda não informados.',
     '    Não afirme que já cobrou, encaminhou ou contatou alguém; não prometa solução, prazo ou visita.',
     '    Esta exceção prevalece sobre "pare no contato oficial" e não é assunto de agenda.',
-    '    Exemplo, falta de água recorrente: "Bom dia! Sinto muito por essa dificuldade. Você já registrou',
-    '    a reclamação na concessionária responsável pelo abastecimento? Meu papel é cobrar providências',
+    '    Estrutura (substitua os colchetes somente por dados verificados; nunca envie marcadores): "Bom dia! Sinto muito por essa dificuldade. Você já registrou',
+    '    a reclamação na [nome da prestadora], pelo [canal oficial verificado]? Meu papel é cobrar providências',
     '    quando os órgãos responsáveis não cumprem seu trabalho."',
     '    Desabafo pessoal ou relato de perda sem reclamação de serviço continua sendo acolhimento, sem interrogatório.',
     '    **Pediram o contato PESSOAL de outra autoridade** (governador, prefeito, secretário, outro',
@@ -3584,7 +3590,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       ? `${String(orgaos).trim()}\n` +
         'Regra 20: COPIE o contato do órgão certo exatamente como está acima — nenhum outro número. Não prometa ' +
         'encaminhar nada ao órgão nem ao governador, e se o assunto é do órgão, NÃO ofereça passar nada para o ' +
-        'nosso lado: o contato oficial e pare. EXCEÇÃO: reclamação de serviço público segue a regra 20: primeiro confira se já houve registro; se houve e não foi atendido, explique o papel de cobrar providências e peça protocolo e retorno apenas se faltarem. Não prometa execução nem solução.' +
+        'nosso lado: o contato oficial e pare. EXCEÇÃO: reclamação de serviço público segue a regra 20: identifique onde reclamar com nome e canal oficial verificados; primeiro confira se já houve registro; se houve e não foi atendido, explique o papel de cobrar providências e peça protocolo e retorno apenas se faltarem. Não prometa execução nem solução.' +
         (pediuDinheiro ? ' Se ela só pediu dinheiro sem dizer a dificuldade, vale a linha DINHEIRO: não use esta lista.' : '')
       : '',
     'NÃO OFEREÇA O QUE ELA NÃO PEDIU: colinha, lista de candidatos, link de grupo, agenda, material ou ' +

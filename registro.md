@@ -1,4 +1,14 @@
-## 2026-11-09 - v3.274.0 - ESTADO DE AGORA - reclamacao de servico e cobranca
+## 2026-11-09 - v3.275.0 - ESTADO DE AGORA - finalidade nos pedidos salvos
+
+A correcao anterior cobria o rascunho IA, mas boas-vindas e sua variante ainda tinham a frase
+antiga na fabrica e no storage. Atualizados os padroes e adicionada migracao independente,
+que substitui apenas a frase antiga conhecida em textos/variantes, preservando personalizacoes.
+A normalizacao das boas-vindas tambem corrige a frase na insercao. Recarregar extensao e F5;
+conferir 3.275.0. Texto ja presente no composer precisa ser gerado novamente.
+Reclamacoes: a pergunta sobre registro agora exige tambem nome e canal oficial verificados
+na mesma resposta; sem prestadora confirmada, perguntar qual consta na conta, sem adivinhar.
+
+## 2026-11-09 - v3.274.0 - HISTORICO - reclamacao de servico e cobranca
 
 Pedido do usuario: antes de encaminhar reclamacao de servico publico, perguntar se ja foi
 registrada no canal responsavel. Se ja informado, nao repetir. Sem atendimento apos registro,

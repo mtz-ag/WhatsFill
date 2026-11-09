@@ -1057,7 +1057,7 @@ grupo('boas-vindas em tom neutro (31/10/2026)');
   const neutra = templates.saudacaoNeutra(dela);
   check(neutra.startsWith('Boa noite! Que bom ter você aqui!'), `saudacao: ${JSON.stringify(neutra.split('\n')[0])}`);
   check(!/bem-vind/i.test(neutra), 'sem bem-vindo');
-  check(/para eu atender melhor/.test(neutra) && !/atendê-l/.test(neutra), 'o pedido ficou sem gênero');
+  check(/salvar seu contato e melhorar o atendimento/.test(neutra) && !/atendê-l/.test(neutra), 'o pedido ficou sem gênero');
   check(/Nome , Cidade/.test(neutra), 'o formulário continua');
   check(templates.saudacaoNeutra('Boa tarde! Seja bem-vinda!').startsWith('Boa tarde! Que bom ter você aqui!'), 'bem-vinda também sai');
   check(
