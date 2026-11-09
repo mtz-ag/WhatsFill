@@ -1012,7 +1012,30 @@ async function conversaDaTela(oque, opcoes = {}) {
   if (alvo && st.sessionId !== alvo) {
     throw new Error(`${oque}: a tela mostra outra conversa — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }
-  if (st.porQuantosSinais !== 'os-dois') {
+  /**
+   * **`so-um-sinal` NUNCA quer dizer "os dois discordaram"** (09/11/2026, print dele com a tecla 3:
+   * *"a tecla 3 nao resolveu: sei qual conversa esta aberta por UM sinal so"*, com a conversa certa
+   * na tela e o rascunho no campo).
+   *
+   * Medido no `conversaAberta`: discordando, ele devolve **NADA** — e ai quem recusa e o
+   * `!st.sessionId`, duas linhas acima. `so-um-sinal` significa so que **um dos dois witnesses nao
+   * esta na tela**, e a ausencia do da FILA e o caso NORMAL: a lista e virtualizada (78 linhas no
+   * DOM para uma fila de centenas, medido em 26/10) e, com a conversa aberta, a linha pode nem
+   * estar desenhada. Entao esta exigencia nao protegia de conflito: ela cobrava uma testemunha que
+   * a plataforma as vezes nao desenha.
+   *
+   * **Com `id` a leitura deixa de ser palpite e vira CONFIRMACAO:** a rodada diz qual conversa
+   * abriu, e a comparacao logo acima ja provou que o sinal que sobrou aponta para ELA. Mostrando
+   * outra, aquela linha recusa; discordando, a de cima recusa. **Nenhuma das duas afrouxou** — o
+   * que saiu foi a cobranca do segundo witness quando ja ha uma expectativa a conferir.
+   *
+   * E a mesma reinterpretacao que o `id` ja trouxe em 28/10 para o *"Nenhuma conversa aberta"*: o
+   * mesmo estado da tela significa outra coisa quando se espera alguem em particular.
+   *
+   * **SEM `id` a exigencia continua inteira**, e esse e o clique a mao: ali nao ha expectativa
+   * nenhuma contra o que conferir, e um sinal so e adivinhar qual conversa esta na tela.
+   */
+  if (!alvo && st.porQuantosSinais !== 'os-dois') {
     throw new Error(`${oque}: sei qual conversa esta aberta por ${MARCA_SINAL_FRACO} (${st.porQuantosSinais}) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }
   return st.sessionId;

@@ -1,3 +1,47 @@
+## 2026-11-09 - v3.281.0 - ESTADO DE AGORA - a tecla 3 nao resolvia por falta de UMA testemunha
+
+Print dele com a tecla 3: "a tecla 3 nao resolveu: Resolver: sei qual conversa esta aberta por UM
+sinal so (so-um-sinal) — recuso, porque errar aqui mexe no atendimento de outra pessoa", com a
+conversa certa na tela e o rascunho no campo.
+
+Medido no codigo, e a premissa da guarda estava invertida. Quem le a conversa aberta devolve:
+
+| o que ha na tela                        | resposta      |
+|-----------------------------------------|---------------|
+| os dois sinais, com ids DIFERENTES      | nada          |
+| os dois sinais, com o mesmo id          | os-dois       |
+| so o painel da direita, ou so a linha   | so-um-sinal   |
+
+Ou seja: DISCORDAR nunca produz "so-um-sinal" — produz nada, e ai quem recusa e o "Nenhuma
+conversa aberta". "so-um-sinal" significa que uma das duas testemunhas nao esta desenhada, e a que
+falta e quase sempre a da FILA: a lista e virtualizada e, com a conversa aberta, a linha pode nem
+existir no DOM.
+
+No modo "Eu mando" isso virava recusa garantida: ali o unico ato que exige os dois sinais e a
+CONCLUSAO (o texto vai ao campo por um caminho que nao exige nada, e quem envia e voce), entao a
+espera inteira terminava em pulado por falta de uma linha de fila.
+
+O que mudou: havendo o id que a rodada abriu, um sinal que BATE com ele passa a bastar. Nao e
+palpite sobre qual conversa esta na tela: e confirmacao de que a tela mostra a que a rodada abriu,
+e a comparacao do id ja acontecia uma linha acima. E a mesma releitura que o id trouxe em 28/10
+para o "Nenhuma conversa aberta".
+
+O que NAO mudou, e e o que protege de verdade: a tela mostrando OUTRA conversa recusa, e os dois
+sinais discordando recusam. Sem id — o clique a mao — a exigencia dos dois continua inteira. Hoje
+so o Resolver carrega id; Assumir e Reabrir seguem exigindo os dois.
+
+Isto alcanca tambem a conclusao da propria rodada, que falhava pelo mesmo motivo (a familia do
+relato de 09/11 em Minhas).
+
+Nao foi medido QUAL dos dois sinais faltava na sua tela. O conserto nao depende disso: ele vale
+para a ausencia de qualquer um dos dois. A espera de 4s nao mudou, entao o tempo por contato
+continua o mesmo (antes ela esperava 4s e recusava).
+
+Pendencias: validacao ao vivo da tecla 3 e da tecla 2 na sua tela; e segue aberta a do titulo da
+conversa como fonte de cidade (v3.270.0).
+
+Recarregar extensao e F5 no CRM; conferir 3.281.0. Sem chamada paga ou envio real na validacao.
+
 ## 2026-11-09 - v3.280.0 - ESTADO DE AGORA - a tecla 2 pula e a 3 resolve
 
 Pedido dele: "adicione a opcao de pular no numero 2" e "na opcao 3 bote para resolver e ir pro

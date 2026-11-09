@@ -529,6 +529,8 @@ mudaram as maos, nao a cabeca.
   **A GUARDA NAO AFROUXOU, e nao se afrouxa:** `os-dois` continua obrigatorio para assumir,
   resolver, reabrir e enviar — assumir com um sinal so mexe no atendimento de outra pessoa. O que
   mudou e **dar tempo**, em vez de decidir no primeiro quadro.
+  **CORRIGIDO EM 09/11/2026 para o caso em que ha `id`:** veja *"`so-um-sinal` NAO QUER DIZER QUE
+  OS DOIS DISCORDARAM"* nas armadilhas do painel. Sem `id` esta frase continua inteira.
   **E o teste da FUNCAO nao pegava o defeito**, porque ele era ela ser chamada uma vez so: a
   assercao que trava isso exercita `clickIniciar` com uma janela que firma na terceira pergunta e
   exige que o guarda tenha sido ATRAVESSADO. Reintroduzindo a leitura unica, caem 2 assercoes.
@@ -837,6 +839,8 @@ mudaram as maos, nao a cabeca.
   deixaria a resposta pronta parando a rodada pela mesma razao.
   **A guarda que ela protege nao afrouxou:** `os-dois` continua obrigatorio para assumir,
   resolver, reabrir e enviar. O que mudou e o que a RODADA faz com a recusa.
+  **CORRIGIDO EM 09/11/2026 onde ha `id`** — ver a entrada do `so-um-sinal` nas armadilhas do
+  painel; sem `id` (o clique a mao) continua valendo como esta escrito.
 
 - **APAGAR ESVAZIA O CAMPO IGUALZINHO A ENVIAR — e o modo "Eu mando" dava os dois por enviados**
   (29/10/2026, relato dele: *"o texto foi pro box de conversa, eu olhei e vi que estava errado,
@@ -3491,6 +3495,36 @@ mudaram as maos, nao a cabeca.
 
 
 ## Armadilhas do próprio painel
+
+- **`so-um-sinal` NAO QUER DIZER QUE OS DOIS DISCORDARAM: QUER DIZER QUE UM NAO ESTA DESENHADO**
+  (09/11/2026, print dele apertando a tecla 3 com a conversa certa na tela e o rascunho no campo:
+  *"a tecla 3 nao resolveu: Resolver: sei qual conversa esta aberta por UM sinal so (so-um-sinal) —
+  recuso, porque errar aqui mexe no atendimento de outra pessoa"*).
+  **Medido no codigo, e a premissa da guarda estava invertida.** `dom-mob.conversaAberta` faz:
+  ```
+  os dois presentes e com ids DIFERENTES -> null        <- discordancia
+  os dois presentes e iguais ............ 'os-dois'
+  so o painel / so a linha .............. 'so-um-sinal' <- AUSENCIA de testemunha
+  ```
+  Entao **discordar nunca produz `so-um-sinal`** — produz `null`, e quem recusa ali e o
+  `Nenhuma conversa aberta`, duas linhas acima. A exigencia de `os-dois` cobrava **a segunda
+  testemunha**, e a que falta e quase sempre a da FILA: a lista e virtualizada (78 linhas no DOM
+  para uma fila de centenas, 26/10) e com a conversa aberta a linha pode nem estar desenhada.
+  **No modo "Eu mando" isso vira recusa garantida:** ali o unico ato que exige `os-dois` e a
+  CONCLUSAO (o texto vai ao campo por `setComposerText`, que nao exige nada, e quem envia e ele),
+  entao a espera inteira terminava em `pulado` por falta de uma linha de fila.
+  **O `id` e o que muda o significado da leitura**, e isso ja era doutrina daqui: em 28/10 o mesmo
+  `id` transformou *"Nenhuma conversa aberta"* de resposta FINAL em estado NORMAL. Com `id`, o
+  sinal que sobrou nao e palpite sobre qual conversa esta aberta — e **confirmacao** de que a tela
+  mostra a que a rodada abriu, e a comparacao `st.sessionId !== alvo` (logo acima) ja provou isso.
+  **As duas protecoes que importam ficaram intactas:** a tela mostrando OUTRA conversa recusa, e os
+  dois discordando recusam. **Sem `id` — o clique a mao — a exigencia continua inteira**, porque
+  ali nao ha expectativa contra o que conferir. Na pratica so o **Resolver** carrega `id` hoje
+  (`concluirPeloPainel`); Assumir e Reabrir seguem exigindo os dois.
+  **O que NAO foi medido:** QUAL dos dois sinais estava faltando na tela dele. O conserto nao
+  depende disso — ele vale para a ausencia de qualquer um dos dois —, e a espera de 4s continua
+  como estava, entao o tempo por contato nao mudou (hoje ela esperava 4s e recusava).
+  Provas: exigindo `os-dois` de novo cai 1 assercao; tirando a comparacao do `id`, caem 2.
 
 - **TECLA QUE VIRA ACAO MUDA O PRECO DE O NUMERO SER DIGITADO NO CAMPO DE MENSAGEM** (09/11/2026,
   pedido dele: *"adicione a opcao de pular no numero 2"* e *"na opcao 3 bote para resolver e ir pro

@@ -717,6 +717,32 @@ grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
   }
 
   /**
+   * **COM `id`, UM SINAL QUE BATE E CONFIRMACAO — e nao palpite** (09/11/2026, print dele com a
+   * tecla 3: *"a tecla 3 nao resolveu: sei qual conversa esta aberta por UM sinal so"*, com a
+   * conversa certa na tela e o rascunho no campo).
+   *
+   * `so-um-sinal` nunca significa "os dois discordaram": discordando, `conversaAberta` devolve
+   * NADA e quem recusa e o `Nenhuma conversa aberta`. Significa que um dos witnesses nao esta
+   * desenhado — e a linha da fila some o tempo todo (lista virtualizada). A guarda cobrava a
+   * segunda testemunha num caso em que ja havia expectativa a conferir.
+   *
+   * **Prova de regressao:** tirando o `!alvo` da condicao, cai a primeira assercao; tirando a
+   * comparacao do id, cai a segunda; tirando a exigencia sem id, cai a terceira.
+   */
+  const comId = janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal');
+  const passou = await erro(() => clickConcluir({ id: 'c-1', prazoMs: 0, janela: comId }));
+  check(!passou.includes('UM sinal'),
+    'Resolver com o id que a rodada abriu passa da guarda com um sinal so');
+
+  const outra = await erro(() => clickConcluir({ id: 'c-OUTRA', prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal') }));
+  check(outra.includes('a tela mostra outra conversa'),
+    'e a tela mostrando OUTRA conversa continua recusando — a protecao que importa nao mudou');
+
+  const semId = await erro(() => clickConcluir({ prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'so-um-sinal') }));
+  check(semId.includes('UM sinal'),
+    'sem id (o clique a mao) a exigencia dos dois sinais continua inteira');
+
+  /**
    * **Assumir devolve o estado da TELA, nao a sonda do banco** (28/10/2026). A sonda e
    * `{ ok, estado, temAtendente }` — sem `hasComposer`. A rodada dos Novos lia a ausencia
    * como "o campo nao apareceu" e parava no primeiro contato, depois de ja ter assumido.
