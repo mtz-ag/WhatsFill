@@ -809,6 +809,24 @@ const DEFAULTS = {
    * sempre foi na prática.
    */
   defaultGroupLink: '',
+  /**
+   * **OS DOIS FORMULÁRIOS** — pedido dele (09/11/2026): *"iremos passar esse formulário para
+   * demandas … e para visitas …"*, e logo depois *"adicione na extensão para que o formulário
+   * possa ser mudado caso necessário e seja utilizado pela IA"*.
+   *
+   * **Link em campo, nunca colado no texto** — a lição do grupo (07/09): o endereço muda, e colado
+   * ele seria reescrito em cada resposta, com a chance de uma ficar velha. Aqui é uma edição num
+   * lugar.
+   *
+   * **Vazio é desligado, e isso é deliberado:** sem link a variável BLOQUEIA o envio com o motivo
+   * na tela, e o bloco não entra no prompt — a IA não fica sabendo de um formulário que não existe.
+   * É o que faz o candidato novo (que não tem esses formulários) não mandar o link do outro.
+   *
+   * Nasce vazio e é preenchido por `templates.migrarLinksDosFormularios`: default novo não chega em
+   * quem já usa a extensão, porque `store.get` só mescla default em chave que FALTA.
+   */
+  linkDemanda: '',
+  linkAgenda: '',
   settings: {
     autoSend: false, // começa desligado de propósito: primeiro teste você faz no seu número
     throttleMs: 1500,
@@ -1825,7 +1843,7 @@ export async function importJson(text) {
    * `conteudoPreferido` estava faltando desde antes, pelo mesmo motivo e com o mesmo efeito.
    */
   const allowed = [
-    'templates', 'defaultGroupLink', 'settings', 'writeContract', 'dicts',
+    'templates', 'defaultGroupLink', 'linkDemanda', 'linkAgenda', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
     'modeloPadraoAnuncio', 'modelosPadraoAnuncio',

@@ -35,6 +35,7 @@ export async function list({ perfil } = {}) {
     await migrarBoasVindasTemDados();
     await migrarRespostaAgendaGrupo();
     await migrarLinkDoGrupoAtual();
+    await migrarLinksDosFormularios();
     // DEPOIS da de cima: aquela so preenche o link, esta reescreve o TEXTO de quem ja tinha a
     // resposta gravada prometendo o grupo da cidade (03/11/2026).
     await migrarLinkGrupoSemCidade();
@@ -527,6 +528,53 @@ export async function migrarLinkDoGrupoAtual() {
 
   await store.set('migracoes', { ...migracoes, linkGrupoAgenda: true });
   return !atual;
+}
+
+/**
+ * **OS DOIS FORMULÁRIOS DELE** — 09/11/2026: *"iremos passar esse formulário para demandas
+ * https://capitaomartim.com.br/formulario/demanda-cidada e para visitas
+ * https://mobiliza.me/capitaomartim/formulario/agenda"*.
+ *
+ * Medidos na página, logado, antes de qualquer linha de código:
+ *
+ *  - **demanda** — *"Registre um pedido ou problema da sua comunidade. O gabinete recebe com
+ *    protocolo e dá retorno."* Pede nome, WhatsApp, em nome de quem fala, assunto (infraestrutura,
+ *    saúde, educação, segurança, transporte, meio ambiente, assistência social, iluminação,
+ *    saneamento, Defesa Civil), **o endereço do problema**, o que está acontecendo, o que quer que
+ *    o deputado faça, prazo, e **se já procurou algum órgão e qual foi a resposta**;
+ *  - **agenda** — *"Preencha o formulário para solicitar uma visita, reunião, evento ou
+ *    entrevista."* Pede tipo de agenda (visita, reunião, evento público, entrevista, live,
+ *    carreata), cidade e UF, data e horário sugeridos, local e descrição.
+ *
+ * **Só preenche o que está VAZIO**, como a do grupo: o endereço que ele trocar amanhã não pode
+ * voltar ao antigo no próximo carregamento do painel — e é por isso que a marca em `migracoes`
+ * existe, não bastasse o campo estar cheio.
+ *
+ * As duas chaves são **por candidato** (`perfis.CHAVES_DO_PERFIL`), e esta migração escreve na do
+ * candidato de fábrica, que é a dele. O perfil novo continua vazio: estes formulários são do
+ * gabinete do Capitão Martim.
+ */
+export const LINK_DEMANDA_09_11_2026 = 'https://capitaomartim.com.br/formulario/demanda-cidada';
+export const LINK_AGENDA_09_11_2026 = 'https://mobiliza.me/capitaomartim/formulario/agenda';
+
+export async function migrarLinksDosFormularios() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.linksDosFormularios) return [];
+
+  const postos = [];
+  const demanda = String((await store.get('linkDemanda')) || '').trim();
+  if (!demanda) {
+    await store.set('linkDemanda', LINK_DEMANDA_09_11_2026);
+    postos.push('linkDemanda');
+  }
+  const agenda = String((await store.get('linkAgenda')) || '').trim();
+  if (!agenda) {
+    await store.set('linkAgenda', LINK_AGENDA_09_11_2026);
+    postos.push('linkAgenda');
+  }
+
+  await store.set('migracoes', { ...migracoes, linksDosFormularios: true });
+  return postos;
 }
 
 export const migrarBoasVindasTemDados = () =>

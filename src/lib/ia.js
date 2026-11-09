@@ -2156,6 +2156,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **NUNCA fale de urgência, prioridade, avaliação ou análise** ("vamos avaliar a urgência",',
     '    "é prioridade", "vamos analisar"): ninguém aqui faz triagem, e a pessoa lê que vão decidir',
     '    se ela merece.',
+    '    **Havendo o bloco FORMULÁRIOS com o link da AGENDA, ele substitui esta promessa:** mande o',
+    '    endereço para ela pedir a visita, a reunião, o evento ou a entrevista, em vez de dizer que',
+    '    vai passar para alguém. Sem o bloco, vale a frase acima.',
     'SEM ECO: não repita nem resuma o que ela escreveu ("Entendi que você quer apresentar…",',
     '"Você me contou que…"). Ela sabe o que disse. Vá direto à resposta, curta e calorosa.',
     '',
@@ -2916,7 +2919,63 @@ function linhaDoGenero(nome) {
   return '';
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '' } = {}) {
+/**
+ * **OS DOIS FORMULÁRIOS, no bloco do CONTATO** — pedido dele (09/11/2026): *"iremos passar esse
+ * formulário para demandas … e para visitas …"*, *"adicione na extensão para que o formulário possa
+ * ser mudado caso necessário e seja utilizado pela IA"*.
+ *
+ * **No bloco do contato e não no sistema**, pela razão de sempre: o sistema leva `cache_control` e é
+ * igual para todo mundo, e estes dois endereços são do CANDIDATO (`perfis.CHAVES_DO_PERFIL`) e
+ * mudam quando ele trocar o campo na Config — no sistema, cada troca invalidaria o cache de todos.
+ *
+ * **Campo vazio não gera bloco, e isso é o desligamento:** o candidato que não tem formulário não
+ * fica sabendo de um, em vez de mandar o link do outro. A mesma regra do dossiê.
+ *
+ * **O endereço vai LITERAL e com a ordem de copiar**, como `PEDIDO_DE_DADOS_NO_RASCUNHO` e como os
+ * telefones do bloco ÓRGÃOS. O que impede a redigitação é a trava `linkForaDoCadastro`, não esta
+ * frase — frase no prompt é pedido (a lição do relógio, 04/09).
+ *
+ * **O que cada um é foi MEDIDO na página, logado, antes de escrever esta linha** — ver
+ * `templates.migrarLinksDosFormularios`. O de demanda pergunta o endereço do problema e se ela já
+ * procurou algum órgão; é por isso que ele entra DEPOIS do contato oficial da regra 20, e não no
+ * lugar dele.
+ */
+export function blocoDosFormularios(formularios = {}) {
+  const demanda = String(formularios?.demanda || '').trim();
+  const agenda = String(formularios?.agenda || '').trim();
+  if (!demanda && !agenda) return '';
+
+  const linhas = [
+    'FORMULÁRIOS: endereços oficiais do mandato. COPIE o endereço exatamente como está escrito ' +
+      'aqui — nunca escreva um link de memória, nunca mude uma letra, nunca invente outro endereço.',
+  ];
+  if (demanda) {
+    linhas.push(
+      `- DEMANDA — ${demanda}\n` +
+        '  Para problema da comunidade (rua, água, luz, saúde, escola, segurança, transporte, ' +
+        'saneamento, Defesa Civil) e para pedir que o mandato cobre o órgão responsável. O ' +
+        'formulário pergunta o endereço do problema e se ela já procurou algum órgão, e o registro ' +
+        'entra com protocolo. Numa reclamação de serviço público (regra 20) o contato do órgão vem ' +
+        'PRIMEIRO; o formulário é o passo seguinte, para o mandato cobrar — nunca o substituto.'
+    );
+  }
+  if (agenda) {
+    linhas.push(
+      `- AGENDA — ${agenda}\n` +
+        '  Para pedir visita, reunião, evento, entrevista, live ou caminhada. Com este link, NÃO ' +
+        'diga que vai passar para o responsável pela agenda (regra 21): mande o endereço, que é ' +
+        'por onde o pedido entra.'
+    );
+  }
+  linhas.push(
+    'Mande o link SÓ quando ela trouxer esse caso: formulário não se oferece a quem não pediu, e ' +
+      'os dois nunca vão na mesma mensagem. E NÃO diga que você registrou, abriu protocolo, ' +
+      'encaminhou ou já cobrou — quem registra é ela, preenchendo. Nada de prazo nem de solução.'
+  );
+  return linhas.join('\n');
+}
+
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '', formularios = {} } = {}) {
   /** Ver `FASE_PADRAO`. As linhas deste bloco que falavam de campanha seguem a mesma chave. */
   const EM_CAMPANHA = emCampanha(fase);
   /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
@@ -3593,6 +3652,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'nosso lado: o contato oficial e pare. EXCEÇÃO: reclamação de serviço público segue a regra 20: identifique onde reclamar com nome e canal oficial verificados; primeiro confira se já houve registro; se houve e não foi atendido, explique o papel de cobrar providências e peça protocolo e retorno apenas se faltarem. Não prometa execução nem solução.' +
         (pediuDinheiro ? ' Se ela só pediu dinheiro sem dizer a dificuldade, vale a linha DINHEIRO: não use esta lista.' : '')
       : '',
+    blocoDosFormularios(formularios),
     'NÃO OFEREÇA O QUE ELA NÃO PEDIU: colinha, lista de candidatos, link de grupo, agenda, material ou ' +
       'conteúdo só entram se ela pediu ou perguntou por isso. Nada de "quer que eu te mande…?", "posso ' +
       'te encaminhar…?" ou "qual prefere?" para criar assunto. Se fechar com pergunta, a pergunta é ' +
@@ -3720,6 +3780,19 @@ export const AVISOS_QUE_IMPEDEM_ENVIO = {
   prometeuChegarAEle: 'promete que o recado chega ao deputado ou que ele vai ler — quem lê é a equipe',
   prometeuOrgao: 'promete encaminhar o pedido ao governador ou a outro órgão — o certo é dar o contato oficial',
   telefoneForaDoDossie: 'tem um telefone que não está no dossiê de órgãos nem na conversa — confira o número',
+  /**
+   * **O link redigitado é o número de urna de novo** (09/11/2026).
+   *
+   * Em 09/09 a regra ficou escrita: *"número de urna não se redigita — seis números redigitados são
+   * seis chances de mandar o eleitor votar em outra pessoa"*. Um endereço é a mesma coisa com um
+   * desfecho pior: um caractere trocado e o eleitor cai numa página que não existe, ou numa que não
+   * é nossa, achando que registrou a demanda dele.
+   *
+   * A lista de permissão sai do CADASTRO (os dois formulários, o grupo) e do bloco ÓRGÃOS, que é o
+   * que a regra 20 manda copiar — assim o site oficial do órgão continua passando, e o que barra é
+   * o endereço que ninguém escreveu em lugar nenhum.
+   */
+  linkForaDoCadastro: 'tem um link que não está nos campos da Config nem no bloco de órgãos — confira o endereço',
   disseQueNaoTemONumero: 'diz que não temos o telefone ou o contato — o motivo é segurança, e quem escreve acha que fala com ele',
   misturouOrgaoENos: 'dá o contato de outro órgão E oferece passar para o nosso lado — assunto do órgão termina no contato',
   /**
@@ -4153,6 +4226,30 @@ export function telefonesDoTexto(texto) {
   return [...new Set(achados.map((t) => t.replace(/\D/g, '')).filter((d) => d.length >= 10))];
 }
 
+/**
+ * Os endereços escritos num texto, normalizados para comparar.
+ *
+ * Minúscula, sem `http(s)://`, sem `www.`, sem a barra e a pontuação do fim — é o que faz
+ * *"Acesse https://Capitaomartim.com.br/formulario/demanda-cidada."* ser o MESMO endereço que o
+ * campo da Config guarda. O que não se normaliza é o caminho: `/formulario/demanda` e
+ * `/formulario/demanda-cidada` são páginas diferentes, e é justamente essa diferença que a trava
+ * existe para pegar.
+ */
+export function linksDoTexto(texto) {
+  const achados = String(texto || '').match(/(?:https?:\/\/|www\.)[^\s<>"')\]]+/giu) || [];
+  return [...new Set(achados.map(normalizarLink).filter(Boolean))];
+}
+
+export function normalizarLink(bruto) {
+  return String(bruto || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/[.,;:!?)\]]+$/, '')
+    .replace(/\/+$/, '');
+}
+
 /** O mesmo número? Tira o 55 do país e o zero do 0800 antes de comparar. */
 function mesmoTelefone(a, b) {
   const n = (d) => String(d).replace(/^55(?=\d{10,11}$)/, '').replace(/^0(?=800)/, '');
@@ -4249,6 +4346,19 @@ export function travasDoEscopo(texto, contexto = {}) {
 
   if (new RegExp(`${L}n[ãa]o\\s+(temos|tenho|possu[íi]mos|possuo|sabemos|sei)\\s+(o\\s+|esse\\s+|este\\s+|nenhum\\s+)?(telefone|n[úu]mero|contato|whats\\p{L}*|celular|zap)`, 'iu').test(t)) {
     avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.disseQueNaoTemONumero);
+  }
+
+  /**
+   * **Link que ninguém cadastrou não sai** — ver `AVISOS_QUE_IMPEDEM_ENVIO.linkForaDoCadastro`.
+   *
+   * Só roda com a lista presente: sem ela não há com o que comparar, e barrar todo link faria o
+   * rascunho parar de dar o site do órgão, que é o que a regra 20 manda copiar.
+   */
+  if (Array.isArray(contexto?.linksPermitidos)) {
+    const permitidos = contexto.linksPermitidos.map(normalizarLink).filter(Boolean);
+    if (linksDoTexto(t).some((l) => !permitidos.includes(l))) {
+      avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.linkForaDoCadastro);
+    }
   }
 
   if (Array.isArray(contexto?.telefonesPermitidos)) {

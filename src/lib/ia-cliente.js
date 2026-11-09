@@ -23,6 +23,7 @@ import {
   perguntouOCargo,
   perguntouDaTransicao,
   telefonesDoTexto,
+  linksDoTexto,
   tokensAproximados,
   ANTERIOR_MAX_FALAS,
   ELA_SE_DESCULPOU,
@@ -282,7 +283,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, expressouApoio = null, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, expressouApoio = null, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null, linksPermitidos = null, formularios = {} }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -304,7 +305,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
    */
   const contato = montarContatoRascunho({
-    mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos,
+    mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   });
   const lidoPelaIA = {
@@ -412,6 +413,26 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
          * conversa, no dossiê, nas regras e nas respostas prontas — número que ela mesma escreveu
          * não é palpite da IA.
          */
+        /**
+         * **Os endereços que podem sair** (09/11/2026) — mesma mecânica da linha de baixo, e pela
+         * mesma razão: lista nula deixa a trava calada; lista (mesmo vazia) soma o que JÁ está
+         * escrito na conversa, no dossiê, nas regras e nas respostas prontas, porque link que ela
+         * mesma mandou não é palpite da IA. O que barra é o endereço que ninguém escreveu em lugar
+         * nenhum — ver `ia.AVISOS_QUE_IMPEDEM_ENVIO.linkForaDoCadastro`.
+         */
+        linksPermitidos: Array.isArray(linksPermitidos)
+          ? [
+              ...linksPermitidos,
+              ...linksDoTexto([
+                ...(mensagens || []).map((m) => m?.texto),
+                ...(anterior || []).map((m) => m?.texto),
+                gabinete,
+                regras,
+                orgaos,
+                ...(templates || []).flatMap((t) => [t?.text, ...(t?.variantes || [])]),
+              ].join('\n')),
+            ]
+          : null,
         telefonesPermitidos: Array.isArray(telefonesPermitidos)
           ? [
               ...telefonesPermitidos,

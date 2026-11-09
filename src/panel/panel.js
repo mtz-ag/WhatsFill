@@ -16849,6 +16849,26 @@ const CONTATOS_POR_PAGINA = 200;
       /* segue sem o bloco */
     }
 
+    /**
+     * **OS DOIS FORMULÁRIOS DO CANDIDATO ATIVO** (09/11/2026) — o de demandas e o de agenda, lidos
+     * do perfil como o link do grupo. Vazio não vira bloco no prompt: candidato sem formulário não
+     * fica sabendo de um (ver `ia.blocoDosFormularios`).
+     */
+    const formularios = {
+      demanda: String((await perfisLib.lerDoAtivo('linkDemanda', '')) || '').trim(),
+      agenda: String((await perfisLib.lerDoAtivo('linkAgenda', '')) || '').trim(),
+    };
+    /**
+     * **A lista de permissão dos endereços.** Os três que a extensão conhece; `ia-cliente` soma o
+     * que já está escrito na conversa, no dossiê, nas regras, nas respostas prontas e no bloco
+     * ÓRGÃOS. Endereço fora disso barra o envio — ver `linkForaDoCadastro`.
+     */
+    const linksPermitidos = [
+      formularios.demanda,
+      formularios.agenda,
+      String((await perfisLib.lerDoAtivo('defaultGroupLink', '')) || '').trim(),
+    ].filter(Boolean);
+
     // `async` é obrigatório: há `await` no meio dos argumentos (o dossiê e a chapa saem de funções).
     const chamarIA = async () =>
       iaCliente.rascunhar({
@@ -16924,6 +16944,8 @@ const CONTATOS_POR_PAGINA = 200;
         fase: faseAtual(),
         orgaos: orgaosDaConversa.bloco,
         telefonesPermitidos: orgaosDaConversa.telefones,
+        formularios,
+        linksPermitidos,
       });
 
     let rascunho;
@@ -18085,6 +18107,45 @@ const CONTATOS_POR_PAGINA = 200;
       setStatus(link ? 'Link do grupo salvo.' : 'Link do grupo apagado: a resposta do grupo não vai sair.', 'ok');
     });
     body.append(h('label', { class: 'wf-field' }, [h('span', {}, 'Link do grupo'), defaultInput]), cityBtn);
+
+    /**
+     * **OS DOIS FORMULÁRIOS** — pedido dele (09/11/2026): *"iremos passar esse formulário para
+     * demandas … e para visitas …"*, e em seguida *"adicione na extensão para que o formulário
+     * possa ser mudado caso necessário e seja utilizado pela IA"*.
+     *
+     * Mesmo desenho do link do grupo, pela mesma razão: **o endereço muda**, e colado no texto ele
+     * seria reescrito resposta por resposta. Aqui é uma edição num lugar — e o campo vazio DESLIGA:
+     * a variável bloqueia o envio e o bloco não entra no prompt da IA.
+     */
+    body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Formulários'));
+    body.append(
+      h('p', { class: 'wf-hint' }, 'Os dois links que a IA manda: o de DEMANDAS (problema da comunidade, pedido para o mandato cobrar um órgão) e o de AGENDA (visita, reunião, evento, entrevista). Entram também em {{link_demanda}} e {{link_agenda}} nas respostas prontas. Campo vazio desliga: a IA não fica sabendo do formulário e a resposta que o promete não sai.')
+    );
+
+    const demandaInput = h('input', { type: 'text', placeholder: 'https://.../formulario/demanda-cidada' });
+    const agendaInput = h('input', { type: 'text', placeholder: 'https://.../formulario/agenda' });
+    perfisLib.ler('linkDemanda', perfilAtivo(), '').then((v) => (demandaInput.value = v || ''));
+    perfisLib.ler('linkAgenda', perfilAtivo(), '').then((v) => (agendaInput.value = v || ''));
+
+    const formsBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar os formulários');
+    formsBtn.addEventListener('click', async () => {
+      const demanda = demandaInput.value.trim();
+      const agenda = agendaInput.value.trim();
+      await perfisLib.gravar('linkDemanda', perfilAtivo(), demanda);
+      await perfisLib.gravar('linkAgenda', perfilAtivo(), agenda);
+      const desligados = [!demanda && 'demandas', !agenda && 'agenda'].filter(Boolean);
+      setStatus(
+        desligados.length
+          ? `Formulários salvos. Sem link, a IA não manda o de ${desligados.join(' nem o de ')}.`
+          : 'Formulários salvos.',
+        'ok'
+      );
+    });
+    body.append(
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Formulário de demandas'), demandaInput]),
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Formulário de agenda e visitas'), agendaInput]),
+      formsBtn
+    );
 
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Etiquetas por conteúdo'));
     body.append(

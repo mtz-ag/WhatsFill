@@ -56,6 +56,15 @@ export const CHAVES_DO_PERFIL = [
    * o painel usa para reconhecer o clique.
    */
   'defaultGroupLink',
+  /**
+   * **Os dois formulários** (09/11/2026), pelo mesmo critério da linha de cima: o endereço sai para
+   * o eleitor e carrega o domínio DELE (`capitaomartim.com.br`, `mobiliza.me/capitaomartim`).
+   * Compartilhado, o candidato novo mandaria o eleitor registrar a demanda no gabinete do outro.
+   *
+   * Sem valor gravado, o perfil novo lê VAZIO — e vazio aqui é desligado, não herdado.
+   */
+  'linkDemanda',
+  'linkAgenda',
   'contentTemplates',
   'modelosPadraoAnuncio',
   'modeloPadraoAnuncio',

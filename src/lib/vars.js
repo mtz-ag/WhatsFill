@@ -7,6 +7,7 @@
  */
 
 import * as cities from './cities.js';
+import * as perfis from './perfis.js';
 
 export const KNOWN_VARS = [
   ['{{saudacao}}', 'Bom dia / Boa tarde / Boa noite, conforme a hora'],
@@ -15,6 +16,10 @@ export const KNOWN_VARS = [
   ['{{primeiro_nome}}', 'Só o primeiro nome (evite, mesmo motivo)'],
   ['{{cidade}}', 'Cidade classificada do contato'],
   ['{{link_grupo}}', 'Link do grupo do WhatsApp (aba Config)'],
+  // Os dois formulários (09/11/2026) — campo na aba Config, por candidato. Vazio BLOQUEIA o envio,
+  // que é a trava certa: resposta que promete um formulário não pode sair sem o endereço dele.
+  ['{{link_demanda}}', 'Link do formulário de demandas (aba Config)'],
+  ['{{link_agenda}}', 'Link do formulário de agenda e visitas (aba Config)'],
   ['{{telefone}}', 'Telefone formatado'],
   // `{{funcao}}` e `{{partido}}` saíram em 01/09/2026 com os campos que os alimentavam. Resposta
   // salva que ainda use uma delas passa a bloquear o envio com o motivo na tela ("variável
@@ -263,6 +268,16 @@ export async function buildContext(ctx = {}) {
   const linkGrupo = resolved.link || '';
   const linkReason = resolved.reason || null;
 
+  /**
+   * **Os dois formulários** (09/11/2026) — lidos do candidato ATIVO, como o link do grupo.
+   *
+   * Vazio devolve motivo próprio em vez do genérico *"variável sem valor"*: o que ele precisa saber
+   * é ONDE se mexe, e a lição é a mesma da cidade em 03/11 — motivo que diz o sintoma custa uma
+   * sessão de diagnóstico.
+   */
+  const linkDemanda = String((await perfis.lerDoAtivo('linkDemanda', '')) || '').trim();
+  const linkAgenda = String((await perfis.lerDoAtivo('linkAgenda', '')) || '').trim();
+
   return {
     values: {
       saudacao: saudacao(),
@@ -270,6 +285,8 @@ export async function buildContext(ctx = {}) {
       primeiro_nome: firstName(nome),
       cidade,
       link_grupo: linkGrupo,
+      link_demanda: linkDemanda,
+      link_agenda: linkAgenda,
       telefone: ctx.contact?.phonenumberFormatted || ctx.contact?.phonenumber || '',
     },
     reasons: {
@@ -283,6 +300,8 @@ export async function buildContext(ctx = {}) {
        */
       cidade: cidade ? null : 'Cidade ainda não classificada — preencha a Cidade na aba Dados.',
       link_grupo: linkReason,
+      link_demanda: linkDemanda ? null : 'Link do formulário de demandas ainda não preenchido — cartão "Formulários", aba Config.',
+      link_agenda: linkAgenda ? null : 'Link do formulário de agenda ainda não preenchido — cartão "Formulários", aba Config.',
       nome: nome ? null : 'Nome ainda não preenchido (o cadastro está com apelido automático) — preencha na aba Dados.',
       primeiro_nome: nome
         ? null

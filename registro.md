@@ -1,3 +1,73 @@
+## 2026-11-09 - v3.282.0 - ESTADO DE AGORA - os dois formularios, no cadastro e na IA
+
+Pedido dele: "iremos passar esse formulario para demandas
+https://capitaomartim.com.br/formulario/demanda-cidada e para visitas
+https://mobiliza.me/capitaomartim/formulario/agenda", e em seguida "adicione na extensao para que o
+formulario possa ser mudado caso necessario e seja utilizado pela ia".
+
+As duas paginas foram ABERTAS e lidas antes de qualquer linha de codigo, porque o texto que a IA
+escreve nao pode descrever um formulario que ninguem viu:
+
+| formulario | o que a pagina diz | o que ela pede |
+|---|---|---|
+| demanda | "Registre um pedido ou problema da sua comunidade. O gabinete recebe com protocolo e da retorno." | nome, WhatsApp, em nome de quem fala, assunto (infraestrutura, saude, educacao, seguranca, transporte, saneamento, Defesa Civil...), ENDERECO do problema, o que esta acontecendo, o que quer que o deputado faca, prazo, e SE JA PROCUROU ALGUM ORGAO |
+| agenda | "Preencha o formulario para solicitar uma visita, reuniao, evento ou entrevista." | tipo de agenda (visita, reuniao, evento publico, entrevista, live, carreata), cidade e UF, data e horario sugeridos, local, descricao |
+
+Os dois encaixam em regras que o prompt JA tinha, e e por isso que nenhuma regra nova foi
+inventada: a 20 (reclamacao de servico publico - "Meu papel e cobrar providencias", que agora tem
+um canal com protocolo) e a 21 (assunto nosso - que ate hoje prometia "vou passar para o
+responsavel pela agenda" e passa a mandar o link).
+
+O que entrou:
+
+- dois campos na aba Config, cartao "Formularios", POR CANDIDATO. O endereco carrega o dominio
+  dele (capitaomartim.com.br, mobiliza.me/capitaomartim), entao compartilhado ele mandaria o
+  eleitor registrar a demanda no gabinete do outro;
+- as variaveis {{link_demanda}} e {{link_agenda}}, para ele por o link nas respostas prontas sem
+  colar o endereco no texto - a licao do link do grupo (07/09): colado, trocar o endereco seria
+  reescrever resposta por resposta;
+- o bloco FORMULARIOS no prompt do CONTATO (nunca no sistema, que leva cache e e igual para todos),
+  com o endereco LITERAL e a ordem de copiar;
+- a trava linkForaDoCadastro: endereco que nao esta nos campos da Config, no bloco ORGAOS, na
+  conversa, no dossie, nas regras nem nas respostas prontas BARRA o envio automatico.
+
+CAMPO VAZIO E O DESLIGAMENTO, e isso e deliberado: sem link nao ha bloco no prompt (a IA nao fica
+sabendo de um formulario que nao existe) e a variavel bloqueia o envio. E o que faz o candidato
+novo nao mandar o formulario do Martim.
+
+Medido, com a lista de permissao ligada:
+
+| rascunho | desfecho |
+|---|---|
+| o endereco do cadastro, com ponto final, em maiuscula ou com www | SAI |
+| /formulario/demanda no lugar de /formulario/demanda-cidada | BARRA |
+| capitaomartim.com no lugar de capitaomartim.com.br | BARRA |
+| o site do orgao que ESTA no bloco ORGAOS | SAI |
+| o site do orgao escrito de memoria | BARRA (e e a regra 20 sendo cumprida) |
+| "ja registrei sua demanda com protocolo" | BARRA (afirmouAcao, que ja existia) |
+
+Link redigitado e o numero de urna de novo (09/09): um caractere trocado manda o eleitor para uma
+pagina que nao existe achando que registrou a demanda dele.
+
+Prova de regressao, reintroduzindo cada defeito: sem a trava do link caem 3 assercoes; sem o bloco
+no prompt, 8; com a migracao passando por cima do link que ele trocou, 1; com o motivo generico na
+variavel, 1; e tirando as duas chaves de perfis.CHAVES_DO_PERFIL o teste NEM RODA - exigirChaveConhecida
+estoura, que e a lista de permissao de 25/09 fazendo o trabalho dela.
+
+O que NAO entrou, e e decisao dele: nenhuma resposta pronta nova e nenhuma caixa no quadro. O
+pedido foi "seja utilizado pela ia", entao quem manda o link e o rascunho. Querendo uma tecla para
+mandar o formulario sem a IA, e uma resposta pronta com a variavel dentro.
+
+Duas observacoes sobre as paginas, que sao dele e nao foram tocadas: a de demanda diz "o gabinete
+recebe" (o vocabulario daqui e equipe/assessoria desde 07/09) e a de agenda fala em "equipe da
+campanha", que acabou em 04/10.
+
+Pendencias: validacao ao vivo dos dois formularios no rascunho; a da tecla 2 e da tecla 3 segue
+aberta; e a do titulo da conversa como fonte de cidade (v3.270.0).
+
+Recarregar extensao e F5 no CRM; conferir 3.282.0. Os links ja entram preenchidos pela migracao -
+confira no cartao "Formularios" da aba Config.
+
 ## 2026-11-09 - v3.281.0 - ESTADO DE AGORA - a tecla 3 nao resolvia por falta de UMA testemunha
 
 Print dele com a tecla 3: "a tecla 3 nao resolveu: Resolver: sei qual conversa esta aberta por UM

@@ -5377,6 +5377,49 @@ mudaram as maos, nao a cabeca.
 
 ## Avaliação por IA (só neste branch)
 
+- **OS DOIS FORMULARIOS: O ENDERECO MORA NO CADASTRO, E A IA SO PODE COPIAR** (09/11/2026, pedido
+  dele: *"iremos passar esse formulario para demandas … e para visitas …"*, e em seguida *"adicione
+  na extensao para que o formulario possa ser mudado caso necessario e seja utilizado pela ia"*).
+  **AS DUAS PAGINAS FORAM ABERTAS ANTES DE ESCREVER UMA LINHA**, e foi a leitura que decidiu o
+  desenho: a de **demanda** diz *"Registre um pedido ou problema da sua comunidade. O gabinete
+  recebe com protocolo e da retorno"* e pergunta **o endereco do problema** e **se ela ja procurou
+  algum orgao**; a de **agenda** e *"visita, reuniao, evento ou entrevista"*, com data e horario.
+  **Nenhuma regra nova foi inventada, porque as duas ja tinham dona:** a **20** (reclamacao de
+  servico publico — *"Meu papel e cobrar providencias"*, que agora tem um canal com protocolo) e a
+  **21** (assunto nosso — que prometia *"vou passar para o responsavel pela agenda"* e passa a
+  mandar o link). Na demanda **o contato do orgao continua vindo PRIMEIRO**: o formulario e o passo
+  seguinte, nunca o substituto — senao a regra 20 vira *"procure a coordenacao"* (07/09) com outro
+  nome.
+  **O BLOCO VAI NO CONTATO E NUNCA NO SISTEMA:** o sistema leva `cache_control` e e igual para
+  todos, e estes dois enderecos sao do CANDIDATO (`perfis.CHAVES_DO_PERFIL`) e mudam quando ele
+  trocar o campo — no sistema, cada troca invalidaria o cache de todo mundo.
+  **CAMPO VAZIO E O DESLIGAMENTO, e e ele que protege o outro candidato:** sem link nao ha bloco
+  (a IA nao fica sabendo de um formulario que nao existe) e a variavel BLOQUEIA o envio. Os
+  enderecos carregam o dominio dele, entao compartilhados mandariam o eleitor registrar a demanda
+  no gabinete do outro.
+  **LINK REDIGITADO E O NUMERO DE URNA DE NOVO** (09/09): um caractere trocado manda o eleitor para
+  uma pagina que nao existe **achando que registrou**. Por isso `linkForaDoCadastro` — e a lista de
+  permissao e a mesma politica do `telefonesPermitidos`: os campos da Config **mais** o bloco
+  ORGAOS, a conversa, o dossie, as regras e as respostas prontas. Medido: `/formulario/demanda` no
+  lugar de `/formulario/demanda-cidada` **barra**; `capitaomartim.com` no lugar de
+  `capitaomartim.com.br` **barra**; o site do orgao que esta no bloco **sai**, e o escrito de
+  memoria **barra** — que e a regra 20 sendo cumprida, nao um falso positivo.
+  **A normalizacao para de proposito no CAMINHO:** maiuscula, `www.`, `https://`, barra e pontuacao
+  do fim somem; `/demanda` e `/demanda-cidada` continuam sendo paginas diferentes, e e essa
+  diferenca que a trava existe para pegar.
+  **E A LISTA NULA DEIXA A TRAVA CALADA**, como a dos telefones: sem medicao nao se afirma nada, e
+  barrar todo link faria o rascunho parar de dar o site do orgao.
+  **O que NAO entrou, e e decisao dele:** nenhuma resposta pronta nova e nenhuma caixa no quadro —
+  o pedido foi *"seja utilizado pela ia"*. Querendo uma tecla, e uma resposta pronta com
+  `{{link_demanda}}` ou `{{link_agenda}}` dentro.
+  **E a migracao e obrigatoria:** default novo nao chega em quem ja usa a extensao (a armadilha do
+  `-contato-assessor`, 04/09), e ela **so preenche o que esta vazio** — o endereco que ele trocar
+  amanha nao pode voltar ao antigo no proximo carregamento do painel.
+  Provas: sem a trava do link caem 3 assercoes; sem o bloco no prompt, 8; com a migracao passando
+  por cima, 1; com o motivo generico na variavel, 1. **Tirando as duas chaves de
+  `CHAVES_DO_PERFIL`, o teste NEM RODA** — `exigirChaveConhecida` estoura, que e a lista de
+  permissao de 25/09 fazendo o trabalho dela.
+
 - **COMENTARIO SO COM EMOJI SUMIA DA FILA, E O CULPADO ERA UM `c.texto &&` QUE NINGUEM MEDIU**
   (23/10/2026, print dele: *"comentarios que so contem emoticons estao sendo pulados"*).
   **Medido nos DOIS formatos em que o emoji chega**, antes de mexer:
@@ -7893,7 +7936,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 48 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 49 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu duas vezes:** em 03/11/2026 ela tinha 30 nomes e o diretório
 > já tinha 39; em 09/11/2026, 43 contra 48 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -7902,7 +7945,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 48 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/formularios.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
