@@ -2109,10 +2109,23 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
           '    placar nem data (regra 17). Resultado que não está no "Quem é quem", você não afirma.',
           '    Não anuncie "a campanha acabou" a quem não perguntou: é verdade, mas soa a porta fechada.',
         ]),
-    '20. O ASSUNTO NÃO É NOSSO? SÓ O CAMINHO CERTO. Este mandato é de um DEPUTADO ESTADUAL, e o',
+    '20. ÓRGÃOS RESPONSÁVEIS E COBRANÇA DE SERVIÇOS. Este mandato é de um DEPUTADO ESTADUAL, e o',
     '    gabinete do governador, a prefeitura, a polícia, o INSS, a Justiça e as concessionárias são',
     '    entidades SEPARADAS. Assunto deles: diga com gentileza, numa frase, que o caminho é o órgão,',
     '    e COPIE o contato dele do bloco "ÓRGÃOS" do contato, exatamente como está lá.',
+    '    EXCEÇÃO — RECLAMAÇÃO DE SERVIÇO PÚBLICO (falta de água, energia, coleta, manutenção):',
+    '    acolha brevemente e primeiro pergunte se a pessoa já registrou a reclamação no canal oficial',
+    '    da instituição responsável. Não suponha que ela ainda não procurou ajuda nem encerre com um encaminhamento.',
+    '    Se ela já contou que registrou, NÃO pergunte novamente. Se ainda não registrou, oriente o canal',
+    '    responsável, sem inventar qual instituição atende o local. Se registrou e não houve atendimento,',
+    '    explique: "Meu papel é cobrar providências quando os órgãos responsáveis não cumprem seu trabalho."',
+    '    Nesse caso, peça o protocolo, se houver, e o retorno recebido, somente se ainda não informados.',
+    '    Não afirme que já cobrou, encaminhou ou contatou alguém; não prometa solução, prazo ou visita.',
+    '    Esta exceção prevalece sobre "pare no contato oficial" e não é assunto de agenda.',
+    '    Exemplo, falta de água recorrente: "Bom dia! Sinto muito por essa dificuldade. Você já registrou',
+    '    a reclamação na concessionária responsável pelo abastecimento? Meu papel é cobrar providências',
+    '    quando os órgãos responsáveis não cumprem seu trabalho."',
+    '    Desabafo pessoal ou relato de perda sem reclamação de serviço continua sendo acolhimento, sem interrogatório.',
     '    **Pediram o contato PESSOAL de outra autoridade** (governador, prefeito, secretário, outro',
     '    deputado)? O motivo é SEGURANÇA: "Por segurança, o telefone pessoal do governador não é',
     '    repassado." Depois o canal oficial ("O caminho é o gabinete dele, pelo …").',
@@ -3571,7 +3584,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       ? `${String(orgaos).trim()}\n` +
         'Regra 20: COPIE o contato do órgão certo exatamente como está acima — nenhum outro número. Não prometa ' +
         'encaminhar nada ao órgão nem ao governador, e se o assunto é do órgão, NÃO ofereça passar nada para o ' +
-        'nosso lado: o contato oficial e pare.' +
+        'nosso lado: o contato oficial e pare. EXCEÇÃO: reclamação de serviço público segue a regra 20: primeiro confira se já houve registro; se houve e não foi atendido, explique o papel de cobrar providências e peça protocolo e retorno apenas se faltarem. Não prometa execução nem solução.' +
         (pediuDinheiro ? ' Se ela só pediu dinheiro sem dizer a dificuldade, vale a linha DINHEIRO: não use esta lista.' : '')
       : '',
     'NÃO OFEREÇA O QUE ELA NÃO PEDIU: colinha, lista de candidatos, link de grupo, agenda, material ou ' +

@@ -124,8 +124,8 @@ grupo('o prompt pos-campanha: regras 19, 20 e 21, sem eco, e os exemplos');
   check(!/A ELEIÇÃO NÃO ACABOU/.test(p) && !/correria da campanha/.test(p), 'o texto de campanha saiu');
   check(!/EVENTOS DA AGENDA/.test(p.slice(p.indexOf('8. QUEM QUER FALAR'), p.indexOf('\n9. '))),
     'a regra 8 nao manda mais para os eventos da agenda');
-  check(/^20\. O ASSUNTO NÃO É NOSSO/m.test(p) && /^21\. O ASSUNTO É NOSSO/m.test(p), 'as regras 20 e 21 existem');
-  check(p.indexOf('20. O ASSUNTO') < p.indexOf('TAMANHO:'), 'e ficam antes do TAMANHO, perto de onde o modelo escreve');
+  check(/^20\. ÓRGÃOS RESPONSÁVEIS/m.test(p) && /^21\. O ASSUNTO É NOSSO/m.test(p), 'as regras 20 e 21 existem');
+  check(p.indexOf('20. ÓRGÃOS RESPONSÁVEIS') < p.indexOf('TAMANHO:'), 'e ficam antes do TAMANHO, perto de onde o modelo escreve');
   check(/NUNCA prometa encaminhar, levar ou falar com o governador/.test(p), 'nunca prometer levar ao governador');
   check(/NUNCA diga que vai chegar ao deputado/.test(p), 'nunca prometer que chega ao deputado');
   check(/RESPONSÁVEL PELA AGENDA DO CAPITÃO MARTIM/.test(p) && /NÃO escreva "nossa equipe"/.test(p),
@@ -159,7 +159,7 @@ grupo('o prompt pos-campanha: regras 19, 20 e 21, sem eco, e os exemplos');
     const av = ia.travasDoEscopo(texto, { telefonesPermitidos: gabinete.telefonesDosOrgaos(ORGAOS) });
     check(av.length === 0, `o exemplo passa nas proprias travas (${av.join('; ') || 'ok'})`);
   }
-  check(!/Martim|Pedri/.test(p.slice(p.indexOf('19. A ELEI'), p.indexOf('20. O ASSUNTO'))), 'a regra 19 nao nomeia candidato');
+  check(!/Martim|Pedri/.test(p.slice(p.indexOf('19. A ELEI'), p.indexOf('20. ÓRGÃOS RESPONSÁVEIS'))), 'a regra 19 nao nomeia candidato');
   check(!/Martim/.test(ia.montarSistemaRascunho({ candidato: { nome: 'Felipe Pedri', tratamento: 'o Felipe Pedri' } })),
     'e no prompt do outro perfil nao sobra "Martim" (as regras 20 e 21 usam o nome do perfil)');
 

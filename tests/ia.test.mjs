@@ -3166,7 +3166,7 @@ grupo('as eleicoes de 2026 terminaram (30/10/2026)');
   const p = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   const i19 = p.indexOf('19. A ELEIÇÃO DE 2026 ACABOU');
   check(i19 > 0, 'a regra 19 existe');
-  const fim19 = p.indexOf('20. O ASSUNTO', i19);
+  const fim19 = p.indexOf('20. ÓRGÃOS RESPONSÁVEIS', i19);
   const r19 = p.slice(i19, fim19 > i19 ? fim19 : i19 + 1400);
 
   check(

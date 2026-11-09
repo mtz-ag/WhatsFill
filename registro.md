@@ -1,4 +1,13 @@
-## 2026-11-09 - v3.273.0 - ESTADO DE AGORA - alerta de prazo de resposta
+## 2026-11-09 - v3.274.0 - ESTADO DE AGORA - reclamacao de servico e cobranca
+
+Pedido do usuario: antes de encaminhar reclamacao de servico publico, perguntar se ja foi
+registrada no canal responsavel. Se ja informado, nao repetir. Sem atendimento apos registro,
+explicar o papel de cobrar providencias e pedir protocolo/retorno apenas se ausentes.
+Regra 20 e lembrete junto ao catalogo de orgaos atualizados para nao se contradizerem.
+Sem promessa de solucao, prazo ou cobranca ja feita. Desabafos e emergencias preservados.
+Recarregar extensao e F5 no CRM; conferir 3.274.0. Nenhuma mensagem enviada.
+
+## 2026-11-09 - v3.273.0 - HISTORICO - alerta de prazo de resposta
 
 Alerta fixo no cabecalho de todas as abas ao completar 24h desde a ultima mensagem recebida.
 Usa entrantes antes dos filtros de texto (audio e imagem tambem contam), nao nossa resposta.
