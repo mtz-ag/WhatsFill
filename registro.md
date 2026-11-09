@@ -1,4 +1,11 @@
-## 2026-11-09 - v3.282.0 - ESTADO DE AGORA - os dois formularios, no cadastro e na IA
+## 2026-11-09 - v3.283.0 - ESTADO DE AGORA - relato pessoal sem repeticao
+
+Relato de trajetoria sem pergunta recebe uma frase breve, sem repetir profissao, datas,
+instituicoes ou etapas e sem elogios excessivos. Exemplo aprovado pelo usuario incorporado.
+Preservadas as alteracoes concorrentes ate 3.282.0, inclusive limite de contexto ja integrado.
+Recarregar extensao e F5 no CRM; conferir 3.283.0 e gerar novamente o rascunho.
+
+## 2026-11-09 - v3.282.0 - HISTORICO - os dois formularios, no cadastro e na IA
 
 Pedido dele: "iremos passar esse formulario para demandas
 https://capitaomartim.com.br/formulario/demanda-cidada e para visitas
