@@ -1,4 +1,14 @@
-## 2026-11-09 - v3.272.0 - ESTADO DE AGORA - leitura do contato em paralelo
+## 2026-11-09 - v3.273.0 - ESTADO DE AGORA - alerta de prazo de resposta
+
+Alerta fixo no cabecalho de todas as abas ao completar 24h desde a ultima mensagem recebida.
+Usa entrantes antes dos filtros de texto (audio e imagem tambem contam), nao nossa resposta.
+Atualiza localmente a cada 30 segundos, sem consultas adicionais. Sem data, avisa que nao pode
+confirmar. Nova mensagem lida renova o prazo. Nao muda bloqueios nem envia mensagens.
+A explicacao distingue a regra da API oficial do provedor nao oficial presumido pelo codigo antigo.
+Fonte: https://business.whatsapp.com/policy (consultada em 09/11/2026).
+Recarregar extensao e F5 no CRM; conferir 3.273.0.
+
+## 2026-11-09 - v3.272.0 - HISTORICO - leitura do contato em paralelo
 
 A leitura das mensagens agora comeca junto com cadastro e campos, antes de etiquetas e memoria.
 A sessao e o numero do canal tambem sao consultados em paralelo; falha na ponte continua sem

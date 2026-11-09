@@ -6,6 +6,7 @@
  */
 
 import * as api from '../lib/api.js';
+import { avisoJanelaResposta } from '../lib/janela-resposta.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
 import * as templatesLib from '../lib/templates.js';
@@ -613,6 +614,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
        */
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
+      state.entrantesJanela = conversa.entrantes || [];
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
@@ -655,6 +657,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.draft = {};
     state.tagSuggestions = [];
     state.incoming = [];
+    state.entrantesJanela = [];
     // Sobreviver à troca de contato faria a etiqueta de nome divergente cair na pessoa errada —
     // é a mesma armadilha da pergunta de cidade, registrada no CLAUDE.md.
     state.nomeInformado = '';
@@ -820,6 +823,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * texto vazio ali não carrega o "ela mandou um áudio" que os `entrantes` guardam.
        */
       state.incoming = conversa.incoming.filter((t) => !ehMensagemDaPlataforma(t));
+      state.entrantesJanela = conversa.entrantes || [];
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
@@ -2254,7 +2258,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
   }
 
+  var timerJanelaResposta;
   function renderHeader() {
+    clearTimeout(timerJanelaResposta);
     header.replaceChildren();
 
     const reload = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Recarregar');
@@ -2298,6 +2304,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
       return;
     }
+
+    const alertaJanela = h('div', { class: 'wf-block', 'data-fica': '1', role: 'status' });
+    const atualizarJanela = () => {
+      if (!alertaJanela.isConnected) return;
+      const texto = avisoJanelaResposta(state.entrantesJanela || []);
+      alertaJanela.textContent = texto;
+      alertaJanela.hidden = !texto;
+      timerJanelaResposta = setTimeout(atualizarJanela, 30000);
+    };
+    header.append(alertaJanela);
+    atualizarJanela();
 
     const name = state.contact.name || state.contact.nameWhatsapp || 'Sem nome';
     const phone = state.contact.phonenumberFormatted || state.contact.phonenumber || '';
