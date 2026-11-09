@@ -2125,6 +2125,69 @@ grupo('popup das teclas enquanto ele confere o texto');
   check(espera.includes('await page.sendText(rendido.text)'), 'a tecla envia de verdade, nao so troca o texto');
   check(espera.includes("if (!/Enter/.test(String(ato.como || '')))"),
     'clique que nao esvaziou o campo nao pula nem conclui');
+
+  /**
+   * **A 2 PULA E A 3 RESOLVE** — pedido dele (09/11/2026): *"adicione a opcao de pular no numero
+   * 2"* e *"na opcao 3 bote para resolver e ir pro proximo"*. Eram tecla de texto livre, vazias na
+   * tela dele: a espera so sabia enviar, e largar um contato sem resposta exigia o Parar, que
+   * encerra a rodada inteira.
+   *
+   * **Prova de regressao:** devolvendo a ordem antiga de `itens()` (momento + extras) caem as
+   * duas primeiras assercoes; tirando a guarda do campo de mensagem cai a do "22"; tirando o
+   * `desfechoDaTecla` caem as dos dois chamadores.
+   */
+  const ordem = popup.slice(popup.indexOf('function itens()'), popup.indexOf('function rotuloDoItem'));
+  check(ordem.indexOf("acao: 'pular'") > 0 && ordem.indexOf("acao: 'pular'") < ordem.indexOf("acao: 'resolver'"),
+    'a tecla 2 pula e a 3 resolve, nessa ordem');
+  check(ordem.indexOf("acao: 'resolver'") > 0 && ordem.indexOf("acao: 'resolver'") < ordem.indexOf('extrasGuardados()'),
+    'e as teclas de TEXTO dele passam a comecar no 4 — a lista gravada e a mesma, so vem depois');
+
+  /**
+   * **"22" e o numero do candidato, e ele digita isso na resposta.** A excecao do campo de
+   * mensagem existe para a tecla 1 (o rascunho esta nele); com acao atras da 2 e da 3, cada
+   * digito corrigido no rascunho pularia ou resolveria o atendimento.
+   */
+  const teclado = popup.slice(popup.indexOf('function aoTeclar'));
+  check(teclado.includes('if (item.acao && ehCampoDeTexto(alvo))'),
+    'pular e resolver nao disparam de dentro do campo de mensagem');
+  check(teclado.includes('nao vale dentro do campo de mensagem'),
+    'e a barra diz onde a tecla vale — tecla muda vira defeito aos olhos dele');
+
+  /** **Pular nao grava nada** (a decisao dele de 31/08), e isso e o que a assercao trava. */
+  const ramoPular = espera.slice(espera.indexOf("item?.acao === 'pular'"), espera.indexOf("item?.acao === 'resolver'"));
+  check(ramoPular.includes("resultado: 'pulado'") && !ramoPular.includes('saveClassification') && !ramoPular.includes('concluirPeloPainel'),
+    'pular nao grava, nao envia e nao conclui');
+
+  /**
+   * **Resolver grava ANTES de fechar, e nao fecha se a gravacao falhar** — resolver sem gravar
+   * tira o contato da fila sem a cidade, as etiquetas e a data que o painel acabou de
+   * classificar, e fechar as cegas nao tem volta.
+   */
+  const ramoResolver = espera.slice(espera.indexOf('async function resolverPelaTecla'));
+  const iGrava = ramoResolver.indexOf('saveClassification({ withCompletionDate: true, quiet: true })');
+  const iFecha = ramoResolver.indexOf('await concluirPeloPainel()');
+  check(iGrava > 0 && iFecha > iGrava, 'a tecla 3 grava a classificacao antes de resolver');
+  check(ramoResolver.slice(iGrava, iFecha).includes('a classificação não gravou'),
+    'e nao resolve quando a gravacao falha');
+  check(!ramoResolver.slice(0, iFecha + 40).includes('page.clickConcluir'),
+    'quem fecha e `concluirPeloPainel`, que leva o id que a RODADA abriu — nao a conversa que estiver na tela');
+  check(ramoResolver.includes('fechou.dialogOpen') && ramoResolver.includes('parar: true'),
+    'dialogo de motivo de conclusao para a rodada, como nos outros caminhos que concluem');
+
+  /**
+   * **O desfecho atravessa os DOIS chamadores da espera.** `sendTemplate` devolve um booleano:
+   * sem este canal a tecla 3 viraria `pulado` no log e o chamador concluiria de novo um
+   * atendimento ja fechado.
+   */
+  check(painel.includes('function anotarEnvioQueNaoSaiu(motivo, desfecho = null)'),
+    'o canal existe no ponto unico por onde toda recusa de envio passa');
+  check(painel.includes('return anotarEnvioQueNaoSaiu(mandou.motivo, mandou.desfecho)'),
+    'o caminho da resposta pronta leva o desfecho da tecla');
+  check(painel.includes("resultado: mandou.desfecho?.resultado || 'pulado'"),
+    'e o do rascunho da IA tambem — a guarda nova vale onde ela e ALCANCADA');
+  const pulou = painel.slice(painel.indexOf('function pulouPorqueNaoSaiu'), painel.indexOf('function pulouPorqueNaoSaiu') + 700);
+  check(pulou.indexOf('desfechoDaTecla = null') < pulou.indexOf('if (daTecla)'),
+    'e o canal e consumido na leitura: desfecho velho nao decide o contato seguinte');
 }
 
 grupo('identificar a cidade e preencher — a porta do contrato nao existe aqui');

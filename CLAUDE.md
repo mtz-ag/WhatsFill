@@ -3492,6 +3492,33 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **TECLA QUE VIRA ACAO MUDA O PRECO DE O NUMERO SER DIGITADO NO CAMPO DE MENSAGEM** (09/11/2026,
+  pedido dele: *"adicione a opcao de pular no numero 2"* e *"na opcao 3 bote para resolver e ir pro
+  proximo"*). As duas eram tecla de TEXTO livre (`atalhosDaConferencia`) e estavam **vazias** na
+  tela dele: a espera do modo "Eu mando" so sabia enviar, e largar um contato sem resposta exigia o
+  **Parar**, que encerra a rodada inteira.
+  **A armadilha nao e a acao: e a excecao do campo de mensagem que ja existia.** O popup deixa o
+  numero valer **dentro** do campo de mensagem de proposito (30/10: *"e nele que o rascunho esta, e
+  e dali que ele aperta 1"*), e com as duas teclas vazias digitar um numero ali so devolvia *"tecla
+  vazia"*. Com acao atras delas isso muda de preco: **"22" e o numero do candidato e ele digita
+  isso na resposta** (a mesma medicao do painel do Facebook, 21/10), e a colinha e "10122" — cada
+  `2` corrigido no rascunho pularia o contato e cada `3` resolveria o atendimento. Hoje as teclas
+  de ACAO exigem o foco FORA de campo de texto, **e dizem isso na barra** (gesto que nao faz nada
+  vira defeito aos olhos dele, 01/09); o botao do popup continua valendo sempre.
+  **PULAR nao grava nada** (a decisao dele de 31/08) e **RESOLVER grava como toda conclusao
+  daqui** — resolver sem gravar tiraria o contato da fila sem a cidade, as etiquetas e a data que o
+  painel acabou de classificar. **Gravacao que falha NAO resolve:** fechar o atendimento as cegas
+  nao tem volta, pular tem.
+  **E `sendTemplate` DEVOLVE UM BOOLEANO, entao desfecho novo precisa de CANAL.** Sem ele a tecla 3
+  viraria `pulado` no log **e o chamador concluiria de novo** um atendimento ja fechado — e
+  `clickConcluir` numa conversa resolvida e `erro`, que para a fila. O canal e `desfechoDaTecla`, ao
+  lado de `porqueNaoSaiu`, escrito no **ponto unico** por onde toda recusa de envio passa
+  (`anotarEnvioQueNaoSaiu`) e **consumido na leitura**, senao o desfecho de um contato decide o
+  seguinte. Os DOIS chamadores da espera leem (a resposta pronta e o rascunho da IA): **guarda nova
+  so vale onde ela e ALCANCADA.**
+  Provas: devolvendo a ordem antiga de `itens()` cai 1 assercao; tirando a guarda do campo, 2;
+  tirando o canal do desfecho, 3; resolvendo sem gravar antes, 2.
+
 - **DESEJAR SUCESSO E CARINHO, E NENHUM DETECTOR CONHECIA ISSO** (05/11/2026, print do Mauricio:
   462 caracteres felicitando pela nova missao, e a rodada mandou para a mao dele depois de a IA
   marcar `naoHaOQueResponder`. Pergunta dele: *"por que a IA nao achou algo quando era uma questao
@@ -7832,16 +7859,16 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 43 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 48 suítes** passando.
 
-> **Esta lista envelhece, e envelheceu:** em 03/11/2026 ela tinha 30 nomes e o diretório já tinha
-> 39 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
+> **Esta lista envelhece, e envelheceu duas vezes:** em 03/11/2026 ela tinha 30 nomes e o diretório
+> já tinha 39; em 09/11/2026, 43 contra 48 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
 > `momento-desatualizado`, `momento-no-gesto`, `orgaos`, `rascunho-vazio`) nunca rodavam por este
 > comando. **Suíte nova entra aqui no mesmo commit**, ou ela só roda no dia em que alguém procurar
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/categorizar.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

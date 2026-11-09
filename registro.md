@@ -1,3 +1,45 @@
+## 2026-11-09 - v3.280.0 - ESTADO DE AGORA - a tecla 2 pula e a 3 resolve
+
+Pedido dele: "adicione a opcao de pular no numero 2" e "na opcao 3 bote para resolver e ir pro
+proximo". As duas eram tecla de TEXTO livre e estavam VAZIAS na tela dele, entao a espera do modo
+"Eu mando" so sabia enviar: para largar um contato sem resposta sobrava o Parar, que encerra a
+rodada inteira.
+
+O que mudou no popup:
+
+| tecla | antes            | agora                                              |
+|-------|------------------|----------------------------------------------------|
+| 1     | mensagem do momento | igual                                            |
+| 2     | texto livre (vazio) | PULA: nao envia, nao conclui, nao grava nada     |
+| 3     | texto livre (vazio) | RESOLVE sem enviar, grava a classificacao, segue |
+| 4, 5… | nao existiam     | as teclas de texto que ele guardar                  |
+
+As teclas de texto dele NAO foram apagadas: a lista gravada (`atalhosDaConferencia`) e a mesma, so
+entra depois das duas acoes. Na tela dele ela esta vazia, entao nada mudou de lugar.
+
+Pular nao grava nada, que e a decisao dele de 31/08 ("ao pular tem gravado dados no CRM, o que faz
+eu perder tempo"). Resolver grava como toda conclusao deste projeto (cidade, etiquetas marcadas e a
+data) antes de fechar: resolver sem gravar tiraria o contato da fila sem nada do que o painel
+acabou de classificar. Gravacao que falha NAO resolve, e o atendimento fica aberto com o motivo na
+barra. Se a plataforma pedir um motivo de conclusao, a rodada para, como nos outros caminhos que
+concluem.
+
+As teclas 2 e 3 so valem com o foco FORA de campo de texto, e a barra diz isso. O popup deixa o
+numero valer dentro do campo de MENSAGEM de proposito (a tecla 1, com o rascunho nele); com as duas
+vazias isso era inofensivo, e com acao atras delas nao e: "22" e o numero do candidato e a colinha
+e "10122" — cada digito corrigido no rascunho pularia ou resolveria o atendimento. Os BOTOES do
+popup continuam valendo sempre.
+
+No log da rodada o desfecho e o que de fato aconteceu: "pulado" na tecla 2 e "concluido" na tecla
+3, com o motivo escrito ("voce apertou 2 — pulei este contato sem enviar nem gravar nada").
+
+Valido nos dois caminhos da espera: a resposta pronta e o rascunho da IA.
+
+Pendencias: validacao ao vivo das duas teclas na tela dele (nada foi executado em producao nesta
+sessao); e segue aberta a do titulo da conversa como fonte de cidade (v3.270.0).
+
+Recarregar extensao e F5 no CRM; conferir 3.280.0. Sem chamada paga ou envio real na validacao.
+
 ## 2026-11-09 - v3.279.0 - MINHAS - Resolver vazio nao encerra a rodada
 
 A rodada de Minhas parava no Resolver com "Nenhuma conversa aberta na tela" mesmo com a

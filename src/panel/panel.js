@@ -3256,13 +3256,30 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   let porqueNaoSaiu = '';
 
-  function anotarEnvioQueNaoSaiu(motivo) {
+  /**
+   * O desfecho que uma TECLA do popup decidiu, quando houve uma — `{resultado, parar}`.
+   *
+   * `sendTemplate` devolve um booleano, então não há por onde dizer *"ele apertou 3 e eu já
+   * resolvi este atendimento"*: sem este canal, a tecla 3 viraria `pulado` no log e o chamador
+   * concluiria de novo um atendimento já fechado. Vive ao lado de `porqueNaoSaiu` e é escrito no
+   * mesmo lugar, para não poder ficar velho: toda recusa passa por `anotarEnvioQueNaoSaiu`.
+   */
+  let desfechoDaTecla = null;
+
+  function anotarEnvioQueNaoSaiu(motivo, desfecho = null) {
     porqueNaoSaiu = String(motivo || '');
+    desfechoDaTecla = desfecho;
     return false;
   }
 
   function pulouPorqueNaoSaiu(nome, rotulo) {
     const detalhe = porqueNaoSaiu;
+    const daTecla = desfechoDaTecla;
+    desfechoDaTecla = null;
+    if (daTecla) {
+      // Ele escolheu no popup: o motivo já está escrito, e o rótulo do envio não tem o que dizer.
+      return { nome, resultado: daTecla.resultado, parar: !!(daTecla.parar || state.auto.parar), motivo: detalhe };
+    }
     if (state.auto.parar) {
       return { nome, resultado: 'pulado', parar: true, motivo: detalhe || 'você parou a rodada' };
     }
@@ -3378,8 +3395,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       if (send && !state.settings.autoSend && state.auto.rodando) {
         const mandou = await esperarVoceEnviar(text);
         if (!mandou.ok) {
-          setStatus(`Não concluí: ${mandou.motivo}.`, 'err');
-          return anotarEnvioQueNaoSaiu(mandou.motivo);
+          // Tecla do popup não é falha: ele escolheu pular ou resolver, e o verbo certo é o dele.
+          setStatus(mandou.desfecho ? mandou.motivo : `Não concluí: ${mandou.motivo}.`, mandou.desfecho ? 'ok' : 'err');
+          return anotarEnvioQueNaoSaiu(mandou.motivo, mandou.desfecho);
         }
 
         /**
@@ -7221,17 +7239,33 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Numero apertado dentro do cadastro nao e tecla.** Ele escreveu no mesmo pedido que remover
    * etiqueta e corrigir o contato nao pode fazer a rodada agir. O campo de mensagem e a excecao:
    * e nele que o rascunho esta, e e dali que ele aperta 1.
+   *
+   * **A 2 PULA E A 3 RESOLVE** — pedido dele (09/11/2026): *"adicione a opcao de pular no numero
+   * 2"* e *"na opcao 3 bote para resolver e ir pro proximo"*. As duas eram tecla de TEXTO livre
+   * (`atalhosDaConferencia`), e na tela dele estavam **vazias** — a espera so sabia enviar, e para
+   * largar um contato sem resposta sobrava o Parar, que encerra a rodada inteira.
+   *
+   * **As teclas de texto que ele guardar passam a comecar no 4.** Elas nao foram apagadas: a lista
+   * gravada e a mesma, so entra depois das duas acoes.
+   *
+   * **Pular nao grava nada** (a decisao dele de 31/08: *"ao pular tem gravado dados no CRM, o que
+   * faz eu perder tempo"*). **Resolver grava como toda conclusao deste projeto** — cidade,
+   * etiquetas marcadas e a data —, senao o contato sairia da fila sem nada do que o painel acabou
+   * de classificar.
    */
   function abrirPopupDeAtalhos(aoEscolher) {
     const caixa = h('div', { class: 'wf-pergunta wf-atalhos' });
     const fundo = h('div', { class: 'wf-pergunta-fundo' }, [caixa]);
-    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Trocar o texto e enviar');
+    const barra = h('div', { class: 'wf-pergunta-titulo' }, 'Teclas: enviar, pular ou resolver');
     caixa.append(barra);
     tornarArrastavel(caixa, barra, 'atalhosPos');
     const corpo = h('div', { class: 'wf-pergunta-botoes' });
     caixa.append(corpo);
     caixa.append(h('div', { class: 'wf-pergunta-dica' },
-      '1, 2, 3… trocam o que esta no campo e enviam. Enter ou o botao de enviar manda o texto que ficou. Etiqueta e cadastro nao avancam a rodada.'));
+      '1 manda a mensagem do momento. 2 pula sem gravar nada. 3 resolve sem enviar e abre o proximo. ' +
+      '4, 5… trocam o que esta no campo e enviam. Enter ou o botao de enviar manda o texto que ficou. ' +
+      'As teclas 2 e 3 so valem com o foco FORA do campo de mensagem — nele, use os botoes. ' +
+      'Etiqueta e cadastro nao avancam a rodada.'));
 
     let formulario = null;
 
@@ -7240,10 +7274,21 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return lista.map((t) => String(t || '').trim());
     }
 
+    /** 1 = mensagem do momento, 2 = pular, 3 = resolver, 4… = o que ele guardou. */
     function itens() {
-      const extras = extrasGuardados();
-      while (extras.length < 2) extras.push('');
-      return [{ momento: true }, ...extras.map((texto) => ({ momento: false, texto }))].slice(0, 9);
+      return [
+        { momento: true },
+        { acao: 'pular' },
+        { acao: 'resolver' },
+        ...extrasGuardados().map((texto) => ({ texto })),
+      ].slice(0, 9);
+    }
+
+    function rotuloDoItem(item) {
+      if (item.momento) return 'Mensagem do momento';
+      if (item.acao === 'pular') return 'Pular este contato (nao grava nada)';
+      if (item.acao === 'resolver') return 'Resolver e ir pro proximo (sem enviar)';
+      return item.texto ? truncate(item.texto, 80) : '(vazio)';
     }
 
     function desenhar() {
@@ -7251,7 +7296,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       formulario = null;
       itens().forEach((item, i) => {
         const n = String(i + 1);
-        const rotulo = item.momento ? 'Mensagem do momento' : (item.texto ? truncate(item.texto, 80) : '(vazio)');
+        const rotulo = rotuloDoItem(item);
         const btn = h('button', { class: 'wf-btn', type: 'button' }, n + '  ' + rotulo);
         btn.addEventListener('click', () => aoEscolher(i + 1));
         corpo.append(btn);
@@ -7268,7 +7313,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           const texto = area.value.trim();
           if (!texto) return;
           const guardados = extrasGuardados();
-          while (guardados.length < 2) guardados.push('');
           const vazio = guardados.findIndex((t) => !t);
           if (vazio >= 0) guardados[vazio] = texto;
           else guardados.push(texto);
@@ -7290,7 +7334,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const alvo = ev.composedPath?.()[0] || ev.target;
       if (ehCampoDeTexto(alvo) && !ehCampoDeMensagem(alvo)) return;
       const n = Number(ev.key);
-      if (n > itens().length) return;
+      const item = itens()[n - 1];
+      if (!item) return;
+      /**
+       * **PULAR E RESOLVER NAO SAEM DE DENTRO DO CAMPO DE MENSAGEM** (09/11/2026, escrito antes de
+       * ir ao ar). A excecao do campo de mensagem existe para a tecla 1 — *"e nele que o rascunho
+       * esta"* —, e com as teclas 2 e 3 vazias digitar um numero ali so dava "tecla vazia".
+       *
+       * Com acao atras delas isso muda de preco: **"22" e o numero do candidato e ele digita isso
+       * na resposta** (a mesma armadilha do painel do Facebook, 21/10), e "10122" e a colinha.
+       * Corrigindo o rascunho, cada digito 2 pularia o contato e cada 3 resolveria o atendimento.
+       *
+       * **E nao e silencio:** gesto que nao faz nada vira defeito aos olhos dele (01/09), entao a
+       * barra diz onde a tecla vale e o botao do popup continua valendo sempre.
+       */
+      if (item.acao && ehCampoDeTexto(alvo)) {
+        setStatus(
+          `A tecla ${n} (${item.acao}) nao vale dentro do campo de mensagem — clique no botao ${n} do popup, ou tire o foco do campo.`,
+          'err'
+        );
+        return;
+      }
       ev.preventDefault();
       ev.stopPropagation();
       aoEscolher(n);
@@ -7368,8 +7432,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     let viuOTexto = false;
     setStatus(
       observando
-        ? 'Escrevi no campo. Revise e envie (Enter ou o botão), ou aperte 1, 2, 3… para trocar o texto e enviar. Etiqueta e cadastro não avançam a rodada.'
-        : 'Escrevi no campo. Revise e dê Enter, ou aperte 1, 2, 3… para trocar o texto e enviar.'
+        ? 'Escrevi no campo. Revise e envie (Enter ou o botão). No popup: 1 manda a mensagem do momento, 2 pula este contato, 3 resolve sem enviar. Etiqueta e cadastro não avançam a rodada.'
+        : 'Escrevi no campo. Revise e dê Enter. No popup: 1 manda a mensagem do momento, 2 pula este contato, 3 resolve sem enviar.'
     );
 
     let pedido = 0;
@@ -7421,6 +7485,47 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return { ok: true, como: 'tecla ' + n };
     }
 
+    /**
+     * **A tecla 3: resolver sem enviar, e só então seguir** (09/11/2026).
+     *
+     * **Grava antes de fechar, como toda conclusão daqui** — resolver sem gravar tiraria o contato
+     * da fila sem a cidade, as etiquetas e a data que o painel acabou de classificar, e ele teria
+     * de reabrir para refazer. **A classificação não gravou? Não resolvo:** fechar o atendimento
+     * às cegas é o estrago que não tem volta; pular tem.
+     *
+     * **`concluirPeloPainel` leva o id que a rodada abriu**, então ele resolve ESTA conversa e não
+     * a que estiver na tela — a mesma guarda do conserto de 09/11 no Resolver da rodada.
+     *
+     * **`dialogOpen` para a rodada**, como nos outros caminhos que concluem: a plataforma pediu um
+     * motivo de conclusão, e seguir deixaria um diálogo aberto na frente do próximo contato.
+     */
+    async function resolverPelaTecla(n) {
+      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+        return { ok: false, motivo: `a tecla ${n} não resolveu: a classificação não gravou — deixei o atendimento aberto` };
+      }
+      let fechou = null;
+      try {
+        fechou = await concluirPeloPainel();
+      } catch (err) {
+        return { ok: false, motivo: `a tecla ${n} não resolveu: ${err?.message || err}` };
+      }
+      if (!fechou?.ok) {
+        return { ok: false, motivo: `a tecla ${n} não resolveu: ${fechou?.reason || 'a plataforma não confirmou'}` };
+      }
+      if (fechou.dialogOpen) {
+        return {
+          ok: false,
+          desfecho: { resultado: 'concluido', parar: true },
+          motivo: 'você apertou 3 — resolvi, mas a plataforma pediu um motivo de conclusão: responda o diálogo',
+        };
+      }
+      return {
+        ok: false,
+        desfecho: { resultado: 'concluido' },
+        motivo: 'você apertou 3 — resolvi sem enviar e segui',
+      };
+    }
+
     try {
     while (Date.now() < fim) {
       if (state.auto.parar) return { ok: false, motivo: 'você parou a rodada', parar: true };
@@ -7430,6 +7535,25 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         pedido = 0;
         ocupado = true;
         try {
+          const item = popup.itens()[n - 1];
+          /**
+           * **Pular não grava, não envia e não conclui** — é a decisão dele de 31/08 na tecla.
+           * O contato fica como está, e a rodada abre o próximo.
+           */
+          if (item?.acao === 'pular') {
+            return {
+              ok: false,
+              desfecho: { resultado: 'pulado' },
+              motivo: 'você apertou 2 — pulei este contato sem enviar nem gravar nada',
+            };
+          }
+          if (item?.acao === 'resolver') {
+            const fim3 = await resolverPelaTecla(n);
+            if (fim3.desfecho) return fim3;
+            // Não resolveu: a razão vai para a barra e a espera continua — ele ainda pode enviar.
+            setStatus(fim3.motivo, 'err');
+            continue;
+          }
           const saiu = await mandarPelaTecla(n);
           if (saiu.ok) return { ok: true, como: saiu.como };
           setStatus(saiu.motivo, 'err');
@@ -11794,11 +11918,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           if (euMando) {
             const mandou = await esperarVoceEnviar(rascunho.texto);
             if (!mandou.ok) {
+              // Mesmo canal do `sendTemplate`: a tecla 2/3 traz o desfecho dela e o motivo pronto.
               return {
                 nome,
-                resultado: 'pulado',
-                parar: !!mandou.parar,
-                motivo: `o rascunho da IA ficou no campo: ${mandou.motivo}`,
+                resultado: mandou.desfecho?.resultado || 'pulado',
+                parar: !!(mandou.parar || mandou.desfecho?.parar),
+                motivo: mandou.desfecho ? mandou.motivo : `o rascunho da IA ficou no campo: ${mandou.motivo}`,
               };
             }
           }
