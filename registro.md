@@ -1,4 +1,12 @@
-## 2026-11-09 - v3.275.0 - ESTADO DE AGORA - finalidade nos pedidos salvos
+## 2026-11-09 - v3.276.0 - ESTADO DE AGORA - atendimento assumido com status antigo
+
+A tela ja tinha campo de mensagem, mas estadoDaConversa mantinha isPending pelo status aberto
+do objeto da conversa. Agora a evidencia positiva do composer tambem prevalece no isPending.
+Sem campo confirmado, preserva a leitura de status. Identidade por dois sinais permanece obrigatoria.
+A mudanca de velocidade nao alterou esse trecho. Teste reproduz status aberto com composer visivel.
+Recarregar extensao e F5 no CRM; conferir 3.276.0. Sem envio ou rodada real nesta validacao.
+
+## 2026-11-09 - v3.275.0 - HISTORICO - finalidade nos pedidos salvos
 
 A correcao anterior cobria o rascunho IA, mas boas-vindas e sua variante ainda tinham a frase
 antiga na fabrica e no storage. Atualizados os padroes e adicionada migracao independente,

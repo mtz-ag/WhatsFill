@@ -274,7 +274,10 @@ export function estadoDaConversa(aberta, { dark = false, hasDialog = false, hasC
   const status = String(c.status || '').toLowerCase();
   return {
     sessionId: c.id || null,
-    isPending: status === ABERTO,
+    // O campo confirmado pelo DOM so existe depois de assumir. O objeto da fila
+    // pode conservar "aberto" apos o React ja desenhar o atendimento assumido.
+    // null/false nao sao prova de que assumiu; nesses casos o status continua valendo.
+    isPending: status === ABERTO && hasComposer !== true,
     /**
      * **A TELA vence o status, e agora ela sabe do que esta falando.** Medido em 27/10/2026: numa
      * conversa `aberto` **nao ha campo de mensagem** — a plataforma so o cria depois de ASSUMIR, e

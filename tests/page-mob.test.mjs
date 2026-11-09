@@ -2194,4 +2194,14 @@ grupo('os grupos por cidade sairam, e o cartao nao promete mais o que nao existe
   check(/Link do grupo/.test(macro), 'ela diz o que o botao precisa hoje');
 }
 
+grupo('Status antigo depois de assumir com composer confirmado');
+{
+  const aberta = { conversa: { id: 'teste-assumido', status: ABERTO }, por: 'os-dois' };
+  const assumida = estadoDaConversa(aberta, { hasComposer: true });
+  check(!assumida.isPending && assumida.hasComposer, 'campo confirmado nao pode continuar aguardando atendente');
+  check(assumida.sessionId === 'teste-assumido' && assumida.porQuantosSinais === 'os-dois', 'preserva identidade e sinais');
+  check(estadoDaConversa(aberta, { hasComposer: false }).isPending, 'sem campo continua pendente');
+  check(estadoDaConversa(aberta, { hasComposer: null }).isPending, 'campo desconhecido nao prova que assumiu');
+}
+
 fim();
