@@ -7959,6 +7959,19 @@ Lógica que grava em dado real tem teste. Bug encontrado ao vivo vira teste de r
   - Tipos: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`
   - Exemplo: `fix(fields): le customFieldValues no formato real da api`
 - **Nunca `git add -A`** — adicione arquivos explicitamente.
+- **`-m @'...'@` É SINTAXE DO POWERSHELL: no Git Bash o `@` vira TEXTO da mensagem** (09/11/2026).
+  O commit saiu com a primeira linha valendo `@`, o assunto de verdade na segunda e outro `@`
+  depois do `Co-Authored-By` — ou seja, **sem assunto e com o trailer quebrado**. Nada acusa: o
+  commit é criado normalmente. Mensagem de várias linhas vai em **arquivo** (`git commit -F`),
+  escrito pela ferramenta de edição. É a família da crase executada pelo bash e do `\b` que vira
+  backspace: **sintaxe de um shell usada no outro não dá erro, dá conteúdo errado.**
+- **E `-F` COM NOME GENÉRICO NA PASTA DE RASCUNHO PEGA O ARQUIVO DE OUTRA SESSÃO** (no mesmo dia,
+  e foi pior que o primeiro). O script que ia escrever `msg.txt` falhou (caminho `/c/...` não
+  existe para o Python do Windows), o `git commit --amend -F …/msg.txt` rodou na linha seguinte
+  **sem depender dele**, e amendou com um `msg.txt` de semanas atrás: a mensagem virou
+  *"feat(denuncia): o preterito e os dois alvos…"*. **Arquivo de mensagem leva nome único**
+  (`msg-<assunto>.txt`), e **comando que depende do anterior vai com `&&`**, nunca em linha nova.
+  Depois de todo commit, confira o assunto: `git log -1 --pretty=format:'%s'`.
 - **Commit e push sem perguntar**, sempre que a tarefa fechar (autorização permanente do Thiago).
 - **Todo commit leva o `registro.md` junto.** Entrada nova no TOPO, com causa raiz quando for
   correção. Commit sem registro é conserto que ninguém vai conseguir explicar daqui a um mês —
