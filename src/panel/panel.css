@@ -746,3 +746,5 @@
   cursor: pointer;
 }
 .wf-root .wf-subnav button.wf-active { color: var(--wf-accent); border-color: var(--wf-accent); }
+
+.wf-controle-prazo { margin: 6px 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }

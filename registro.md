@@ -1,4 +1,11 @@
-## 2026-11-09 - v3.276.0 - ESTADO DE AGORA - atendimento assumido com status antigo
+## 2026-11-09 - v3.277.0 - ESTADO DE AGORA - status 24h no controle flutuante
+
+Caixa Rodada mostra nome do contato e tempo restante em horas/minutos, PRAZO VENCIDO ou prazo
+desconhecido. Atualiza localmente, inclusive parada; remove timer quando a caixa fecha.
+Cabecalho tambem mostra status dentro da janela, nao apenas aviso apos vencer.
+Recarregar extensao e F5 no CRM; conferir 3.277.0. Nenhuma mensagem enviada.
+
+## 2026-11-09 - v3.276.0 - HISTORICO - atendimento assumido com status antigo
 
 A tela ja tinha campo de mensagem, mas estadoDaConversa mantinha isPending pelo status aberto
 do objeto da conversa. Agora a evidencia positiva do composer tambem prevalece no isPending.

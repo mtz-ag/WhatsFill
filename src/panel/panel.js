@@ -6,7 +6,7 @@
  */
 
 import * as api from '../lib/api.js';
-import { avisoJanelaResposta } from '../lib/janela-resposta.js';
+import { avisoJanelaResposta, statusJanelaResposta } from '../lib/janela-resposta.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
 import * as templatesLib from '../lib/templates.js';
@@ -2308,7 +2308,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const alertaJanela = h('div', { class: 'wf-block', 'data-fica': '1', role: 'status' });
     const atualizarJanela = () => {
       if (!alertaJanela.isConnected) return;
-      const texto = avisoJanelaResposta(state.entrantesJanela || []);
+      const texto = statusJanelaResposta(state.entrantesJanela || []);
+      alertaJanela.title = avisoJanelaResposta(state.entrantesJanela || []);
       alertaJanela.textContent = texto;
       alertaJanela.hidden = !texto;
       timerJanelaResposta = setTimeout(atualizarJanela, 30000);
@@ -6559,6 +6560,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     const estado = h('div', { class: 'wf-controle-estado' }, 'Andando…');
     caixa.append(estado);
+    const prazoResposta = h('div', { class: 'wf-controle-prazo', 'data-fica': '1', role: 'status' });
+    caixa.append(prazoResposta);
 
     /**
      * **Só o ícone, e maior** — pedido dele (07/09/2026): *"os botões só preciso do ícone um pouco
@@ -6581,6 +6584,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     function pintar() {
       const rodando = !!state.auto.rodando;
+      prazoResposta.textContent = state.contact
+        ? `${state.contact.name || 'Contato aberto'} · ${statusJanelaResposta(state.entrantesJanela || [])}`
+        : '24h: aguardando carregar o contato';
       estado.textContent = rodando ? 'Andando…' : 'PARADA';
       estado.classList.toggle('wf-controle-pausada', !rodando);
       parar.disabled = !rodando;
@@ -6699,9 +6705,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
     pintar();
 
+    const timerPrazoResposta = setInterval(pintar, 1000);
     controleDaRodada = {
       pintar,
       fechar() {
+        clearInterval(timerPrazoResposta);
         document.removeEventListener('keydown', aoTeclar);
         fundo.remove();
         controleDaRodada = null;
