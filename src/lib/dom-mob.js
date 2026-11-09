@@ -258,20 +258,42 @@ export function propsDoFiber(no, niveis = NIVEIS) {
  * **Sinal 1 — a linha que o React marcou como ativa.** A prop se chama `ativa`, e e a propria
  * plataforma dizendo qual conversa esta selecionada.
  *
- * **Mais de uma ativa devolve `null`**: duas verdades ao mesmo tempo nao sao verdade nenhuma, e o
- * desfecho de afirmar a errada e o painel classificar uma pessoa e responder outra.
+ * **Mais de uma ativa, com ids diferentes, devolve `null`**: duas verdades ao mesmo tempo nao sao
+ * verdade nenhuma, e o desfecho de afirmar a errada e o painel classificar uma pessoa e responder
+ * outra.
+ *
+ * **O mesmo id repetido e UMA linha.** O avatar da fila e outro botao dentro da linha; o navegador
+ * as vezes o tira de dentro do `<button>` e a leitura conta a mesma conversa duas vezes. Isso nao
+ * e discordancia — e a mesma pessoa desenhada duas vezes. Tratar como discordancia apagava a
+ * conversa que estava na tela.
+ *
+ * **Um no que estoura nao apaga o resto.** Fibra hostil (getter que lanca) no meio da lista fazia
+ * a leitura inteira cair no `catch` do gancho, e o painel dizia "nenhuma conversa aberta" com a
+ * conversa na tela.
  */
 export function linhaAtiva(nos) {
   const achadas = [];
   for (const no of nos || []) {
-    for (const p of propsDoFiber(no, NIVEIS)) {
-      if (p && p.conversa && typeof p.conversa.id === 'string') {
-        if (p.ativa === true) achadas.push(p.conversa);
+    let props;
+    try {
+      props = propsDoFiber(no, NIVEIS);
+    } catch (_) {
+      continue;
+    }
+    for (const p of props) {
+      try {
+        if (p && p.conversa && typeof p.conversa.id === 'string') {
+          if (p.ativa === true) achadas.push(p.conversa);
+          break;
+        }
+      } catch (_) {
         break;
       }
     }
   }
-  return achadas.length === 1 ? achadas[0] : null;
+  if (achadas.length === 1) return achadas[0];
+  if (achadas.length > 1 && achadas.every((c) => c.id && c.id === achadas[0].id)) return achadas[0];
+  return null;
 }
 
 /**
@@ -284,9 +306,23 @@ export function linhaAtiva(nos) {
  */
 export function painelDaConversa(nos) {
   for (const no of nos || []) {
-    for (const p of propsDoFiber(no, 3)) {
-      if (p && p.conversa && typeof p.conversa.id === 'string' && typeof p.onStatusChange === 'function' && typeof p.onClose === 'function') {
-        return p.conversa;
+    // O painel foi medido a 3 niveis. Um involucro a mais, ou um no que estoura antes dele,
+    // fazia a leitura inteira voltar vazia — e o Resolver parava a rodada com a conversa na tela.
+    // O teto e o mesmo da linha (8): a assinatura continua obrigatoria, entao subir mais nao
+    // afirma um ancestral que nao e o painel.
+    let props;
+    try {
+      props = propsDoFiber(no, NIVEIS);
+    } catch (_) {
+      continue;
+    }
+    for (const p of props) {
+      try {
+        if (p && p.conversa && typeof p.conversa.id === 'string' && typeof p.onStatusChange === 'function' && typeof p.onClose === 'function') {
+          return p.conversa;
+        }
+      } catch (_) {
+        /* prop hostil: este no nao serve, o proximo pode ser o painel */
       }
     }
   }

@@ -946,6 +946,17 @@ export function ehRecusaPorSinalFraco(mensagem) {
 }
 
 /**
+ * **A tela disse que nao ha conversa — e isso NAO e sinal fraco.**
+ *
+ * Sinal fraco e "sei qual e, mas so por um lado". Aqui a leitura voltou vazia. No clique manual
+ * o desfecho continua sendo pedir para abrir a conversa. Na rodada, quem decide pular e o painel:
+ * a frase atravessa a ponte, entao a marca tem de estar no texto.
+ */
+export function ehRecusaPorConversaSumida(mensagem) {
+  return String(mensagem || '').includes('Nenhuma conversa aberta na tela');
+}
+
+/**
  * **ESPERA os dois sinais concordarem — a recusa estava certa e a PRESSA e que estava errada.**
  *
  * `openQueueSession` devolve assim que o clique na linha volta, e nesse instante so um dos dois
@@ -987,8 +998,20 @@ export async function esperarOsDoisSinais({ id = '', prazoMs = PRAZO_DOS_SINAIS_
 
 async function conversaDaTela(oque, opcoes = {}) {
   const st = await esperarOsDoisSinais(opcoes);
+  const alvo = String(opcoes.id || '');
   if (!st.ganchoRespondeu) throw new Error(`${oque}: nao consegui ler qual conversa esta aberta — recuso mexer as cegas.`);
   if (!st.sessionId) throw new Error(`${oque}: Nenhuma conversa aberta na tela — abra a conversa antes.`);
+  /**
+   * **A rodada ja sabe QUAL conversa abriu.** Sem este id, o primeiro quadro vazio — normal
+   * depois de um envio, enquanto o React redesenha — era resposta final e o Resolver parava a
+   * fila inteira (09/11/2026, Minhas, com a conversa visivel na tela).
+   *
+   * Com id, a espera acima da tempo de a tela mostrar ESSA conversa. Mostrando OUTRA, recusar
+   * aqui e o que impede resolver a pessoa errada: o id que voltou nao e o que a rodada abriu.
+   */
+  if (alvo && st.sessionId !== alvo) {
+    throw new Error(`${oque}: a tela mostra outra conversa — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
+  }
   if (st.porQuantosSinais !== 'os-dois') {
     throw new Error(`${oque}: sei qual conversa esta aberta por ${MARCA_SINAL_FRACO} (${st.porQuantosSinais}) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }

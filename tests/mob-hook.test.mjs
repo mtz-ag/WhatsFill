@@ -157,6 +157,18 @@ grupo('QUAL esta aberta: as duas copias tambem tem de concordar');
     { nome: 'so a lista', botoes: [linhaAtiva(a, true)], divs: [] },
     { nome: 'nada aberto', botoes: [linhaAtiva(a, false)], divs: [] },
     { nome: 'duas ativas', botoes: [linhaAtiva(a, true), linhaAtiva(b, true)], divs: [] },
+    { nome: 'mesmo id em dois botoes', botoes: [linhaAtiva(a, true), linhaAtiva(a, true)], divs: [painel(a)] },
+    {
+      nome: 'no hostil antes do painel',
+      botoes: [linhaAtiva(a, true)],
+      divs: [
+        Object.defineProperty({ tagName: 'DIV' }, '__reactFiber$k', {
+          get() { throw new Error('hostil'); },
+          enumerable: true,
+        }),
+        painel(a),
+      ],
+    },
   ];
 
   for (const caso of casos) {

@@ -246,25 +246,37 @@
    * responder outra.
    */
   function conversaAberta() {
-    let daLista = null;
-    let quantasAtivas = 0;
+    // Copia de `dom-mob.linhaAtiva` + `painelDaConversa`. O mesmo id em dois botoes e UMA linha
+    // (o avatar da fila). Ids diferentes continuam sendo discordancia. No que estoura e pulado:
+    // um getter hostil nao pode apagar a conversa que esta na tela.
+    const achadas = [];
     for (const no of document.querySelectorAll('button, [role="button"]')) {
-      for (const p of propsDoFiber(no, NIVEIS)) {
-        if (p && p.conversa && typeof p.conversa.id === 'string') {
-          if (p.ativa === true) { daLista = p.conversa; quantasAtivas++; }
-          break;
-        }
+      let props;
+      try { props = propsDoFiber(no, NIVEIS); } catch (_) { continue; }
+      for (const p of props) {
+        try {
+          if (p && p.conversa && typeof p.conversa.id === 'string') {
+            if (p.ativa === true) achadas.push(p.conversa);
+            break;
+          }
+        } catch (_) { break; }
       }
     }
-    if (quantasAtivas > 1) daLista = null;
+    let daLista = null;
+    if (achadas.length === 1) daLista = achadas[0];
+    else if (achadas.length > 1 && achadas.every((c) => c.id && c.id === achadas[0].id)) daLista = achadas[0];
 
     let doPainel = null;
     for (const no of document.querySelectorAll('div')) {
-      for (const p of propsDoFiber(no, 3)) {
-        if (p && p.conversa && typeof p.conversa.id === 'string' && typeof p.onStatusChange === 'function' && typeof p.onClose === 'function') {
-          doPainel = p.conversa;
-          break;
-        }
+      let props;
+      try { props = propsDoFiber(no, NIVEIS); } catch (_) { continue; }
+      for (const p of props) {
+        try {
+          if (p && p.conversa && typeof p.conversa.id === 'string' && typeof p.onStatusChange === 'function' && typeof p.onClose === 'function') {
+            doPainel = p.conversa;
+            break;
+          }
+        } catch (_) { /* este no nao serve */ }
       }
       if (doPainel) break;
     }

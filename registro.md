@@ -1,3 +1,12 @@
+## 2026-11-09 - v3.279.0 - MINHAS - Resolver vazio nao encerra a rodada
+
+A rodada de Minhas parava no Resolver com "Nenhuma conversa aberta na tela" mesmo com a
+conversa visivel e o resto da lista aberto. O primeiro quadro sem leitura virava erro, e erro
+para a fila. Agora o Resolver espera a conversa que a rodada ja abriu. Se a tela mostrar outra
+pessoa, a rodada para. Se nao confirmar ninguem, esse contato e pulado e continua na lista.
+Um no do React que estoura, ou o mesmo id em dois botoes, nao apaga mais a leitura da tela.
+Recarregar extensao e F5 no CRM; conferir 3.279.0. Sem chamada paga ou envio real na validacao.
+
 ## 2026-11-09 - v3.278.0 - ESTADO DE AGORA - limite de contexto chega a IA
 
 O prazo antes decidia somente o fluxo por inatividade; a IA lia o historico inteiro.

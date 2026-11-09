@@ -6499,8 +6499,18 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * Uma vez por rodada basta: o texto é o mesmo em todo contato, e repeti-lo cem vezes afogaria o
    * resto do log — que é onde ele procura o que deu errado.
    */
+  /**
+   * A conversa que a rodada acabou de abrir. Vazio fora dela.
+   *
+   * O Resolver lia a tela sem dizer QUAL conversa esperava. O primeiro quadro sem conversa —
+   * o React ainda desenhando — virava "nenhuma conversa aberta" e `erro`, e `erro` para a
+   * rodada inteira de Minhas (09/11/2026), com contatos ainda na lista.
+   */
+  let idQueARodadaAbriu = '';
+
   async function concluirPeloPainel() {
-    const r = await page.clickConcluir();
+    const id = idQueARodadaAbriu;
+    const r = await page.clickConcluir(id ? { id } : {});
     if (r?.ok) agendarContagem();
 
     if (r?.avisoDaConfirmacao && !state.auto.avisouConfirmacao) {
@@ -7150,6 +7160,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       motivo:
         'a tela não se decidiu sobre qual conversa está aberta (os dois sinais não concordaram ' +
         `a tempo) — pulei para não ${oQuePoderiaDarErrado}`,
+    };
+  }
+
+  /**
+   * **"Nenhuma conversa aberta" no meio da rodada e deste contato, nao da fila** (09/11/2026).
+   *
+   * Nao e sinal fraco: la a tela disse quem era, por um lado so. Aqui ela nao confirmou ninguem.
+   * Resolver essa pessoa as cegas mexe no atendimento de outra. Parar a rodada, com o resto da
+   * lista ainda aberto, era o que a print mostrou. Pular deixa este na lista e segue.
+   *
+   * Fora da rodada o mesmo texto continua sendo erro: o clique manual tem de dizer para abrir
+   * a conversa, nao fingir que pulou.
+   */
+  function pularPorConversaSumida(nome, err) {
+    if (!page.ehRecusaPorConversaSumida(err?.message)) return null;
+    return {
+      nome,
+      resultado: 'pulado',
+      motivo:
+        'a tela não mostrou conversa aberta na hora de resolver — pulei este e segui; ele continua na lista',
     };
   }
 
@@ -9818,6 +9848,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     /** A previsão sai com `resultado: 'previsao'`, que nenhuma rodada produz — ver `veredito`. */
     const prever = (o) => ({ nome, resultado: 'previsao', ...o });
     try {
+      if (!simular) idQueARodadaAbriu = sessionId;
       // Carrega pelo caminho de sempre: parser, sugestão de etiquetas, e a classificação
       // automática do que é determinístico.
       if (!simular) await load(sessionId);
@@ -12730,7 +12761,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const fraco = pularPorSinalFraco(nome, err, 'mexer no atendimento de outra pessoa');
       if (fraco) return fraco;
+      const sumida = pularPorConversaSumida(nome, err);
+      if (sumida) return sumida;
       return { nome, resultado: 'erro', motivo: traduzirErroDeRede(err.message), rede: ehErroDeRede(err.message) };
+    } finally {
+      idQueARodadaAbriu = '';
     }
   }
 

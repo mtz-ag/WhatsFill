@@ -30,6 +30,7 @@ import {
   numeroDoCanal,
   esperarOsDoisSinais,
   ehRecusaPorSinalFraco,
+  ehRecusaPorConversaSumida,
   MARCA_SINAL_FRACO,
   queuePreview,
   textoDoComposer,
@@ -1412,6 +1413,37 @@ grupo('A TELA DESENHA DEPOIS DO CLIQUE — e quem le antes conclui que a aba tro
   const semId = await esperarOsDoisSinais({ janela: vazia2, espera: async () => {}, agora: relogio() });
   check(semId.sessionId === null && vazia2.perguntas() === 1, 'sem `id`, "nenhuma aberta" e resposta final — nao espera');
 
+  /**
+   * **Print de 09/11/2026: a rodada de Minhas parou no Resolver** com a conversa visivel e o
+   * resto da lista ainda aberto. O Resolver lia a tela sem o id que a rodada acabou de abrir,
+   * entao o primeiro quadro vazio era final.
+   */
+  const vazia3 = janelaVaziaDepoisCheia(2, 'c-nova');
+  const resolveu = await (async (f) => { try { await f(); return ''; } catch (e) { return String(e.message); } })(
+    () => clickConcluir({ id: 'c-nova', janela: vazia3, espera: async () => {}, agora: relogio() })
+  );
+  check(vazia3.perguntas() > 1, `Resolver com o id da rodada espera a tela (${vazia3.perguntas()} leituras)`);
+  check(!resolveu.includes('Nenhuma conversa aberta'), 'e nao recusa por conversa sumida quando ela aparece');
+
+  function janelaDeOutra() {
+    const ouvintes = [];
+    const j = {
+      addEventListener: (ti, fn) => { if (ti === 'message') ouvintes.push(fn); },
+      removeEventListener: (ti, fn) => { const i = ouvintes.indexOf(fn); if (i >= 0) ouvintes.splice(i, 1); },
+      postMessage(msg) {
+        const ev = { source: j, origin: ORIGEM, data: { __whatsfill: 'mob-page', type: 'aberta',
+          payload: { pedido: msg.payload.pedido, por: 'os-dois', conversa: { id: 'outra', status: 'em_atendimento' } } } };
+        for (const fn of [...ouvintes]) fn(ev);
+      },
+    };
+    return j;
+  }
+  const outra = await (async (f) => { try { await f(); return ''; } catch (e) { return String(e.message); } })(
+    () => clickConcluir({ id: 'c-nova', janela: janelaDeOutra(), espera: async () => {}, agora: (() => { let n = 0; return () => (n += 1500); })() })
+  );
+  check(outra.includes('outra conversa'), 'tela de outra pessoa nao e resolvida no lugar');
+  check(ehRecusaPorConversaSumida(outra) === false, 'e isso nao vira pulo: a tela e de outra pessoa, a rodada para');
+
   /** O painel tem de separar as duas causas, senao a rodada morre no primeiro desenho atrasado. */
   const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   // Ancora no CODIGO e nao no texto: o comentario logo acima cita a mesma frase, e o
@@ -2007,8 +2039,16 @@ grupo('A RECUSA POR UM SINAL SO PULA O CONTATO — nas TRES filas, nao so nos No
    */
   const j = painel.indexOf("return { nome, resultado: 'enviado' };\n    } catch (err) {");
   check(j > 0, 'achei o catch de fora de `processarRespondido`');
-  check(painel.slice(j, j + 700).includes('pularPorSinalFraco'),
+  check(painel.slice(j, j + 900).includes('pularPorSinalFraco'),
     'e ele pula por sinal fraco antes de chamar de erro');
+  check(painel.slice(j, j + 900).includes('pularPorConversaSumida'),
+    'e conversa sumida na hora de resolver pula o contato em vez de parar a rodada');
+  check(painel.includes('idQueARodadaAbriu = sessionId'), 'a rodada diz ao Resolver qual conversa ela abriu');
+  check(painel.includes('page.clickConcluir(id ? { id } : {})'), 'e o Resolver espera essa, em vez de desistir no primeiro quadro vazio');
+  check(ehRecusaPorConversaSumida('Resolver: Nenhuma conversa aberta na tela — abra a conversa antes.') === true,
+    'a frase do Resolver e a marca do pulo');
+  check(ehRecusaPorSinalFraco('Resolver: Nenhuma conversa aberta na tela — abra a conversa antes.') === false,
+    'e continua nao sendo sinal fraco');
 }
 
 /**

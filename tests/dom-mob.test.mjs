@@ -240,6 +240,7 @@ grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');
 
   /** Duas ativas ao mesmo tempo nao sao verdade nenhuma. */
   check(linhaAtiva([linha(a, true), linha(b, true)]) === null, 'duas linhas ativas: nenhuma vale');
+  check(linhaAtiva([linha(a, true), linha(a, true)])?.id === 'c-1', 'o mesmo id em dois botoes e uma linha so');
   check(linhaAtiva([linha(a, true)])?.id === 'c-1', 'uma ativa vale');
   check(linhaAtiva([]) === null, 'lista vazia, null');
 
@@ -251,6 +252,19 @@ grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');
   const quaseo = { tagName: 'DIV' };
   quaseo['__reactFiber$k'] = { memoizedProps: { conversa: a, onClose() {} }, return: null };
   check(painelDaConversa([quaseo]) === null, 'no que tem conversa mas nao a assinatura inteira nao conta');
+
+  const hostil = { tagName: 'DIV' };
+  Object.defineProperty(hostil, '__reactFiber$k', {
+    get() { throw new Error('hostil'); },
+    enumerable: true,
+  });
+  check(painelDaConversa([hostil, painel(a)])?.id === 'c-1', 'no que estoura nao esconde o painel');
+
+  const fundo = { tagName: 'DIV' };
+  let fibra = { memoizedProps: { conversa: a, onStatusChange() {}, onClose() {} }, return: null };
+  for (let i = 0; i < 4; i++) fibra = { memoizedProps: {}, return: fibra };
+  fundo['__reactFiber$k'] = fibra;
+  check(painelDaConversa([fundo])?.id === 'c-1', 'painel a mais de 3 niveis ainda conta');
 
   check(propsDoFiber(linha(a, true)).length === 1, 'a cadeia de props e lida do no para cima');
   check(propsDoFiber({ tagName: 'DIV' }).length === 0, 'no sem fiber devolve cadeia vazia');
