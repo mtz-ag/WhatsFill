@@ -8,8 +8,8 @@
 > `panel.js` (6.000+ linhas) é como as duas versões divergem em uma semana.
 >
 > **A série da versão diz qual das duas está carregada: produção é `0.x`; aqui é tudo o que NÃO
-> for `0.x`.** Conferido em 31/10/2026: produção é `WhatsFill` **0.63.0**, e este branch é
-> `WhatsFill+IA` **3.250.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
+> for `0.x`.** Conferido em 09/11/2026: produção é `WhatsFill` **0.63.0**, e este branch é
+> `WhatsFill+IA` **3.278.0**. (O texto antigo dizia "este branch é `1.x`" e envelheceu — a série
 > daqui já passou por 1.x e 2.x, e o que separa as duas é o **zero** de produção, que nunca muda.)
 > As duas carregam da MESMA pasta, então dar checkout aqui troca a extensão em produção sem
 > avisar ninguém — o nome (`WhatsFill+IA`) e a série são os únicos sinais. A regra anterior era
@@ -4094,6 +4094,11 @@ mudaram as maos, nao a cabeca.
   basta: meca a ORDEM** (segunda vez em dois dias).
   **A regua virou HORAS** (`cortesia.contextoPerdido`) e o limite e campo (`auto.horasContextoPerdido`,
   nasce em 48, `0` desliga) — numero que ele ditou nao vira constante (licao do teto de 45, 02/10).
+  **O MESMO PRAZO CORTA O QUE A IA LE (09/11/2026, v3.278).** Ate aqui ele so escolhia o fluxo.
+  Encerramento, rascunho, historico anterior, dossie e orgaos recebiam a conversa inteira, e a
+  avaliacao citava reclamacao antiga quando o recente eram so links. `limitarContextoIA` e um
+  lugar so. Data ausente fica. A conferencia de cidade continua olhando a conversa: a cidade
+  dita antes do prazo ainda e a cidade. Devolver a lista intacta derruba o teste de corte.
   **`deOutroDia` NAO foi removida:** ela e sinal do QUADRO, e sinal que some do codigo e descartado
   de quadro ja exportado — o ramo dele sumiria sem ninguem pedir.
   **A caixa subiu para a 7a posicao**, logo abaixo das seis protecoes que nao enviam nada.

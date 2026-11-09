@@ -1,4 +1,12 @@
-## 2026-11-09 - v3.277.0 - ESTADO DE AGORA - status 24h no controle flutuante
+## 2026-11-09 - v3.278.0 - ESTADO DE AGORA - limite de contexto chega a IA
+
+O prazo antes decidia somente o fluxo por inatividade; a IA lia o historico inteiro.
+Agora o mesmo prazo corta a conversa do encerramento, do rascunho, do historico anterior
+e do texto que escolhe dossie e orgaos. 0 desliga. Datas ausentes ficam, porque nao
+provam antiguidade. A conferencia de cidade nao entra neste corte. Cadastro nao e apagado.
+Recarregar extensao e F5 no CRM; conferir 3.278.0. Sem chamada paga ou envio real na validacao.
+
+## 2026-11-09 - v3.277.0 - HISTORICO - status 24h no controle flutuante
 
 Caixa Rodada mostra nome do contato e tempo restante em horas/minutos, PRAZO VENCIDO ou prazo
 desconhecido. Atualiza localmente, inclusive parada; remove timer quando a caixa fecha.

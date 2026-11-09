@@ -6,6 +6,7 @@
  */
 
 import * as api from '../lib/api.js';
+import { limitarContextoIA } from '../lib/contexto-ia.js';
 import { avisoJanelaResposta, statusJanelaResposta } from '../lib/janela-resposta.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
@@ -4667,12 +4668,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      */
     card.append(
       campoNumero(
-        'Contexto passou depois de quantas HORAS sem ela escrever (0 desliga)',
+        'Limite do contexto em HORAS (0 desliga)',
         state.auto.cfg.horasContextoPerdido,
         (v) => salvarAuto({ horasContextoPerdido: v }).then(renderAll)
       ),
       h('div', { class: 'wf-origin' },
-        'Passado o limite, a rodada para de seguir o fluxo e manda a MENSAGEM DO MOMENTO — ou ' +
+        'A IA recebe somente mensagens dentro deste prazo. Após esse tempo sem novas mensagens, a rodada manda a MENSAGEM DO MOMENTO — ou ' +
           'conclui sem enviar, se não houver mensagem do momento para mandar. Responder o assunto ' +
           'de doze dias atrás soa a quem não estava lá.'),
       h('div', { class: 'wf-origin' },
@@ -16564,7 +16565,8 @@ const CONTATOS_POR_PAGINA = 200;
       at: m?.at || null,
       ordem: i,
     }));
-    return [...dela, ...nossa]
+    // 09/11/2026: sem este corte a IA citava assunto velho com a fila recente so de links.
+    return limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido)
       .filter((m) => m.texto.trim())
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
       // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
@@ -16618,8 +16620,10 @@ const CONTATOS_POR_PAGINA = 200;
       nomeContato: state.contact?.name || '',
       tituloConversa: state.session?.contactDisplayName || '',
     });
-    const dela = mensagensParaIA();
-    if (!dela.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
+    const delaToda = mensagensParaIA();
+    if (!delaToda.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
+    // Dossie e orgaos leem so o texto dela. O mesmo prazo, senao o pedido antigo volta no rascunho.
+    const dela = limitarContextoIA(delaToda, state.auto.cfg.horasContextoPerdido);
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
 
     /**
@@ -16669,7 +16673,7 @@ const CONTATOS_POR_PAGINA = 200;
         .filter((m) => !ehMensagemDaPlataforma(m?.texto))
         .map((m) => ({ de: 'contato', texto: String(m?.texto || '') || iaLib.marcaDeMidia(m), at: m?.at || null }));
       const nossa = (c.nossas || []).map((m) => ({ de: 'nos', texto: String(m?.texto || ''), at: m?.at || null }));
-      return [...dela, ...nossa]
+      return limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido)
         .filter((m) => m.texto.trim())
         .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
     })();
