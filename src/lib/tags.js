@@ -92,6 +92,12 @@ export async function coredeFor(city) {
  * divergências como "Centro-Sul" (planilha) x "Centro Sul" (CRM). O resto vem da tabela de
  * apelidos, editável na aba Config.
  */
+/** Para remover, o proprio contato e evidencia melhor que o catalogo amostrado. */
+export function etiquetaLocalParaRemover(nome, etiquetas = []) {
+  const alvo = normalize(nome);
+  return etiquetas.find(t => normalize(t.label || t.name || '') === alvo) || null;
+}
+
 export async function resolveTag(name) {
   if (!name) return null;
   const [tags, aliases] = await Promise.all([loadTags(), store.get('tagAliases')]);

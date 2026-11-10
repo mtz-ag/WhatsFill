@@ -1,4 +1,11 @@
-## 2026-11-10 - v3.290.0 - ESTADO DE AGORA - desabafo politico nao e emergencia, e o resumo do audio vai para a IA
+## 2026-11-10 - v3.291.0 - ESTADO DE AGORA - remocao usa etiquetas do contato
+
+Lista de remover agora resolve primeiro nas etiquetas do contato aberto. Catalogo amostrado
+nao pode impedir remocao de etiqueta presente no proprio cadastro. Fallback preserva aliases.
+API verifica tambem se alguma etiqueta removida permaneceu na resposta, nao apenas as mantidas.
+Recarregar extensao e F5 no CRM; conferir 3.291.0. Sem alteracao em contato real nos testes.
+
+## 2026-11-10 - v3.290.0 - HISTORICO - desabafo politico nao e emergencia, e o resumo do audio vai para a IA
 
 Print dele: audio de 2min25 contra a distribuicao de celulares caros para politicos, com uma frase
 no meio ("doi na alma... se enterrar de uma vez, nao comer mais e ver se morre para nao ver isso"),

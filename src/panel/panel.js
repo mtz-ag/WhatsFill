@@ -9244,7 +9244,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     for (const nome of nomes) {
       let tag = null;
       try {
-        tag = await tagsLib.resolveTag(nome);
+        const local = tagsLib.etiquetaLocalParaRemover(nome, state.contact?.tags || []);
+        tag = local ? { ...local, label: local.label || local.name } : await tagsLib.resolveTag(nome);
       } catch (_) {
         tag = null;
       }

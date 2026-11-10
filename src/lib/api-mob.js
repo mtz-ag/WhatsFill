@@ -739,7 +739,8 @@ export async function aplicarEtiquetas(contatoId, nomes = [], { remover = [] } =
   const linha = await gravarNaLinha(contatoId, { tags: novas }, (escrito, volta) => {
     const vieram = new Set((Array.isArray(volta?.tags) ? volta.tags : []).map(chaveDaEtiqueta));
     const faltou = escrito.tags.some((n) => !vieram.has(chaveDaEtiqueta(n)));
-    return faltou ? ['tags'] : [];
+    const sobrou = [...saem].some(k => vieram.has(k));
+    return faltou || sobrou ? ['tags'] : [];
   });
   return { ok: true, tags: Array.isArray(linha.tags) ? linha.tags : novas };
 }
