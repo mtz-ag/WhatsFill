@@ -3848,6 +3848,14 @@ mudaram as maos, nao a cabeca.
   estava num pronome e numa oracao relativa. **Antes de mexer numa guarda desta regra, isole o
   gatilho tirando UMA palavra por vez** — foi assim que os dois apareceram.
   Prova: tirando a guarda do `esses` cai 1 assercao; tirando a do `que usaram o PL`, caem 2.
+  **E A TERCEIRA PORTA ERA A DISTANCIA** (10/11/2026, apoiadora em audio contra o governo):
+  `agride` pedia um pronome e um xingamento na mesma mensagem, EM QUALQUER LUGAR — e *"tu nao e um
+  deles ... nao tem medo do ladrao"* marcava sem interesse. **Com o adversario na mensagem, o
+  insulto tem de estar DITO sobre nos** (`insultoDitoSobreNos`: predicado no pronome, ou colado
+  nele; um "nao" no meio desfaz). No mesmo audio, "licitacao" sozinha virava alvo LOCAL e o desabafo
+  caia na desconversa ("Seguimos por aqui"): **obra, verba, licitacao e convenio sao COISAS, nao
+  lugares** — so contam com uma marca de lugar daqui. Provas: sem a guarda do insulto caem 4; objeto
+  sozinho como local, 2.
   **E foi a LINHA DA PREVISAO que achou isto**, lendo 10 conversas sem a rodada agir. Antes dela o
   primeiro passo de todo diagnostico custava uma rodada em producao — e foi uma rodada dessas que
   concluiu cinco atendimentos em 02/11.

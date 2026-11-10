@@ -3492,8 +3492,10 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'atentos nem que estamos acompanhando, e NÃO desconverse — sai como quem não leu o que ela ' +
         'escreveu. Continue FORA do mérito da acusação (não diga se é grave, o que precisa ser apurado, ' +
         'nem prometa levar adiante) e, dentro disso: acolha o que ela sentiu em uma frase, sem dar lição ' +
-        'de moral e sem corrigi-la, e RESPONDA o que ela perguntou. Não havendo pergunta, uma frase de ' +
-        'acolhimento basta.'
+        'de moral e sem corrigi-la, e RESPONDA o que ela perguntou. Se ela COBRA o mandato (pede que a ' +
+        'gente aja, diz que votou em nós, ameaça não votar mais), responda à cobrança: diga que seguimos ' +
+        'firmes do lado dela contra isso — sem prometer ação concreta, prazo ou resultado. Não havendo ' +
+        'pergunta nem cobrança, uma frase de acolhimento basta.'
       :
     // Já agradecemos? Então NÃO se manda agradecer de novo — ver `jaAgradecemosADenuncia` (31/10/2026).
     denuncia && !trouxeProblema && !desabafo && jaAgradecemosADenuncia(lista)

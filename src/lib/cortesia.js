@@ -3042,6 +3042,40 @@ function xingouOTitular(norm, nomeDoTitular) {
 }
 
 /**
+ * **COM O ADVERSÁRIO NA MENSAGEM, O INSULTO TEM DE ESTAR DITO SOBRE NÓS** (10/11/2026, print da
+ * Lucia — dois áudios de apoiadora indignada com o governo, e o rascunho saindo seco).
+ *
+ * Medido: `semInteresse` devolvia *"veio hostilizar"* para o segundo áudio, e a menor janela que
+ * disparava era *"eu tenho certeza que **tu não é um deles**. Mas vamos botar o pessoal, não tem
+ * que ter medo do **ladrão**"*. A regra de `agride` só pede um pronome e um xingamento na MESMA
+ * mensagem, em qualquer lugar — e numa fala longa contra o PT os dois sempre aparecem, apontando
+ * para lados opostos. O "tu" ali é ELA dizendo que o capitão NÃO é como eles.
+ *
+ * **A guarda só vale com o adversário na mensagem**, a mesma condição que `mandouNosEmbora` já usa
+ * (26/09): sem ele, pronome e xingamento juntos continuam bastando, como sempre. Com ele, o
+ * xingamento tem de vir PREDICADO no pronome (*"vocês são uns ladrões"*, *"tu é sem vergonha"*, o
+ * Sergio Nunes de 08/09) ou colado nele (*"seus ladrões"*, *"vocês, vagabundos"*) — e um "não" entre
+ * o pronome e o verbo desfaz (*"tu não é um deles"*, *"vocês não são ladrões"*).
+ *
+ * **Errar para este lado é o barato:** o caso vai para a tecla 6, onde alguém lê. O outro lado é
+ * etiqueta permanente de sem interesse mais conclusão em silêncio, em cima de quem votou em nós.
+ */
+const AGRESSAO_SOLTA = AGRESSAO.source.replace(/\\b/g, '');
+const PREDICACAO_DO_INSULTO = new RegExp(
+  `\\b(voces|vcs|voce|vc|tu|senhor|senhora)\\b([^.!?]{0,25}?)\\b(sao|e|eh|esta|estao|ficou|ficaram|viraram|parece|parecem)\\b[^.!?]{0,30}?\\b${AGRESSAO_SOLTA}`,
+  'gi'
+);
+const INSULTO_COLADO_EM_NOS = new RegExp(`\\b(voces|vcs|seus|suas)\\b[\\s,]+(uns\\s+|umas\\s+)?${AGRESSAO_SOLTA}`, 'i');
+
+function insultoDitoSobreNos(norm) {
+  if (INSULTO_COLADO_EM_NOS.test(norm)) return true;
+  for (const m of norm.matchAll(PREDICACAO_DO_INSULTO)) {
+    if (!/\bnao\b/i.test(m[2] || '')) return true;
+  }
+  return false;
+}
+
+/**
  * **O xingamento no IMPERATIVO já é segunda pessoa** — print dele (05/09/2026): a contato chegou
  * pelo anúncio, mandou o texto de apoio às 23:38 e, um minuto depois, *"Então vá para o inferno..
  * desgraçado"*. *"chegou hostilizando e extensão não reconheceu"*.
@@ -3403,7 +3437,23 @@ const CRIME_CONTRA_ELA =
  * secretaria, obra e verba são o oposto — ali existe um lugar para onde o caso iria.
  */
 const ALVO_LOCAL =
-  /(^|[^\p{L}])(prefeit\w+|vereador\w*|camara\s+municipal|secretari[ao]s?|delegad\w+|delegacia|posto\s+de\s+saude|ubs|hospital|escola|creche|obras?|licitac(ao|oes)|verbas?|convenio|conselho\s+tutelar)([^\p{L}]|$)/iu;
+  /(^|[^\p{L}])(prefeit\w+|vereador\w*|camara\s+municipal|secretari[ao]s?|delegad\w+|delegacia|posto\s+de\s+saude|ubs|hospital|escola|creche|conselho\s+tutelar)([^\p{L}]|$)/iu;
+
+/**
+ * **OBRA, VERBA E LICITAÇÃO SÃO COISAS, NÃO LUGARES** (10/11/2026, a Lucia: *"vão trazer o Waters
+ * ... para gastar o nosso dinheiro ... sem licitação nenhuma"*, sobre um show do governo federal).
+ * Estavam em `ALVO_LOCAL` e bastavam sozinhas para o desabafo contra o PT virar denúncia a
+ * desconversar — e o rascunho saiu *"Seguimos por aqui"*. Elas só dizem que o caso é LOCAL quando
+ * vêm com uma marca de lugar daqui (a rua, o bairro, a cidade, o município, "aqui").
+ */
+const OBJETO_DE_CASO_LOCAL =
+  /(^|[^\p{L}])(obras?|licitac(ao|oes)|verbas?|convenio)([^\p{L}]|$)/iu;
+const MARCA_DE_LUGAR_DAQUI =
+  /(^|[^\p{L}])(aqui|daqui|nossa\s+cidade|minha\s+cidade|da\s+cidade|municipi\w+|bairro|rua|vila|praca|comunidade)([^\p{L}]|$)/iu;
+
+function alvoLocal(t) {
+  return ALVO_LOCAL.test(t) || (OBJETO_DE_CASO_LOCAL.test(t) && MARCA_DE_LUGAR_DAQUI.test(t));
+}
 
 /**
  * **ELA QUER QUE A GENTE FAÇA ALGUMA COISA COM A ACUSAÇÃO.** Dizendo isso, é denúncia venha o alvo
@@ -3454,7 +3504,7 @@ const PEDE_PROVIDENCIA =
 function contraOAdversario(t) {
   if (!ADVERSARIO.test(t)) return false;
   if (new RegExp(`(^|[^\\p{L}])${NOSSO_PARTIDO}([^\\p{L}]|$)`, 'iu').test(t)) return false;
-  if (ALVO_LOCAL.test(t)) return false;
+  if (alvoLocal(t)) return false;
   if (PEDE_PROVIDENCIA.test(t)) return false;
   return true;
 }
@@ -4198,7 +4248,7 @@ const INSULTO_AO_ALIADO =
  * nome, e o adversário não pode aparecer no meio nem antes.
  */
 const NOSSO_PARTIDO = '(pl|partido\\s+liberal|republicanos|republicano|bolsonaro|capitao\\s+martim|martim|zucco)';
-const ADVERSARIO = /\b(pt|petista|lula|psol|pc\s*do\s*b|pdt|pcb|comunist[ao]s?|esquerd)/i;
+const ADVERSARIO = /\b(pt|petista|lula|janja|psol|pc\s*do\s*b|pdt|pcb|comunist[ao]s?|esquerd)/i;
 
 const INSULTO_AO_NOSSO_PARTIDO = [
   /**
@@ -4536,8 +4586,15 @@ function umaMensagemRecusa(msg, opcoes = {}) {
    */
   const xingaOTitular = xingouOTitular(norm, opcoes?.nomeDoTitular);
 
+  /**
+   * **Com o adversário na mensagem, o insulto tem de estar dito sobre nós** — ver
+   * `insultoDitoSobreNos` (a Lucia, 10/11/2026). O imperativo continua valendo sozinho: ele diz o
+   * alvo por conta própria.
+   */
+  const contraOutroLado = ADVERSARIO.test(norm) && !mandouEmbora && !insultoDitoSobreNos(norm);
+
   const agride =
-    AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora) && !soXingaTerceiro && !xingaOTitular;
+    AGRESSAO.test(norm) && (DIRIGIDA_A_NOS.test(norm) || mandouEmbora) && !soXingaTerceiro && !xingaOTitular && !contraOutroLado;
   if (agride || soOImperativo || mandouNosEmbora) return { motivo: 'veio hostilizar, não é público do mandato' };
 
   const negativaVale = !falada && (norm.trim().length <= NEGATIVA_CURTA || NEGACAO_COM_OBJETO.test(norm));

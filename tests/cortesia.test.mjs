@@ -3945,4 +3945,39 @@ grupo('o preterito e os dois alvos que faltavam (04/11/2026)');
   check(!d('fui roubado aqui perto da prefeitura'), 'e o participio continua sendo crime contra ela');
 }
 
+/**
+ * **A apoiadora indignada com o governo** (10/11/2026, textos ficticios na forma da print). Dois
+ * defeitos no mesmo audio: "licitacao" sozinha virava alvo LOCAL (e o desabafo contra o PT caia na
+ * desconversa, com o rascunho "Seguimos por aqui"), e "tu nao e um deles ... ladrao" marcava SEM
+ * INTERESSE — o pronome e o xingamento na mesma mensagem, apontando para lados opostos.
+ */
+grupo('apoiadora contra o governo: nao e denuncia local nem hostilidade');
+{
+  const fala = 'Eu tenho certeza que tu nao e um deles, nao tem que ter medo do ladrao. Esse governo do PT ' +
+    'vai gastar o nosso dinheiro num show sem licitacao nenhuma. A gente votou em voces, se nao fizerem nada ' +
+    'eu nao voto mais.';
+  check(trouxeDenuncia(fala)?.contraOAdversario === true,
+    'licitacao sem lugar daqui nao e alvo local: e desabafo contra o adversario');
+  check(semInteresse([{ texto: fala, transcrito: true }]) === null,
+    '"tu nao e um deles" + "ladrao": o insulto e do adversario, nao nosso');
+  check(semInteresse([{ texto: 'meu capitao, a gente votou em voces, essa janja vagabunda gastando o nosso dinheiro' }]) === null,
+    'xingar a Janja e xingar o adversario');
+
+  check(trouxeDenuncia('a obra aqui da rua esta parada, culpa do PT que desviou a verba')?.contraOAdversario === false,
+    'obra/verba COM lugar daqui continua sendo caso local a desconversar');
+  check(trouxeDenuncia('o vereador do PT roubou a verba da licitacao')?.contraOAdversario === false,
+    'e o lugar de sempre (vereador) continua decidindo');
+
+  for (const t of [
+    'voces sao uns ladroes igual o PT',
+    'voces sao tudo igual ao PT, ladroes',
+    'tu e sem vergonha igual o lula',
+    'voces, vagabundos, iguais ao PT',
+    'voce e um mentiroso, vota no Lula mesmo',
+  ]) {
+    check(!!semInteresse([{ texto: t }]), `com o adversario junto, o insulto DITO SOBRE NOS continua hostil: "${t}"`);
+  }
+  check(semInteresse([{ texto: 'voces nao sao ladroes como o PT' }]) === null, 'e o "nao" entre o pronome e o verbo desfaz');
+}
+
 fim();

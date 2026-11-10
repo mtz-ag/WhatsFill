@@ -1,4 +1,44 @@
-## 2026-11-10 - v3.286.0 - ESTADO DE AGORA - o ■ fecha a pergunta aberta e o painel volta
+## 2026-11-10 - v3.287.0 - ESTADO DE AGORA - apoiadora contra o governo: nem desconversa, nem "sem interesse"
+
+Print dele: dois audios de uma apoiadora indignada com o governo federal (celulares para
+deputados, "governo do PT", show "sem licitacao", "a gente votou em voces, se nao fizerem nada nao
+voto mais"), e o rascunho no campo: "Seguimos por aqui. Se precisar de alguma coisa, e so
+escrever." - "a resposta nao ficou boa".
+
+Medido (textos redigitados da print, so no rascunho):
+- o primeiro audio dava `contraOAdversario: true`; o segundo dava `false` - e o ramo do prompt que
+  saiu foi o de DENUNCIA JA AGRADECIDA, que manda escrever exatamente aquela frase neutra;
+- o que derrubava o segundo era a palavra "licitacao": ela estava em `ALVO_LOCAL` e bastava
+  sozinha para o desabafo virar denuncia local a desconversar;
+- e pior: `semInteresse` devolvia "veio hostilizar" para o segundo audio. A menor janela que
+  disparava era "eu tenho certeza que TU NAO E UM DELES... nao tem que ter medo do LADRAO": a regra
+  so pedia um pronome e um xingamento na mesma mensagem, em qualquer lugar. Numa fala longa contra o
+  PT os dois aparecem, apontando para lados opostos. O desfecho seria etiqueta permanente de sem
+  interesse e conclusao em silencio, em quem votou em nos.
+
+O que mudou:
+- obra, verba, licitacao e convenio so contam como alvo LOCAL com uma marca de lugar daqui (aqui, a
+  rua, o bairro, a cidade, o municipio); prefeitura, vereador, secretaria e o resto continuam
+  valendo sozinhos;
+- com o adversario na mensagem, o xingamento so e hostilidade a nos se estiver DITO sobre nos
+  ("voces sao uns ladroes", "tu e sem vergonha", "voces, vagabundos"); um "nao" entre o pronome e o
+  verbo desfaz ("tu nao e um deles"). Sem o adversario, nada muda;
+- "janja" entrou na lista do adversario;
+- a linha do prompt do desabafo contra o adversario ganhou a COBRANCA: quando ela cobra o mandato
+  ("votei em voces", "se nao fizerem nada"), responder a cobranca dizendo que seguimos firmes do
+  lado dela, sem prometer acao, prazo ou resultado.
+
+Medido depois: os dois audios viram desabafo contra o adversario, nenhum vira sem interesse, e o
+pedido leva a linha do desabafo, nao a do "ja agradecemos". Bateria de hostilidade com o
+adversario junto: as cinco formas ditas sobre nos continuam pegas.
+
+Provas (tests/cortesia.test.mjs): sem a guarda do insulto caem 4; objeto sem lugar contando como
+local, 2; sem "janja", 2. 49 suites, checar-modulos e checar-referencias limpos.
+
+Nao consertado, so registrado: "seus ladroes" (sem "voce"/"tu") nunca foi lido como hostil - e
+anterior a isto. Nao conferido na tela dele.
+
+## 2026-11-10 - v3.286.0 - HISTORICO (substituida pela 3.287.0) - o ■ fecha a pergunta aberta e o painel volta
 
 Print dele com a 3.285: a caixa da tecla 6 aberta na coluna e o controle ainda dizendo "Andando..."
 depois de ele apertar o ■ - "eu parei mas nao retornou ao painel".
