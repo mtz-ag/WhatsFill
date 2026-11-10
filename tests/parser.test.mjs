@@ -1360,4 +1360,19 @@ grupo('o APOSTROFO some, e nao vira espaco (22/09/2026, Sant Ana do Livramento)'
     'o ponto continua separando palavras');
 }
 
+/**
+ * **O aproximado depois de pista não ganha do exato** (10/11/2026, *"não pegou a cidade"*): a pista
+ * "em" achava "pelotão" ≈ Pelotas e devolvia na hora, e a cidade de verdade ficava cortada pela
+ * janela de 40 caracteres. Texto fictício na forma da print.
+ */
+grupo('aproximado depois de pista vira reserva; o exato adiante vence');
+{
+  const r = await extract(['Sou Sargento Fulano, trabalho em pelotão rodoviário de Palmeira das Missões']);
+  check(r.cidade?.value === 'Palmeira das Missões' && r.cidade?.confidence === 'exata', `cidade = ${JSON.stringify(r.cidade)}`);
+  const so = await extract(['trabalho em pelotão']);
+  check(so.cidade?.confidence !== 'exata', 'sem exato adiante, o aproximado continua só palpite');
+  const dois = await extract(['moro em Canoas mas trabalho em Esteio']);
+  check(dois.cidade?.value === 'Canoas', 'a primeira pista exata continua vencendo');
+}
+
 fim();

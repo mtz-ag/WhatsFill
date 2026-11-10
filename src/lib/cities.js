@@ -791,6 +791,18 @@ export async function matchCityComContexto(text) {
     }
   }
 
+  /**
+   * **O APROXIMADO DEPOIS DE PISTA NÃO GANHA DO EXATO** (10/11/2026, print dele: *"não pegou a
+   * cidade"*). Ela respondeu *"Sou Sargento Iano, trabalho em pelotão rodoviário de Palmeira das
+   * Missões"*, e a pista `em` achou **"pelotão" ≈ Pelotas** (aproximada) e devolveu na hora — a
+   * cidade de verdade estava 22 caracteres adiante, e a janela de 40 a cortava em "Palmeira das
+   * Missõ". O palpite errado foi descartado na conferência e ela ficou sem cidade nenhuma.
+   *
+   * Hoje o aproximado vira RESERVA: primeiro se procura um casamento EXATO numa janela maior
+   * depois da mesma pista e nas outras pistas; só não havendo, a reserva volta. O exato continua
+   * exigindo uma pista antes — "de" sozinho continua não sendo pista.
+   */
+  let reserva = null;
   for (const pista of PISTAS_DE_CIDADE) {
     pista.lastIndex = 0; // regex global guarda posição entre chamadas
     let m;
@@ -798,7 +810,13 @@ export async function matchCityComContexto(text) {
       const inicio = m.index + m[0].length;
       const trecho = bruto.slice(inicio, inicio + ALCANCE_DA_PISTA);
       const hit = await matchCity(trecho);
-      if (hit) return { ...hit, pista: m[0].trim() };
+      if (hit?.confidence === 'exata') return { ...hit, pista: m[0].trim() };
+      if (hit) {
+        const adiante = await matchCity(bruto.slice(inicio, inicio + ALCANCE_DA_PISTA * 2));
+        if (adiante?.confidence === 'exata') return { ...adiante, pista: m[0].trim() };
+        if (!reserva) reserva = { ...hit, pista: m[0].trim() };
+        continue;
+      }
 
       /**
        * **Depois da pista, fora do RS também vale** — *"moro em Curitiba"*, *"sou de Florianópolis"*.
@@ -808,12 +826,12 @@ export async function matchCityComContexto(text) {
        * é só qual lista responde, e o RS responde primeiro.
        */
       const fora = await matchForaDoRS(trecho);
-      if (fora) {
+      if (fora && !reserva) {
         return { city: fora.city, confidence: 'exata', matched: fora.matched, foraDoRS: fora.uf, pista: m[0].trim() };
       }
     }
   }
-  return null;
+  return reserva;
 }
 
 /**

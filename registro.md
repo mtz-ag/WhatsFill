@@ -1,4 +1,30 @@
-## 2026-11-10 - v3.288.0 - ESTADO DE AGORA - o formulario de CURRICULO
+## 2026-11-10 - v3.289.0 - ESTADO DE AGORA - a cidade cortada pela janela da pista
+
+Print dele: "nao pegou a cidade". A resposta ao nosso pedido de cidade foi, na forma, "Sou
+Sargento <nome>, trabalho em pelotao rodoviario de Palmeira das Missoes", e o painel ficou sem
+cidade.
+
+Medido: a pista "em" casava "pelotao" com Pelotas por aproximacao (distancia 2) e devolvia na
+hora. A cidade de verdade estava 22 caracteres adiante, e a janela de 40 depois da pista a cortava
+em "Palmeira das Missoe". O palpite aproximado nao grava sozinho e foi descartado; ela ficou sem
+cidade nenhuma. O modo de resposta ao formulario nao salvava: o que sobra depois da cidade
+("Sou Sargento ..., trabalho em pelotao rodoviario") nao e nome de gente, entao ele recusa.
+
+O que mudou (`cities.matchCityComContexto`): casamento APROXIMADO depois de pista vira reserva.
+Antes de usa-la, procura-se um casamento EXATO numa janela do dobro depois da mesma pista e nas
+outras pistas; so nao havendo, a reserva volta. Exato continua exigindo pista antes ("de" sozinho
+continua nao sendo pista), e o RS continua vencendo o de fora.
+
+Medido depois: a frase da print da Palmeira das Missoes (exata); "moro em pelotas", "material
+impresso em Pelotas" e "moro em Canoas mas trabalho em Esteio" saem como antes.
+
+Ficou como estava: "trabalho em pelotao" sozinho ainda vira palpite aproximado de Pelotas - nao
+grava sem o clique dele ou a conferencia da IA.
+
+Prova (tests/parser.test.mjs): devolvendo o aproximado na hora, cai 1. Nao conferido na tela dele;
+o contato da print precisa ser reaberto para o painel reler.
+
+## 2026-11-10 - v3.288.0 - HISTORICO (substituida pela 3.289.0) - o formulario de CURRICULO
 
 Pedido dele: "para casos de pessoas querendo mandar curriculo
 https://capitaomartim.com.br/formulario/curriculo".
