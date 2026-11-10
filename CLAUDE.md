@@ -5409,6 +5409,18 @@ mudaram as maos, nao a cabeca.
 
 ## Avaliação por IA (só neste branch)
 
+- **EXAGERO DE DESESPERO NO MEIO DA REVOLTA POLITICA NAO E EMERGENCIA — e a plataforma ja resume o
+  audio** (10/11/2026, print dele: audio de 2min25 contra os celulares para politicos, com *"ver se
+  morre de uma vez para nao ver isso"* no meio, e o rascunho respondendo SAMU, 192, 193 e CVV).
+  **Nenhuma regra nossa falava disso: foi o modelo sozinho, agarrado a uma frase**, e todos os
+  detectores deram nulo. Hoje ha regra no prompt com a FRONTEIRA escrita (intencao DELA de tirar a
+  vida, desligada da politica, continua recebendo o 188 uma vez).
+  **A linha "IA: ..." embaixo da transcricao e a coluna `transcricao_resumo`** de
+  `whatsapp_mensagens` (medido: ~100 caracteres em 39 de 40 audios, `<resumo> • <sentimento> •
+  <intencao>`). O select ja a trazia; `mob.mensagemDoBanco` a descartava. Hoje vai na marca do audio
+  (`ia.resumoDoAudio`). **Antes de pedir a IA para deduzir algo, confira se a plataforma ja nao
+  escreveu numa coluna que voce le e joga fora.**
+
 - **OS DOIS FORMULARIOS: O ENDERECO MORA NO CADASTRO, E A IA SO PODE COPIAR** (09/11/2026, pedido
   dele: *"iremos passar esse formulario para demandas … e para visitas …"*, e em seguida *"adicione
   na extensao para que o formulario possa ser mudado caso necessario e seja utilizado pela ia"*).

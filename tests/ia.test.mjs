@@ -16,6 +16,7 @@ import { chapaDoDossie, precisaDoDossie } from '../src/lib/gabinete.js';
 import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
 import { pedeMaterial, pedeFalarComDeputado, pedeRoupa } from '../src/lib/cortesia.js';
 import {
+  resumoDoAudio,
   montarSistemaRascunho,
   montarContatoRascunho,
   nomeCurtoDeAnuncio,
@@ -1496,8 +1497,11 @@ grupo('a leitura do usage: prompt_tokens INCLUI o cacheado');
    * pedindo o texto inteiro.
    */
   check(sistema.includes(PADRAO_DE_ATENDIMENTO), 'e vai inteiro, sem corte');
-  check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) * 0.35,
-    'e continua sendo uma parte grande do prompt (piso de 35%, medido 49,6% em 10/09)');
+  // Piso baixado de 35% para 30% em 10/11/2026: medido 35,2% antes da regra do desabafo politico e
+  // 34,4% depois, sem corte nenhum — a mesma queda sozinha descrita acima. O corte quem pega e a
+  // assercao de cima, que exige o texto inteiro.
+  check(tokensAproximados(PADRAO_DE_ATENDIMENTO) > tokensAproximados(sistema) * 0.30,
+    'e continua sendo uma parte grande do prompt (piso de 30%, medido 34,4% em 10/11)');
 }
 
 /**
@@ -3869,6 +3873,27 @@ grupo('validarComentario: formato errado nunca vira texto na pagina');
   check(nao.naoResponder === true && nao.texto === '', 'marcando naoResponder, o texto e descartado -- nao se publica o que ela mandou ignorar');
   check(validarComentario({ texto: 'x', confianca: 9, naoResponder: false }).confianca === 1, 'confianca fora da faixa e aparada');
   check(validarComentario({ texto: 'x', naoResponder: false }).confianca === 0, 'sem confianca, zero -- nunca se assume alta');
+}
+
+/**
+ * **Exagero de desespero no meio da indignacao politica nao e emergencia** (10/11/2026): um audio
+ * de dois minutos contra os celulares para politicos, com uma frase de "ver se morre de uma vez",
+ * recebeu SAMU, 192, 193 e CVV. E o resumo da IA da plataforma passa a ir junto do audio.
+ */
+grupo('desabafo politico com exagero de desespero, e o resumo do audio');
+{
+  const sistema = montarSistemaRascunho();
+  check(/DESABAFO POLÍTICO COM EXAGERO DE DESESPERO NÃO É EMERGÊNCIA/u.test(sistema), 'a regra esta no prompt do rascunho');
+  check(/NÃO cite SAMU, 192, 193, 188, CVV/u.test(sistema), 'proibe o protocolo de crise no desabafo politico');
+  check(/intenção DELA/u.test(sistema) && /CVV atende pelo 188/.test(sistema),
+    'e escreve a fronteira: intencao dela de tirar a vida continua recebendo o 188');
+  check(/a plataforma resumiu/.test(sistema), 'e diz a IA o que fazer com o resumo da plataforma');
+
+  check(resumoDoAudio({ transcrito: true, resumoDaPlataforma: '  Critica algo   • negativo • queixa ' }) ===
+    'Critica algo • negativo • queixa', 'o resumo do audio sai limpo');
+  check(resumoDoAudio({ transcrito: false, resumoDaPlataforma: 'x' }) === '', 'mensagem escrita nao leva resumo');
+  check(resumoDoAudio({ transcrito: true }) === '', 'audio sem resumo (plataforma velha) nao inventa nada');
+  check(resumoDoAudio({ transcrito: true, resumoDaPlataforma: 'a'.repeat(500) }).length <= 201, 'e e cortado');
 }
 
 fim();

@@ -2168,6 +2168,27 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     'O tamanho do relato não exige resposta longa; use mais texto somente se houver algo a responder.',
     'SEM ECO: não repita nem resuma o que ela escreveu ("Entendi que você quer apresentar…",',
     '"Você me contou que…"). Ela sabe o que disse. Vá direto à resposta, curta e calorosa.',
+    /**
+     * **EXAGERO DE DESESPERO NO MEIO DA INDIGNAÇÃO POLÍTICA NÃO É EMERGÊNCIA** (10/11/2026, print
+     * dele: dois minutos de áudio contra os celulares para políticos, com *"dói na alma… se enterrar
+     * de uma vez, não comer mais e ver se morre para não ver isso"* no meio — e o rascunho respondeu
+     * com SAMU, 192, 193, CVV 188 e *"você está pensando em se machucar?"*). Medido: nenhuma regra
+     * nossa fala disso; foi o modelo sozinho, agarrado a uma frase. A própria IA da plataforma
+     * resumiu o áudio como *"critica… e lamenta corrupção, pedindo justiça • negativo • queixa"*.
+     * **A fronteira está escrita** porque sem ela a regra calaria também quem fala de verdade em
+     * tirar a própria vida.
+     */
+    'DESABAFO POLÍTICO COM EXAGERO DE DESESPERO NÃO É EMERGÊNCIA. "Dá vontade de morrer", "melhor se',
+    'enterrar de uma vez", "não comer mais e ver se morre para não ver isso", ditos no meio da revolta',
+    'com o governo ou com a política, são o jeito de dizer a indignação — não um pedido de socorro.',
+    'Responda à INDIGNAÇÃO, como na regra 17: acolha a dor dela numa frase, sem corrigir e sem lição.',
+    'NÃO cite SAMU, 192, 193, 188, CVV, emergência, psicólogo nem "procure ajuda", e NÃO pergunte se',
+    'ela pensa em se machucar: isso trata uma eleitora indignada como caso de emergência e mostra que',
+    'ninguém leu o resto. Só é diferente quando ela fala em tirar a própria vida como intenção DELA,',
+    'desligada da política ("vou me matar", "quero acabar com a minha vida", "não aguento mais',
+    'viver"): aí acolha com carinho e diga, uma vez, que o CVV atende pelo 188, 24 horas.',
+    'ÁUDIO COM RESUMO DA PLATAFORMA: quando a marca do áudio traz "a plataforma resumiu", use o',
+    'resumo para entender o assunto principal da fala; a transcrição continua sendo o que ela disse.',
     '',
     exemplosDeEscopo(candidato),
     // O item 22 INTEIRO, e não só a primeira faixa: citar só "mensagem simples: 1 a 3 frases" fez o
@@ -2745,6 +2766,16 @@ export const ANTERIOR_MAX_CARACTERES = 600;
  *
  * @param {{tipo?:string, texto?:string, sistema?:boolean}} m
  */
+/**
+ * **O resumo da IA da plataforma, pronto para ir na marca do áudio** (10/11/2026, ver
+ * `mob.mensagemDoBanco`). Só para áudio TRANSCRITO, e cortado: é contexto, não a fala dela — quem
+ * manda continua sendo a transcrição. Vazio quando não há resumo (a plataforma velha não tem).
+ */
+export function resumoDoAudio(m) {
+  if (!m?.transcrito) return '';
+  return cortar(String(m?.resumoDaPlataforma || '').replace(/\s+/g, ' ').trim(), 200);
+}
+
 export function marcaDeMidia(m) {
   if (String(m?.texto || '').trim()) return '';
   if (m?.sistema) return '(ela mandou uma mensagem que não chegou legível até aqui)';

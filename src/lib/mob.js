@@ -227,6 +227,14 @@ export function mensagemDoBanco(linha) {
     texto: conteudo || transcricao,
     tipo: String(m.tipo || 'TEXT').toUpperCase(),
     transcrito: !conteudo && !!transcricao,
+    /**
+     * **O resumo que a IA DA PLATAFORMA escreve do áudio** (10/11/2026, print dele: *"a IA da
+     * transcrição já deu um contexto também"*). Medido: `transcricao_resumo`, ~100 caracteres, em 39
+     * de 40 áudios, no formato `<resumo> • <sentimento> • <intenção>` — é a linha "IA: …" que a tela
+     * mostra embaixo da transcrição. Ela vai para o NOSSO prompt (ver `ia.resumoDoAudio`): numa fala
+     * de dois minutos é o que diz o assunto principal antes de o modelo se agarrar a uma frase solta.
+     */
+    resumoDaPlataforma: !conteudo && transcricao ? String(m.transcricao_resumo || '').trim() : '',
     doContato: !m.is_outgoing,
     sistema: !!m.is_sistema,
     at: m.created_at || null,

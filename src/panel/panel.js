@@ -16720,7 +16720,11 @@ const CONTATOS_POR_PAGINA = 200;
       return `(texto do ANÚNCIO${qual} em que ela clicou — escrito pela campanha, não por ela) ${texto}`;
     }
     if (m?.encaminhado) return `(áudio ENCAMINHADO de outra conversa, transcrito automaticamente — não é fala dela e não é dirigido a nós) ${texto}`;
-    return m?.transcrito ? `(áudio, transcrito automaticamente) ${texto}` : texto;
+    if (!m?.transcrito) return texto;
+    // O resumo da IA da PLATAFORMA vai junto (10/11/2026): numa fala longa é o que diz o assunto
+    // principal — ver `iaLib.resumoDoAudio`.
+    const resumo = iaLib.resumoDoAudio(m);
+    return `(áudio, transcrito automaticamente${resumo ? `; a plataforma resumiu: "${resumo}"` : ''}) ${texto}`;
   }
 
   /**

@@ -1,4 +1,35 @@
-## 2026-11-10 - v3.289.0 - ESTADO DE AGORA - a cidade cortada pela janela da pista
+## 2026-11-10 - v3.290.0 - ESTADO DE AGORA - desabafo politico nao e emergencia, e o resumo do audio vai para a IA
+
+Print dele: audio de 2min25 contra a distribuicao de celulares caros para politicos, com uma frase
+no meio ("doi na alma... se enterrar de uma vez, nao comer mais e ver se morre para nao ver isso"),
+e o rascunho respondeu como crise: SAMU 192, Bombeiros 193, CVV 188, "voce esta pensando em se
+machucar?". Ele: "a IA da transcricao ja deu um contexto tambem e a IA errou ao escrever".
+
+Medido:
+- nenhuma regra nossa fala de CVV, SAMU ou crise: foi o modelo sozinho, agarrado a uma frase;
+- todos os detectores (desabafo, denuncia, sem interesse, saude) deram nulo para o audio;
+- a linha "IA: ..." embaixo da transcricao e a coluna `transcricao_resumo` de `whatsapp_mensagens`
+  (medido na aba dele, so a forma: ~100 caracteres, em 39 de 40 audios, no formato
+  "<resumo> • <sentimento> • <intencao>"). O select ja trazia a coluna; `mob.mensagemDoBanco` a
+  jogava fora.
+
+O que mudou:
+- `mob.mensagemDoBanco` traz `resumoDaPlataforma` (so em audio transcrito), e a marca do audio no
+  prompt passa a dizer `a plataforma resumiu: "..."` (`ia.resumoDoAudio`, cortado em 200);
+- regra no prompt do rascunho: exagero de desespero dito no meio da revolta politica e jeito de
+  dizer a indignacao, nao pedido de socorro — acolher a dor numa frase e responder a indignacao,
+  sem SAMU, 192, 193, 188, CVV, emergencia ou "voce pensa em se machucar". A fronteira esta
+  escrita: quando ela fala em tirar a propria vida como intencao DELA, desligada da politica,
+  acolhe e diz uma vez que o CVV atende pelo 188.
+
+O piso de proporcao do padrao no prompt (teste) baixou de 35% para 30%: estava em 35,2% e foi a
+34,4% so com a regra nova; o corte continua pego pela assercao que exige o texto inteiro.
+
+Provas: sem a proibicao no prompt cai 1 (ia.test); sem o resumo no banco cai 1 (mob.test). 49
+suites, checar-modulos e checar-referencias limpos. Nao conferido na tela dele: o rascunho ja
+escrito nao muda; pedir de novo.
+
+## 2026-11-10 - v3.289.0 - HISTORICO (substituida pela 3.290.0) - a cidade cortada pela janela da pista
 
 Print dele: "nao pegou a cidade". A resposta ao nosso pedido de cidade foi, na forma, "Sou
 Sargento <nome>, trabalho em pelotao rodoviario de Palmeira das Missoes", e o painel ficou sem

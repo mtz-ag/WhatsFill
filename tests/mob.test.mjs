@@ -349,4 +349,12 @@ grupo('o MESMO campo com duas condicoes: lista no filtro');
   check(solto.includes('status=' + encodeURIComponent('eq.aberto')), 'e o valor solto continua entrando como sempre entrou');
 }
 
+grupo('o resumo da IA da plataforma vem com o audio, e so com o audio');
+{
+  const audio = mensagemDoBanco({ tipo: 'audio', transcricao: 'fala longa', transcricao_resumo: ' Critica algo • negativo • queixa ', is_outgoing: false });
+  check(audio.transcrito && audio.resumoDaPlataforma === 'Critica algo • negativo • queixa', 'audio transcrito traz o resumo');
+  const texto = mensagemDoBanco({ tipo: 'text', conteudo: 'oi', transcricao_resumo: 'x', is_outgoing: false });
+  check(texto.resumoDaPlataforma === '', 'mensagem escrita nao traz resumo');
+}
+
 fim();
