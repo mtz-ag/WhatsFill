@@ -491,24 +491,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
-   * **Mostrar ou esconder SEM gravar a preferência** — pedido dele (10/11/2026): *"quando a
-   * automação começa a extensão se oculta e fica só o painel do automatizado de respostas e de
-   * parar"*, e *"ao parar retorna o painel normal"*.
-   *
-   * É o mesmo gesto do ícone (a classe `wf-collapsed` + o empurrão da página saindo), com uma
-   * diferença que importa: **não grava `panelOpen`**. Esconder para a rodada é estado da RODADA,
-   * não escolha dele — gravado, um F5 no meio da rodada abriria o painel escondido para sempre, e
-   * ele não saberia por quê.
-   *
-   * O controle da rodada e o popup das teclas continuam na tela porque moram FORA do `.wf-root`
-   * (`destinoDaCaixa`, 31/08): o `transform` que esconde o painel não os arrasta.
-   */
-  function mostrarPainel(aberto, { lembrar = true } = {}) {
-    root.classList.toggle('wf-collapsed', !aberto);
-    if (onToggle) onToggle(!!aberto, { lembrar });
-  }
-
-  /**
    * **Dados e Cidades saíram da barra** (16/10/2026): viraram sub-abas da Config, pelo pedido dele
    * — *"são pouca utilizadas"*. A barra tem 380px de largura; cada aba a mais encolhe todas.
    */
@@ -4983,8 +4965,51 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * esteja anexado), cai no próprio `root`: melhor a caixa aparecer no lugar antigo do que não
    * aparecer.
    */
+  /**
+   * **A COLUNA DA RODADA: os quadros da rodada no lugar do painel** — pedido dele (10/11/2026):
+   * *"substitua o painel atual da extensão pelo do automatizado e ao parar retorna o painel
+   * normal"*, e com a print da primeira versão: *"ficou solto, era pra substituir o painel pra não
+   * ficar em cima da conversa"*.
+   *
+   * A primeira versão (v3.284) escondia o painel e tirava o empurrão da página, e as caixas da
+   * rodada — que moram numa camada `fixed` por cima de tudo — ficavam FLUTUANDO sobre a conversa.
+   * Aqui o empurrão FICA (nada passa pelo `onToggle`, então a página continua com a mesma largura)
+   * e as caixas entram numa coluna encaixada exatamente onde o painel estava.
+   *
+   * **Toda caixa aberta durante a rodada vai para a coluna**, não só o controle e as teclas: a
+   * pergunta da rodada e a da cidade também cobriam a conversa, e o pedido é que nada fique por
+   * cima dela. Quem decide é `destinoDaCaixa`, um lugar só.
+   *
+   * **Ao sair, o que sobrou volta a flutuar** — é o controle com o ▶ quando ele parou: ele precisa
+   * continuar alcançável, e dentro de uma coluna removida ele sumiria.
+   */
+  let colunaDaRodada = null;
+
   function destinoDaCaixa() {
-    return root.parentNode || root;
+    return colunaDaRodada || root.parentNode || root;
+  }
+
+  function entrarNaColunaDaRodada() {
+    if (colunaDaRodada || !root.parentNode) return false;
+    const pai = root.parentNode;
+    colunaDaRodada = h('div', { class: 'wf-coluna-rodada' });
+    // Depois do painel: os seletores de tema usam `~`, que só alcança irmão POSTERIOR.
+    pai.append(colunaDaRodada);
+    // O que já estava flutuando (o controle parado, de uma rodada anterior) entra junto.
+    for (const fundo of [...pai.children]) {
+      if (fundo.classList?.contains('wf-pergunta-fundo')) colunaDaRodada.append(fundo);
+    }
+    root.classList.add('wf-oculto-na-rodada');
+    return true;
+  }
+
+  function sairDaColunaDaRodada() {
+    if (!colunaDaRodada) return;
+    const pai = root.parentNode || root;
+    for (const fundo of [...colunaDaRodada.children]) pai.append(fundo);
+    colunaDaRodada.remove();
+    colunaDaRodada = null;
+    root.classList.remove('wf-oculto-na-rodada');
   }
   function abrirEditorDeVariantesDoMomento(cfg) {
     const fundo = h('div', { class: 'wf-pergunta-fundo' });
@@ -8677,18 +8702,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.avisouConfirmacao = false;
     // A sonda da remoção é UMA por rodada, e o aviso de nome que não existe também.
     state.auto.remocao = { sonda: false, avisou: false };
+    /**
+     * **Os quadros da rodada tomam o lugar do painel** (10/11/2026) — ver `entrarNaColunaDaRodada`.
+     * ANTES de abrir o controle, para ele já nascer dentro da coluna.
+     *
+     * Só no modo encaixado e só com o painel aberto: na janela separada o painel É a janela, e com
+     * ele escondido pelo ícone não há lugar encaixado para ocupar (a coluna sairia junto, e o
+     * controle sumiria) — ali as caixas flutuam como sempre.
+     */
+    const naColuna = mode === 'dock' && !root.classList.contains('wf-collapsed') && entrarNaColunaDaRodada();
     // Pedido dele: aparece SEMPRE que a automação começa, em qualquer uma das rodadas.
     abrirControleDaRodada();
-    /**
-     * **O painel sai da frente enquanto a rodada anda, e volta quando ela para** (10/11/2026).
-     * Ficam o controle (■ ▶) e o popup das teclas, que é tudo o que a rodada pede dele, e a página
-     * ganha a largura de volta. Só no modo encaixado: na janela separada o painel É a janela, e
-     * escondê-lo ali não devolve espaço nenhum à conversa.
-     *
-     * Só devolve o que ELE tinha: com o painel já escondido antes da rodada, o fim não o abre.
-     */
-    const escondiParaARodada = mode === 'dock' && !root.classList.contains('wf-collapsed');
-    if (escondiParaARodada) mostrarPainel(false, { lembrar: false });
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -8820,13 +8844,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       else fecharControleDaRodada();
       /**
        * **O painel volta em TODO fim de rodada** — parada por ele, fila no fim ou erro. No
-       * `finally` pelo motivo de sempre: rodada que morre por erro deixaria o painel escondido sem
-       * ninguém ter pedido. E é aqui que ele precisa dele: o veredito e o Andamento estão no painel.
-       * Se ele mesmo o abriu pelo ícone no meio do caminho, já está aberto e nada muda.
+       * `finally` pelo motivo de sempre: rodada que morre por erro deixaria o painel trocado pela
+       * coluna sem ninguém ter pedido. E é aqui que ele precisa dele: o veredito e o Andamento
+       * estão no painel. DEPOIS do controle: parado, ele continua existindo e volta a flutuar.
        */
-      if (escondiParaARodada && root.classList.contains('wf-collapsed')) {
-        mostrarPainel(true, { lembrar: false });
-      }
+      if (naColuna) sairDaColunaDaRodada();
     }
 
     // Só contato conta: ver `NOMES_DE_SERVICO`. As linhas de serviço usam `pulado` como rótulo
@@ -13108,6 +13130,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
     alca.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
+      // Na coluna da rodada a caixa é encaixada, não solta: arrastar ali só gravaria uma posição
+      // que a caixa usaria depois, flutuando, num lugar que ele nunca escolheu.
+      if (caixa.closest('.wf-coluna-rodada')) return;
       const r = caixa.getBoundingClientRect();
       // Fixa a posição atual ANTES de mexer: até aqui ela vinha do flex, sem left/top nenhum.
       arrasto = { dx: ev.clientX - r.left, dy: ev.clientY - r.top };

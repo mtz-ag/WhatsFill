@@ -72,13 +72,10 @@ async function boot() {
       agendarGravacaoDaLargura(largura);
       return largura;
     },
-    // `lembrar: false` é a rodada escondendo o painel enquanto anda (10/11/2026): o empurrão sai e
-    // volta igual, mas a preferência dele não é gravada — senão um F5 no meio da rodada abriria o
-    // painel escondido.
-    onToggle: (aberto, { lembrar = true } = {}) => {
+    onToggle: (aberto) => {
       if (aberto) dock.applyDock(largura);
       else dock.removeDock();
-      if (lembrar) persistir({ panelOpen: aberto });
+      persistir({ panelOpen: aberto });
     },
   });
 

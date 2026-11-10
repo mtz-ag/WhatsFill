@@ -19,7 +19,8 @@
   branco.
 */
 .wf-root,
-.wf-pergunta-fundo {
+.wf-pergunta-fundo,
+.wf-coluna-rodada {
   --wf-bg: #ffffff;
   --wf-fg: #1f2937;
   --wf-muted: #6b7280;
@@ -57,7 +58,9 @@
   depois do painel, e `~` pega irmão posterior.
 */
 .wf-root.wf-dark,
-.wf-root.wf-dark ~ .wf-pergunta-fundo {
+.wf-root.wf-dark ~ .wf-pergunta-fundo,
+.wf-root.wf-dark ~ .wf-coluna-rodada,
+.wf-root.wf-dark ~ .wf-coluna-rodada .wf-pergunta-fundo {
   --wf-bg: #111827;
   --wf-fg: #e5e7eb;
   --wf-muted: #9ca3af;
@@ -104,6 +107,67 @@
 .wf-root.wf-dock.wf-collapsed {
   transform: translateX(100%);
 }
+
+/*
+  A COLUNA DA RODADA (10/11/2026) — os quadros da rodada no LUGAR do painel, e não por cima da
+  conversa. Pedido dele, com a print da primeira versão: "ficou solto, era pra substituir o painel
+  pra não ficar em cima da conversa".
+
+  Mesmo lugar e mesma largura do .wf-dock, e o empurrão da página não muda: quem some é o painel
+  (display: none), quem aparece é esta coluna. As caixas que entram aqui deixam de ser camada fixa
+  por cima da tela e viram blocos empilhados.
+
+  O `!important` nas caixas é o que vence o left/top escritos em linha por `aplicarPosicao` (a
+  posição que ele escolheu para quando elas flutuam) — sem ele a caixa sairia da coluna para o
+  lugar onde foi arrastada da última vez.
+*/
+.wf-root.wf-oculto-na-rodada { display: none; }
+
+.wf-coluna-rodada {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: var(--wf-width, 380px);
+  z-index: 998;
+  box-sizing: border-box;
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--wf-bg);
+  color: var(--wf-fg);
+  border-left: 1px solid var(--wf-border);
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.06);
+  font: 13px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* O ícone da extensão esconde o que estiver no lugar do painel — no meio da rodada, a coluna. */
+.wf-root.wf-collapsed ~ .wf-coluna-rodada { transform: translateX(100%); }
+
+.wf-coluna-rodada .wf-pergunta-fundo {
+  position: static;
+  inset: auto;
+  display: block;
+  padding: 0;
+  margin: 0 0 10px;
+  pointer-events: auto;
+}
+
+.wf-coluna-rodada .wf-pergunta {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  max-width: none;
+  max-height: none !important;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Encaixada não se arrasta (ver `tornarArrastavel`), então a alça não promete movimento. */
+.wf-coluna-rodada .wf-pergunta-titulo,
+.wf-coluna-rodada .wf-pergunta-titulo:active { cursor: default; }
+.wf-coluna-rodada .wf-pergunta-titulo::before { content: none; }
 
 /* Aba para mostrar/esconder. Fica fora da largura do painel, colada nele. */
 .wf-handle {

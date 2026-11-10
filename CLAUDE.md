@@ -3496,15 +3496,23 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
-- **A RODADA ESCONDE O PAINEL AO COMECAR E O DEVOLVE NO `finally`, SEM GRAVAR A PREFERENCIA**
-  (10/11/2026, pedido dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar
-  retorna o painel normal"*). `mostrarPainel(aberto, { lembrar: false })` e o mesmo gesto do icone
-  (classe `wf-collapsed` + o empurrao saindo), **sem gravar `panelOpen`**: esconder para a rodada e
-  estado da RODADA, e gravado um F5 no meio dela abriria o painel escondido para sempre. **So
-  devolve o que ele tinha** (`escondiParaARodada`) e **so no modo encaixado** — na janela separada
-  o painel e a janela. O controle e o popup das teclas continuam na tela porque moram FORA do
-  `.wf-root` (`destinoDaCaixa`, 31/08): **caixa nova da rodada que for pendurada DENTRO do painel
-  some junto com ele.** Provas em `tests/parar-rodada.test.mjs`: cada um dos tres defeitos derruba 1.
+- **NA RODADA OS QUADROS TOMAM O LUGAR DO PAINEL — e "esconder o painel" NAO e isso** (10/11/2026,
+  pedido dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar retorna o
+  painel normal"*). **A v3.284 errou o pedido:** escondeu o painel tirando o empurrao da pagina, e o
+  controle e as teclas — que moram numa camada `fixed` por cima de tudo, de proposito (31/08) —
+  ficaram flutuando sobre a conversa. Print dele: *"ficou solto, era pra substituir o painel pra
+  nao ficar em cima da conversa"*. **Substituir e OCUPAR O LUGAR: o empurrao fica.**
+  Hoje `entrarNaColunaDaRodada` poe uma `.wf-coluna-rodada` na mesma borda e largura do `.wf-dock`,
+  o painel ganha `display: none` e **`destinoDaCaixa` devolve a coluna** — entao TODA caixa aberta
+  durante a rodada (controle, teclas, a pergunta, a da cidade) cai nela, por um lugar so. O CSS usa
+  `!important` porque `aplicarPosicao` escreve `left`/`top` EM LINHA (a posicao arrastada), e sem
+  isso a caixa sairia da coluna para onde foi arrastada da ultima vez. **Ao sair, o que sobrou volta
+  a flutuar** (o controle parado, com o ▶), e na coluna nao se arrasta. So com o painel aberto e so
+  no modo encaixado. **E o tema escuro precisa do seletor DESCENDENTE**
+  (`.wf-root.wf-dark ~ .wf-coluna-rodada .wf-pergunta-fundo`): a lista das variaveis repoe as cores
+  CLARAS em todo `.wf-pergunta-fundo`, e herdar da coluna nao basta.
+  Conferido com o CSS real numa pagina de teste. Provas em `tests/parar-rodada.test.mjs`: caixas
+  fora da coluna derrubam 1; nao sair no fim, 2; a posicao arrastada vencendo, 1.
 
 - **`so-um-sinal` NAO QUER DIZER QUE OS DOIS DISCORDARAM: QUER DIZER QUE UM NAO ESTA DESENHADO**
   (09/11/2026, print dele apertando a tecla 3 com a conversa certa na tela e o rascunho no campo:

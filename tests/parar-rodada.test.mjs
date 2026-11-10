@@ -134,43 +134,71 @@ const caixa = (() => {
 }
 
 /**
- * **O painel sai da frente enquanto a rodada anda, e volta quando ela para** (10/11/2026, pedido
- * dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar retorna o painel
- * normal"*). Ficam o controle da rodada e o popup das teclas, que moram fora do `.wf-root`.
+ * **Os quadros da rodada tomam o LUGAR do painel** (10/11/2026). Pedido dele: *"substitua o painel
+ * atual da extensao pelo do automatizado e ao parar retorna o painel normal"*, e com a print da
+ * primeira versao: *"ficou solto, era pra substituir o painel pra nao ficar em cima da conversa"*.
+ *
+ * A v3.284 escondia o painel e tirava o empurrao da pagina: o controle e as teclas, que moram numa
+ * camada fixa, ficavam flutuando por cima da conversa. Agora o empurrao fica e as caixas entram
+ * numa coluna encaixada onde o painel estava.
  */
-grupo('a rodada esconde o painel ao comecar e o devolve ao terminar');
+const css = readFileSync(new URL('../src/panel/panel.css', import.meta.url), 'utf8');
+// A ULTIMA regra que comeca a linha com este seletor: ele aparece tambem no fim da lista das
+// variaveis de cor, que vem antes no arquivo, e pegar a primeira leria a regra errada.
+const regraCss = (seletor) => {
+  const i = css.lastIndexOf(`\n${seletor} {`);
+  return i < 0 ? '' : css.slice(i, css.indexOf('}', i));
+};
+
+grupo('a rodada troca o painel pela coluna ao comecar e devolve no finally');
 {
   const i = painel.indexOf('async function rodar(');
-  const fimDoFinally = painel.indexOf('const conta = (tipo)', i);
-  const rodar = painel.slice(i, fimDoFinally);
+  const rodar = painel.slice(i, painel.indexOf('const conta = (tipo)', i));
   const comeco = rodar.slice(0, rodar.indexOf('keepalive.ligar()'));
   const fimDaRodada = rodar.slice(rodar.indexOf('} finally {'));
 
-  check(/mostrarPainel\(false,\s*\{\s*lembrar:\s*false\s*\}\)/.test(comeco),
-    'ao comecar a rodada esconde o painel, sem gravar a preferencia dele');
-  check(/escondiParaARodada\s*=\s*mode === 'dock'/.test(comeco),
-    'so no modo encaixado: na janela separada o painel e a propria janela');
+  check(/naColuna\s*=\s*mode === 'dock'[^;]*entrarNaColunaDaRodada\(\)/.test(comeco),
+    'ao comecar entra na coluna, so no modo encaixado');
   check(/!root\.classList\.contains\('wf-collapsed'\)/.test(comeco),
-    'so esconde o que estava aberto — painel que ele ja tinha escondido continua escondido no fim');
-  check(/mostrarPainel\(true,\s*\{\s*lembrar:\s*false\s*\}\)/.test(fimDaRodada),
+    'so com o painel aberto: escondido pelo icone, nao ha lugar encaixado para ocupar');
+  check(comeco.indexOf('entrarNaColunaDaRodada()') < comeco.indexOf('abrirControleDaRodada()'),
+    'a coluna nasce ANTES do controle, para ele ja abrir dentro dela');
+  check(/if \(naColuna\) sairDaColunaDaRodada\(\)/.test(fimDaRodada),
     'o painel volta no FINALLY: parada por ele, fila no fim ou erro');
-  check(/if \(escondiParaARodada/.test(fimDaRodada),
-    'e so volta se foi a rodada que o escondeu');
-
-  // As caixas da rodada (controle e teclas) penduram no PAI do painel, nunca dentro dele: o
-  // transform que esconde o `.wf-root` arrastaria junto tudo o que estivesse la dentro.
-  check(/function destinoDaCaixa\(\)\s*\{\s*return root\.parentNode \|\| root;/.test(painel),
-    'controle e teclas moram fora do painel, entao continuam na tela com ele escondido');
+  check(fimDaRodada.indexOf('fecharControleDaRodada()') < fimDaRodada.indexOf('sairDaColunaDaRodada()'),
+    'e DEPOIS de decidir o controle: parado, ele sai da coluna e volta a flutuar com o ▶');
+  check(!/onToggle\(|mostrarPainel\(/.test(rodar),
+    'a rodada nao mexe no empurrao da pagina: e isso que impede os quadros de cobrir a conversa');
 }
 
-grupo('esconder para a rodada nao grava a preferencia; o icone continua gravando');
+grupo('toda caixa aberta na rodada vai para a coluna, e sai dela no fim');
 {
-  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
-  const onToggle = main.slice(main.indexOf('onToggle:'), main.indexOf('});', main.indexOf('onToggle:')));
-  check(/lembrar\s*=\s*true/.test(onToggle), 'o padrao continua sendo gravar — o clique no icone nao muda');
-  check(/if \(lembrar\) persistir\(\{\s*panelOpen/.test(onToggle),
-    'so grava quando lembrar: senao um F5 no meio da rodada abriria o painel escondido');
-  check(/removeDock\(\)/.test(onToggle) && /applyDock\(largura\)/.test(onToggle),
-    'o empurrao da pagina sai e volta junto com o painel');
+  check(/function destinoDaCaixa\(\)\s*\{\s*return colunaDaRodada \|\| root\.parentNode \|\| root;/.test(painel),
+    'destinoDaCaixa e o lugar unico: com a coluna ativa, controle, teclas e perguntas entram nela');
+  const entrar = painel.slice(painel.indexOf('function entrarNaColunaDaRodada()'), painel.indexOf('function sairDaColunaDaRodada()'));
+  check(/wf-oculto-na-rodada/.test(entrar), 'o painel some da tela enquanto a coluna esta no lugar dele');
+  check(/wf-pergunta-fundo/.test(entrar) && /colunaDaRodada\.append\(fundo\)/.test(entrar),
+    'o controle que ja flutuava (rodada parada e retomada pelo ▶) entra na coluna');
+  const sair = painel.slice(painel.indexOf('function sairDaColunaDaRodada()'));
+  check(/pai\.append\(fundo\)/.test(sair.slice(0, 400)),
+    'ao sair, o que sobrou na coluna volta a flutuar — senao sumiria junto com ela');
+  const arrastar = painel.slice(painel.indexOf('function tornarArrastavel('), painel.indexOf('function aplicarPosicao('));
+  check(/closest\('\.wf-coluna-rodada'\)/.test(arrastar),
+    'na coluna nao se arrasta: gravaria uma posicao de flutuar que ele nunca escolheu');
+}
+
+grupo('o CSS encaixa a coluna onde o painel estava');
+{
+  const coluna = regraCss('.wf-coluna-rodada');
+  check(/position:\s*fixed/.test(coluna) && /right:\s*0/.test(coluna) && /var\(--wf-width/.test(coluna),
+    'mesma borda e mesma largura do painel encaixado');
+  check(/display:\s*none/.test(regraCss('.wf-root.wf-oculto-na-rodada')), 'o painel some enquanto ela esta la');
+  const caixa = regraCss('.wf-coluna-rodada .wf-pergunta');
+  check(/position:\s*static !important/.test(caixa) && /left:\s*auto !important/.test(caixa),
+    'a caixa deixa de flutuar mesmo com a posicao arrastada escrita em linha');
+  check(/pointer-events:\s*auto/.test(regraCss('.wf-coluna-rodada .wf-pergunta-fundo')),
+    'a camada dentro da coluna e clicavel (fora dela ela e transparente de proposito)');
+  check(/\.wf-root\.wf-dark ~ \.wf-coluna-rodada \.wf-pergunta-fundo/.test(css),
+    'no tema escuro as caixas da coluna tambem ficam escuras');
 }
 fim();

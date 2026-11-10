@@ -1,4 +1,41 @@
-## 2026-11-10 - v3.284.0 - ESTADO DE AGORA - a rodada esconde o painel e o devolve ao parar
+## 2026-11-10 - v3.285.0 - ESTADO DE AGORA - os quadros da rodada tomam o LUGAR do painel
+
+Print dele com a v3.284: o controle da rodada e o popup das teclas flutuando por cima da conversa -
+"ficou solto, era pra substituir o painel pra nao ficar em cima da conversa".
+
+Causa: a v3.284 escondia o painel E tirava o empurrao da pagina. As caixas da rodada moram numa
+camada fixa por cima de tudo (desenho de 31/08, para sobreviverem ao painel escondido), entao com
+a conversa voltando a ocupar a largura inteira elas ficaram em cima dela.
+
+O que mudou: o empurrao FICA. Ao comecar a rodada o painel some e no lugar dele, mesma borda e
+mesma largura, entra uma coluna com os quadros da rodada empilhados - o controle (parar /
+continuar) em cima, as teclas embaixo. TODA caixa que a rodada abre vai para a coluna, inclusive
+a pergunta da rodada e a da cidade: nada fica por cima da conversa. Ao terminar a rodada (parada,
+fila no fim ou erro) a coluna sai e o painel volta; o controle parado, com o ▶, volta a flutuar,
+porque ele precisa continuar alcancavel.
+
+Detalhes:
+- na coluna as caixas nao se arrastam (arrastar gravaria uma posicao de flutuar que ele nunca
+  escolheu) e a posicao arrastada antiga e ignorada ali;
+- o icone da extensao esconde a coluna como esconderia o painel;
+- so com o painel ABERTO e so no modo encaixado: escondido pelo icone, as caixas flutuam como
+  antes, porque nao ha lugar encaixado para ocupar;
+- a mudanca da 3.284 no main.js (nao gravar a preferencia) saiu: a rodada nao mexe mais no
+  empurrao, entao nao havia o que deixar de gravar.
+
+Conferido com o CSS real numa pagina de teste (conversa ficticia, tema escuro): coluna de x 986 a
+1366 numa janela de 1366, controle e teclas dentro dela e empilhados, mesmo com posicao arrastada
+escrita nas caixas.
+
+Provas (tests/parar-rodada.test.mjs): caixas fora da coluna derrubam 1; nao sair da coluna no fim,
+2; a posicao arrastada vencendo a coluna, 1.
+
+Pendencias: validacao ao vivo disto; a das teclas 2 e 3; a dos dois formularios no rascunho; e a
+do titulo da conversa como fonte de cidade (v3.270.0).
+
+Recarregar extensao e F5 no mobiliza.me; conferir 3.285.0 no cabecalho antes de comecar a rodada.
+
+## 2026-11-10 - v3.284.0 - HISTORICO (substituida pela 3.285.0) - a rodada esconde o painel e o devolve ao parar
 
 Pedido dele: "quando a automacao comeca a extensao se oculta e fica so o painel do automatizado
 de respostas e de parar", e em seguida "substitua o painel atual da extensao pelo do automatizado
