@@ -132,4 +132,45 @@ const caixa = (() => {
     check(removido && devolvido === valor, `${valor}: fecha a pergunta e devolve a escolha`);
   }
 }
+
+/**
+ * **O painel sai da frente enquanto a rodada anda, e volta quando ela para** (10/11/2026, pedido
+ * dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar retorna o painel
+ * normal"*). Ficam o controle da rodada e o popup das teclas, que moram fora do `.wf-root`.
+ */
+grupo('a rodada esconde o painel ao comecar e o devolve ao terminar');
+{
+  const i = painel.indexOf('async function rodar(');
+  const fimDoFinally = painel.indexOf('const conta = (tipo)', i);
+  const rodar = painel.slice(i, fimDoFinally);
+  const comeco = rodar.slice(0, rodar.indexOf('keepalive.ligar()'));
+  const fimDaRodada = rodar.slice(rodar.indexOf('} finally {'));
+
+  check(/mostrarPainel\(false,\s*\{\s*lembrar:\s*false\s*\}\)/.test(comeco),
+    'ao comecar a rodada esconde o painel, sem gravar a preferencia dele');
+  check(/escondiParaARodada\s*=\s*mode === 'dock'/.test(comeco),
+    'so no modo encaixado: na janela separada o painel e a propria janela');
+  check(/!root\.classList\.contains\('wf-collapsed'\)/.test(comeco),
+    'so esconde o que estava aberto — painel que ele ja tinha escondido continua escondido no fim');
+  check(/mostrarPainel\(true,\s*\{\s*lembrar:\s*false\s*\}\)/.test(fimDaRodada),
+    'o painel volta no FINALLY: parada por ele, fila no fim ou erro');
+  check(/if \(escondiParaARodada/.test(fimDaRodada),
+    'e so volta se foi a rodada que o escondeu');
+
+  // As caixas da rodada (controle e teclas) penduram no PAI do painel, nunca dentro dele: o
+  // transform que esconde o `.wf-root` arrastaria junto tudo o que estivesse la dentro.
+  check(/function destinoDaCaixa\(\)\s*\{\s*return root\.parentNode \|\| root;/.test(painel),
+    'controle e teclas moram fora do painel, entao continuam na tela com ele escondido');
+}
+
+grupo('esconder para a rodada nao grava a preferencia; o icone continua gravando');
+{
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  const onToggle = main.slice(main.indexOf('onToggle:'), main.indexOf('});', main.indexOf('onToggle:')));
+  check(/lembrar\s*=\s*true/.test(onToggle), 'o padrao continua sendo gravar — o clique no icone nao muda');
+  check(/if \(lembrar\) persistir\(\{\s*panelOpen/.test(onToggle),
+    'so grava quando lembrar: senao um F5 no meio da rodada abriria o painel escondido');
+  check(/removeDock\(\)/.test(onToggle) && /applyDock\(largura\)/.test(onToggle),
+    'o empurrao da pagina sai e volta junto com o painel');
+}
 fim();

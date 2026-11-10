@@ -3496,6 +3496,16 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **A RODADA ESCONDE O PAINEL AO COMECAR E O DEVOLVE NO `finally`, SEM GRAVAR A PREFERENCIA**
+  (10/11/2026, pedido dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar
+  retorna o painel normal"*). `mostrarPainel(aberto, { lembrar: false })` e o mesmo gesto do icone
+  (classe `wf-collapsed` + o empurrao saindo), **sem gravar `panelOpen`**: esconder para a rodada e
+  estado da RODADA, e gravado um F5 no meio dela abriria o painel escondido para sempre. **So
+  devolve o que ele tinha** (`escondiParaARodada`) e **so no modo encaixado** — na janela separada
+  o painel e a janela. O controle e o popup das teclas continuam na tela porque moram FORA do
+  `.wf-root` (`destinoDaCaixa`, 31/08): **caixa nova da rodada que for pendurada DENTRO do painel
+  some junto com ele.** Provas em `tests/parar-rodada.test.mjs`: cada um dos tres defeitos derruba 1.
+
 - **`so-um-sinal` NAO QUER DIZER QUE OS DOIS DISCORDARAM: QUER DIZER QUE UM NAO ESTA DESENHADO**
   (09/11/2026, print dele apertando a tecla 3 com a conversa certa na tela e o rascunho no campo:
   *"a tecla 3 nao resolveu: Resolver: sei qual conversa esta aberta por UM sinal so (so-um-sinal) —

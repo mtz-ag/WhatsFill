@@ -1,4 +1,35 @@
-## 2026-11-09 - v3.283.0 - ESTADO DE AGORA - relato pessoal sem repeticao
+## 2026-11-10 - v3.284.0 - ESTADO DE AGORA - a rodada esconde o painel e o devolve ao parar
+
+Pedido dele: "quando a automacao comeca a extensao se oculta e fica so o painel do automatizado
+de respostas e de parar", e em seguida "substitua o painel atual da extensao pelo do automatizado
+e ao parar retorna o painel normal".
+
+O que mudou: ao comecar QUALQUER rodada o painel sai da tela e a pagina ganha a largura de volta
+(o mesmo gesto do icone da extensao). Ficam o controle da rodada (parar / continuar) e o popup das
+teclas - eles ja moravam fora do painel desde 31/08, entao o esconder nao os leva junto. Quando a
+rodada termina - parada por ele, fila no fim ou erro - o painel volta, com o veredito e o
+Andamento a vista.
+
+Tres cuidados:
+- NAO grava a preferencia "painel aberto": esconder para a rodada e estado da rodada. Gravado, um
+  F5 no meio da rodada abriria o painel escondido para sempre. O clique no icone continua gravando.
+- So devolve o que ele tinha: se o painel ja estava escondido antes da rodada, continua escondido
+  no fim. Se ele o abrir pelo icone no meio da rodada, ele fica aberto.
+- So no modo encaixado. Na janela separada o painel E a janela, e esconde-lo ali nao devolve
+  espaco nenhum a conversa.
+
+Provas (tests/parar-rodada.test.mjs): sem esconder no comeco cai 1 assercao; sem devolver no fim,
+1; gravando a preferencia sempre, 1.
+
+Ao PARAR pelo botao o painel volta, como ele pediu, e o controle com o ▶ de continuar fica na
+tela junto dele. Continuando pelo ▶, a rodada nova esconde o painel de novo.
+
+Pendencias: validacao ao vivo disto; a das teclas 2 e 3; a dos dois formularios no rascunho; e a
+do titulo da conversa como fonte de cidade (v3.270.0).
+
+Recarregar extensao e F5 no mobiliza.me; conferir 3.284.0 no cabecalho antes de comecar a rodada.
+
+## 2026-11-09 - v3.283.0 - HISTORICO - relato pessoal sem repeticao
 
 Relato de trajetoria sem pergunta recebe uma frase breve, sem repetir profissao, datas,
 instituicoes ou etapas e sem elogios excessivos. Exemplo aprovado pelo usuario incorporado.

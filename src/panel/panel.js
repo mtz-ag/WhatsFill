@@ -491,6 +491,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   /**
+   * **Mostrar ou esconder SEM gravar a preferência** — pedido dele (10/11/2026): *"quando a
+   * automação começa a extensão se oculta e fica só o painel do automatizado de respostas e de
+   * parar"*, e *"ao parar retorna o painel normal"*.
+   *
+   * É o mesmo gesto do ícone (a classe `wf-collapsed` + o empurrão da página saindo), com uma
+   * diferença que importa: **não grava `panelOpen`**. Esconder para a rodada é estado da RODADA,
+   * não escolha dele — gravado, um F5 no meio da rodada abriria o painel escondido para sempre, e
+   * ele não saberia por quê.
+   *
+   * O controle da rodada e o popup das teclas continuam na tela porque moram FORA do `.wf-root`
+   * (`destinoDaCaixa`, 31/08): o `transform` que esconde o painel não os arrasta.
+   */
+  function mostrarPainel(aberto, { lembrar = true } = {}) {
+    root.classList.toggle('wf-collapsed', !aberto);
+    if (onToggle) onToggle(!!aberto, { lembrar });
+  }
+
+  /**
    * **Dados e Cidades saíram da barra** (16/10/2026): viraram sub-abas da Config, pelo pedido dele
    * — *"são pouca utilizadas"*. A barra tem 380px de largura; cada aba a mais encolhe todas.
    */
@@ -8661,6 +8679,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     state.auto.remocao = { sonda: false, avisou: false };
     // Pedido dele: aparece SEMPRE que a automação começa, em qualquer uma das rodadas.
     abrirControleDaRodada();
+    /**
+     * **O painel sai da frente enquanto a rodada anda, e volta quando ela para** (10/11/2026).
+     * Ficam o controle (■ ▶) e o popup das teclas, que é tudo o que a rodada pede dele, e a página
+     * ganha a largura de volta. Só no modo encaixado: na janela separada o painel É a janela, e
+     * escondê-lo ali não devolve espaço nenhum à conversa.
+     *
+     * Só devolve o que ELE tinha: com o painel já escondido antes da rodada, o fim não o abre.
+     */
+    const escondiParaARodada = mode === 'dock' && !root.classList.contains('wf-collapsed');
+    if (escondiParaARodada) mostrarPainel(false, { lembrar: false });
     renderAll();
 
     // Aba escondida é aba CONGELADA — timer nenhum roda, nem o da plataforma. Sem isto, a
@@ -8790,6 +8818,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       if (state.auto.parar) controleDaRodada?.pintar();
       else fecharControleDaRodada();
+      /**
+       * **O painel volta em TODO fim de rodada** — parada por ele, fila no fim ou erro. No
+       * `finally` pelo motivo de sempre: rodada que morre por erro deixaria o painel escondido sem
+       * ninguém ter pedido. E é aqui que ele precisa dele: o veredito e o Andamento estão no painel.
+       * Se ele mesmo o abriu pelo ícone no meio do caminho, já está aberto e nada muda.
+       */
+      if (escondiParaARodada && root.classList.contains('wf-collapsed')) {
+        mostrarPainel(true, { lembrar: false });
+      }
     }
 
     // Só contato conta: ver `NOMES_DE_SERVICO`. As linhas de serviço usam `pulado` como rótulo
