@@ -984,6 +984,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       );
 
       // Depois do status: se houver o que aplicar, a mensagem de "Aplicado sozinho" substitui.
+      // A lista configurada vale tambem ao abrir o contato, sem iniciar rodada.
+      if (!state.auto.rodando) {
+        state.auto.remocao = { sonda: false, avisou: false };
+        const remocao = await removerEtiquetasListadas(state.contact.name || 'contato');
+        if (remocao?.parar) throw new Error(remocao.motivo);
+      }
       await aplicarAutomatico();
       await preverOFluxo(sessionId);
     } catch (err) {
@@ -5172,7 +5178,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     const card = h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Etiquetas que a rodada REMOVE'),
       h('div', { class: 'wf-preview' },
-        'A lista das etiquetas que devem SAIR de cada contato que a rodada atender. Nome EXATO do ' +
+        'A lista das etiquetas que devem SAIR ao abrir o contato ou quando a rodada atender. Nome EXATO do ' +
           'CRM, separado por vírgula ou uma por linha. Vazio = não remove nada de ninguém.'),
     ]);
 
@@ -11180,7 +11186,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * **Ela encerrou a conversa?** — calculada aqui, antes do contexto, porque DOIS sinais
        * dependem dela: `ultimaEhDespedida` e `soCortesia`. Ver `encerrouAConversa`.
        */
-      const encerrou = await encerrouAConversa(jaRespondemosAntes);
+      // Previa e leitura local: nunca faz chamada paga, mesmo com IA ligada.
+      const encerrou = simular
+        ? !!ultimaEhDespedida(state.entrantes)
+        : await encerrouAConversa(jaRespondemosAntes);
 
       // Lida aqui, antes das opções e da regra, porque as duas usam.
       const etiquetaSemInteresse = String(state.auto.cfg.etiquetaSemInteresse || '').trim();

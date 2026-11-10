@@ -1,4 +1,11 @@
-## 2026-11-10 - v3.291.0 - ESTADO DE AGORA - remocao usa etiquetas do contato
+## 2026-11-10 - v3.292.0 - ESTADO DE AGORA - previa sem IA e remocao ao abrir
+
+Previa chamava encerrouAConversa, que consultava IA paga. Em simulacao usa apenas detector local.
+Pedido do usuario: lista de remover tambem se aplica ao carregar contato, antes do automatico e
+previa, com releitura de verificacao. Na rodada permanece no ponto original. Nenhuma mensagem enviada.
+Recarregar extensao e F5 no CRM; conferir 3.292.0.
+
+## 2026-11-10 - v3.291.0 - HISTORICO - remocao usa etiquetas do contato
 
 Lista de remover agora resolve primeiro nas etiquetas do contato aberto. Catalogo amostrado
 nao pode impedir remocao de etiqueta presente no proprio cadastro. Fallback preserva aliases.
