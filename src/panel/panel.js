@@ -16940,13 +16940,14 @@ const CONTATOS_POR_PAGINA = 200;
     }
 
     /**
-     * **OS DOIS FORMULÁRIOS DO CANDIDATO ATIVO** (09/11/2026) — o de demandas e o de agenda, lidos
+     * **OS FORMULÁRIOS DO CANDIDATO ATIVO** (09/11/2026) — demandas, agenda e (10/11) currículo, lidos
      * do perfil como o link do grupo. Vazio não vira bloco no prompt: candidato sem formulário não
      * fica sabendo de um (ver `ia.blocoDosFormularios`).
      */
     const formularios = {
       demanda: String((await perfisLib.lerDoAtivo('linkDemanda', '')) || '').trim(),
       agenda: String((await perfisLib.lerDoAtivo('linkAgenda', '')) || '').trim(),
+      curriculo: String((await perfisLib.lerDoAtivo('linkCurriculo', '')) || '').trim(),
     };
     /**
      * **A lista de permissão dos endereços.** Os três que a extensão conhece; `ia-cliente` soma o
@@ -16956,6 +16957,7 @@ const CONTATOS_POR_PAGINA = 200;
     const linksPermitidos = [
       formularios.demanda,
       formularios.agenda,
+      formularios.curriculo,
       String((await perfisLib.lerDoAtivo('defaultGroupLink', '')) || '').trim(),
     ].filter(Boolean);
 
@@ -18209,21 +18211,25 @@ const CONTATOS_POR_PAGINA = 200;
      */
     body.append(h('hr', { class: 'wf-sep' }), h('h3', { class: 'wf-h' }, 'Formulários'));
     body.append(
-      h('p', { class: 'wf-hint' }, 'Os dois links que a IA manda: o de DEMANDAS (problema da comunidade, pedido para o mandato cobrar um órgão) e o de AGENDA (visita, reunião, evento, entrevista). Entram também em {{link_demanda}} e {{link_agenda}} nas respostas prontas. Campo vazio desliga: a IA não fica sabendo do formulário e a resposta que o promete não sai.')
+      h('p', { class: 'wf-hint' }, 'Os links que a IA manda: o de DEMANDAS (problema da comunidade, pedido para o mandato cobrar um órgão), o de AGENDA (visita, reunião, evento, entrevista) e o de CURRÍCULO (quem quer mandar currículo — sem prometer vaga). Entram também em {{link_demanda}}, {{link_agenda}} e {{link_curriculo}} nas respostas prontas. Campo vazio desliga: a IA não fica sabendo do formulário e a resposta que o promete não sai.')
     );
 
     const demandaInput = h('input', { type: 'text', placeholder: 'https://.../formulario/demanda-cidada' });
     const agendaInput = h('input', { type: 'text', placeholder: 'https://.../formulario/agenda' });
+    const curriculoInput = h('input', { type: 'text', placeholder: 'https://.../formulario/curriculo' });
     perfisLib.ler('linkDemanda', perfilAtivo(), '').then((v) => (demandaInput.value = v || ''));
     perfisLib.ler('linkAgenda', perfilAtivo(), '').then((v) => (agendaInput.value = v || ''));
+    perfisLib.ler('linkCurriculo', perfilAtivo(), '').then((v) => (curriculoInput.value = v || ''));
 
     const formsBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar os formulários');
     formsBtn.addEventListener('click', async () => {
       const demanda = demandaInput.value.trim();
       const agenda = agendaInput.value.trim();
+      const curriculo = curriculoInput.value.trim();
       await perfisLib.gravar('linkDemanda', perfilAtivo(), demanda);
       await perfisLib.gravar('linkAgenda', perfilAtivo(), agenda);
-      const desligados = [!demanda && 'demandas', !agenda && 'agenda'].filter(Boolean);
+      await perfisLib.gravar('linkCurriculo', perfilAtivo(), curriculo);
+      const desligados = [!demanda && 'demandas', !agenda && 'agenda', !curriculo && 'currículo'].filter(Boolean);
       setStatus(
         desligados.length
           ? `Formulários salvos. Sem link, a IA não manda o de ${desligados.join(' nem o de ')}.`
@@ -18234,6 +18240,7 @@ const CONTATOS_POR_PAGINA = 200;
     body.append(
       h('label', { class: 'wf-field' }, [h('span', {}, 'Formulário de demandas'), demandaInput]),
       h('label', { class: 'wf-field' }, [h('span', {}, 'Formulário de agenda e visitas'), agendaInput]),
+      h('label', { class: 'wf-field' }, [h('span', {}, 'Formulário de currículo'), curriculoInput]),
       formsBtn
     );
 

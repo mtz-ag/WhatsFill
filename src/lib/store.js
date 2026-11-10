@@ -827,6 +827,7 @@ const DEFAULTS = {
    */
   linkDemanda: '',
   linkAgenda: '',
+  linkCurriculo: '',
   settings: {
     autoSend: false, // começa desligado de propósito: primeiro teste você faz no seu número
     throttleMs: 1500,
@@ -1843,7 +1844,7 @@ export async function importJson(text) {
    * `conteudoPreferido` estava faltando desde antes, pelo mesmo motivo e com o mesmo efeito.
    */
   const allowed = [
-    'templates', 'defaultGroupLink', 'linkDemanda', 'linkAgenda', 'settings', 'writeContract', 'dicts',
+    'templates', 'defaultGroupLink', 'linkDemanda', 'linkAgenda', 'linkCurriculo', 'settings', 'writeContract', 'dicts',
     'tagRules', 'tagAliases', 'contentTemplates', 'auto', 'fluxo',
     'modeloPorTexto', 'padroesDeAnuncio', 'conteudoPreferido', 'anuncios',
     'modeloPadraoAnuncio', 'modelosPadraoAnuncio',

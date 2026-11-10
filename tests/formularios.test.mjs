@@ -170,4 +170,53 @@ grupo('dizer que já registrou continua barrado pela trava que já existia');
   check(!ia.rascunhoPodeSairSozinho(avisos), 'quem preenche é ela, e afirmar o contrário é a família do "já encaminhei"');
 }
 
+/**
+ * **O FORMULÁRIO DE CURRÍCULO** (10/11/2026) — *"para casos de pessoas querendo mandar currículo
+ * https://capitaomartim.com.br/formulario/curriculo"*. É a exceção da regra 12, que proíbe "mande
+ * seu currículo"; a outra metade da 12 (não dar a impressão de que existe vaga) continua.
+ */
+const CURRICULO = templates.LINK_CURRICULO_10_11_2026;
+
+grupo('currículo: o link medido, a variável e o perfil');
+{
+  check(CURRICULO === 'https://capitaomartim.com.br/formulario/curriculo', `curriculo = ${CURRICULO}`);
+  mem.linkCurriculo = '';
+  const vazio = vars.render('Mande aqui: {{link_curriculo}}', await vars.buildContext({}));
+  check(vazio.missing.includes('link_curriculo'), 'sem link a resposta que o promete não sai');
+  check(/Formulários/.test(vazio.reasons?.link_curriculo || (await vars.buildContext({})).reasons.link_curriculo || ''),
+    'e o motivo diz onde se mexe');
+  mem.linkCurriculo = CURRICULO;
+  check(vars.render('{{link_curriculo}}', await vars.buildContext({})).text === CURRICULO, 'com link, resolve');
+  check(perfis.CHAVES_DO_PERFIL.includes('linkCurriculo'), 'é por candidato');
+  check((await perfis.ler('linkCurriculo', 'pedri', '')) === '', 'e não vaza para o outro candidato');
+}
+
+grupo('currículo: migração própria, porque a marca dos dois primeiros já está gravada');
+{
+  mem.migracoes = { linksDosFormularios: true };
+  mem.linkCurriculo = '';
+  check((await templates.migrarLinkDoCurriculo()) === true, 'preenche mesmo com a marca antiga gravada');
+  check((await store.get('linkCurriculo')) === CURRICULO, 'com o link que ele mandou');
+  mem.migracoes = { linksDosFormularios: true };
+  mem.linkCurriculo = 'https://outro.exemplo/cv';
+  await templates.migrarLinkDoCurriculo();
+  check((await store.get('linkCurriculo')) === 'https://outro.exemplo/cv', 'o link dele fica');
+  mem.linkCurriculo = '';
+  await templates.migrarLinkDoCurriculo();
+  check((await store.get('linkCurriculo')) === '', 'apagado continua apagado');
+}
+
+grupo('currículo: o bloco e a exceção da regra 12');
+{
+  const bloco = ia.blocoDosFormularios({ curriculo: CURRICULO });
+  check(bloco.includes(CURRICULO), 'o endereço vai literal');
+  check(/NÃO diga que estamos contratando/.test(bloco) && /analisado/.test(bloco), 'sem prometer vaga nem análise');
+  check(/continua na regra 12/.test(bloco), 'quem só pede emprego segue a regra 12');
+  check(!ia.blocoDosFormularios({ demanda: DEMANDA }).includes('CURRÍCULO'), 'sem link, nada de currículo no bloco');
+  const sistema = ia.montarSistemaRascunho();
+  check(/ÚNICA EXCEÇÃO é o CURRÍCULO/.test(sistema), 'a regra 12 aponta para a exceção');
+  const avisos = ia.revisarRascunho(`Pode mandar por aqui: ${CURRICULO}`, agora, { linksPermitidos: [CURRICULO] }).avisos || [];
+  check(ia.rascunhoPodeSairSozinho(avisos), 'o link do cadastro passa pela trava');
+}
+
 fim('Os dois formulários');

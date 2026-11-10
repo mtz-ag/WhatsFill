@@ -36,6 +36,7 @@ export async function list({ perfil } = {}) {
     await migrarRespostaAgendaGrupo();
     await migrarLinkDoGrupoAtual();
     await migrarLinksDosFormularios();
+    await migrarLinkDoCurriculo();
     // DEPOIS da de cima: aquela so preenche o link, esta reescreve o TEXTO de quem ja tinha a
     // resposta gravada prometendo o grupo da cidade (03/11/2026).
     await migrarLinkGrupoSemCidade();
@@ -575,6 +576,25 @@ export async function migrarLinksDosFormularios() {
 
   await store.set('migracoes', { ...migracoes, linksDosFormularios: true });
   return postos;
+}
+
+/**
+ * **O formulário de CURRÍCULO** (10/11/2026) — pedido dele: *"para casos de pessoas querendo mandar
+ * currículo https://capitaomartim.com.br/formulario/curriculo"*.
+ *
+ * Migração PRÓPRIA, com marca própria, e não uma terceira linha em `migrarLinksDosFormularios`: a
+ * marca `linksDosFormularios` já está gravada na máquina dele desde ontem, então uma linha nova ali
+ * nunca rodaria. Mesmas regras: só preenche o que está VAZIO, só no candidato de fábrica.
+ */
+export const LINK_CURRICULO_10_11_2026 = 'https://capitaomartim.com.br/formulario/curriculo';
+
+export async function migrarLinkDoCurriculo() {
+  const migracoes = await store.get('migracoes');
+  if (migracoes.linkDoCurriculo) return false;
+  const atual = String((await store.get('linkCurriculo')) || '').trim();
+  if (!atual) await store.set('linkCurriculo', LINK_CURRICULO_10_11_2026);
+  await store.set('migracoes', { ...migracoes, linkDoCurriculo: true });
+  return !atual;
 }
 
 export const migrarBoasVindasTemDados = () =>

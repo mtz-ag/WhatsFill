@@ -5451,6 +5451,12 @@ mudaram as maos, nao a cabeca.
   por cima, 1; com o motivo generico na variavel, 1. **Tirando as duas chaves de
   `CHAVES_DO_PERFIL`, o teste NEM RODA** — `exigirChaveConhecida` estoura, que e a lista de
   permissao de 25/09 fazendo o trabalho dela.
+  **O TERCEIRO, o de CURRICULO (10/11/2026), e a excecao da regra 12** — que proibia "mande seu
+  curriculo". So quem QUER MANDAR o curriculo recebe o link; quem so pede emprego continua com
+  "nao estamos contratando", e o link nunca vem com vaga, analise ou retorno prometidos. **A
+  migracao dele e PROPRIA** (`linkDoCurriculo`): a marca `linksDosFormularios` ja estava gravada na
+  maquina dele, e uma terceira linha dentro daquela migracao nunca rodaria. **Formulario novo
+  ganha marca nova.**
 
 - **COMENTARIO SO COM EMOJI SUMIA DA FILA, E O CULPADO ERA UM `c.texto &&` QUE NINGUEM MEDIU**
   (23/10/2026, print dele: *"comentarios que so contem emoticons estao sendo pulados"*).

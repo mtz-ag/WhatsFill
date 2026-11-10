@@ -65,6 +65,7 @@ export const CHAVES_DO_PERFIL = [
    */
   'linkDemanda',
   'linkAgenda',
+  'linkCurriculo',
   'contentTemplates',
   'modelosPadraoAnuncio',
   'modeloPadraoAnuncio',

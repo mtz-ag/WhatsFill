@@ -20,6 +20,7 @@ export const KNOWN_VARS = [
   // que é a trava certa: resposta que promete um formulário não pode sair sem o endereço dele.
   ['{{link_demanda}}', 'Link do formulário de demandas (aba Config)'],
   ['{{link_agenda}}', 'Link do formulário de agenda e visitas (aba Config)'],
+  ['{{link_curriculo}}', 'Link do formulário de currículo (aba Config)'],
   ['{{telefone}}', 'Telefone formatado'],
   // `{{funcao}}` e `{{partido}}` saíram em 01/09/2026 com os campos que os alimentavam. Resposta
   // salva que ainda use uma delas passa a bloquear o envio com o motivo na tela ("variável
@@ -277,6 +278,7 @@ export async function buildContext(ctx = {}) {
    */
   const linkDemanda = String((await perfis.lerDoAtivo('linkDemanda', '')) || '').trim();
   const linkAgenda = String((await perfis.lerDoAtivo('linkAgenda', '')) || '').trim();
+  const linkCurriculo = String((await perfis.lerDoAtivo('linkCurriculo', '')) || '').trim();
 
   return {
     values: {
@@ -287,6 +289,7 @@ export async function buildContext(ctx = {}) {
       link_grupo: linkGrupo,
       link_demanda: linkDemanda,
       link_agenda: linkAgenda,
+      link_curriculo: linkCurriculo,
       telefone: ctx.contact?.phonenumberFormatted || ctx.contact?.phonenumber || '',
     },
     reasons: {
@@ -302,6 +305,7 @@ export async function buildContext(ctx = {}) {
       link_grupo: linkReason,
       link_demanda: linkDemanda ? null : 'Link do formulário de demandas ainda não preenchido — cartão "Formulários", aba Config.',
       link_agenda: linkAgenda ? null : 'Link do formulário de agenda ainda não preenchido — cartão "Formulários", aba Config.',
+      link_curriculo: linkCurriculo ? null : 'Link do formulário de currículo ainda não preenchido — cartão "Formulários", aba Config.',
       nome: nome ? null : 'Nome ainda não preenchido (o cadastro está com apelido automático) — preencha na aba Dados.',
       primeiro_nome: nome
         ? null

@@ -1,4 +1,29 @@
-## 2026-11-10 - v3.287.0 - ESTADO DE AGORA - apoiadora contra o governo: nem desconversa, nem "sem interesse"
+## 2026-11-10 - v3.288.0 - ESTADO DE AGORA - o formulario de CURRICULO
+
+Pedido dele: "para casos de pessoas querendo mandar curriculo
+https://capitaomartim.com.br/formulario/curriculo".
+
+Mesmo caminho dos formularios de demanda e agenda (3.282): campo novo no cartao "Formularios" da
+Config, por candidato (`linkCurriculo` em `perfis.CHAVES_DO_PERFIL`), variavel `{{link_curriculo}}`
+(vazia bloqueia o envio com o motivo), bloco FORMULARIOS do prompt do contato e lista de permissao
+do `linkForaDoCadastro`.
+
+O que a IA faz: quem QUER MANDAR o curriculo (diz que quer mandar ou deixar, pergunta para onde,
+ou ja mandou pela conversa) recebe o link, dito como o lugar por onde o curriculo entra. Isto e a
+EXCECAO da regra 12, que proibia "mande seu curriculo"; a outra metade da 12 continua: nada de
+dizer que estamos contratando, que ha vaga, que o curriculo vai ser analisado, que alguem entra em
+contato, nem prazo. Quem so pede emprego, sem falar em curriculo, continua na regra 12 ("nao
+estamos contratando") - interpretacao literal do pedido, perguntada a ele.
+
+Migracao propria (`migrarLinkDoCurriculo`, marca `linkDoCurriculo`): a marca dos dois primeiros ja
+esta gravada na maquina dele, entao uma linha nova la nunca rodaria. So preenche o que esta vazio.
+
+Medido: os pedidos de curriculo ja chegam a IA (pedeEmprego ou falouAlgoProprio, caixa acao.ia).
+
+Provas (tests/formularios.test.mjs): sem o bloco do curriculo caem 3; a migracao usando a marca
+antiga, 2. Tirando `linkCurriculo` da lista do perfil o teste nem roda. Nao conferido na tela.
+
+## 2026-11-10 - v3.287.0 - HISTORICO (substituida pela 3.288.0) - apoiadora contra o governo: nem desconversa, nem "sem interesse"
 
 Print dele: dois audios de uma apoiadora indignada com o governo federal (celulares para
 deputados, "governo do PT", show "sem licitacao", "a gente votou em voces, se nao fizerem nada nao

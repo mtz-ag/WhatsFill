@@ -1902,6 +1902,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **Não dê a impressão de que existe chance**: nada de "as contratações são limitadas",',
     '    "depende da necessidade", "vou registrar seu interesse", "a assessoria avalia", "mande seu',
     '    currículo" nem "procure a equipe". O TAMANHO é o do item 22, mensagem simples.',
+    '    **A ÚNICA EXCEÇÃO é o CURRÍCULO:** se ela QUER MANDAR o currículo e o bloco FORMULÁRIOS do',
+    '    contato traz o link de currículo, mande esse link — e só isso, sem prometer vaga nem retorno.',
+    '    Sem esse link no bloco, a regra vale inteira.',
     '    Se ela pediu mais alguma coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9',
     '    do padrão, numa frase.',
     '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL,',
@@ -2947,7 +2950,8 @@ function linhaDoGenero(nome) {
 export function blocoDosFormularios(formularios = {}) {
   const demanda = String(formularios?.demanda || '').trim();
   const agenda = String(formularios?.agenda || '').trim();
-  if (!demanda && !agenda) return '';
+  const curriculo = String(formularios?.curriculo || '').trim();
+  if (!demanda && !agenda && !curriculo) return '';
 
   const linhas = [
     'FORMULÁRIOS: endereços oficiais do mandato. COPIE o endereço exatamente como está escrito ' +
@@ -2971,9 +2975,25 @@ export function blocoDosFormularios(formularios = {}) {
         'por onde o pedido entra.'
     );
   }
+  /**
+   * **CURRÍCULO** (10/11/2026) — pedido dele: *"para casos de pessoas querendo mandar currículo"*.
+   * É a EXCEÇÃO da regra 12, que proíbe "mande seu currículo": com o link, quem QUER mandar o
+   * currículo recebe o endereço. Quem só pede emprego sem falar em currículo continua na regra 12.
+   * O que não muda é a outra metade da 12: nada de dar a impressão de que existe vaga.
+   */
+  if (curriculo) {
+    linhas.push(
+      `- CURRÍCULO — ${curriculo}\n` +
+        '  Para quem QUER MANDAR O CURRÍCULO: diz que quer mandar ou deixar, pergunta para onde ' +
+        'mandar, ou já mandou o currículo aqui pela conversa. Mande o link e diga que é por ali que o ' +
+        'currículo entra. Esta é a exceção da regra 12, e só ela: NÃO diga que estamos contratando, ' +
+        'que há vaga, que o currículo vai ser analisado, que alguém vai entrar em contato, nem prazo. ' +
+        'Quem só pede emprego, sem falar em currículo, continua na regra 12.'
+    );
+  }
   linhas.push(
     'Mande o link SÓ quando ela trouxer esse caso: formulário não se oferece a quem não pediu, e ' +
-      'os dois nunca vão na mesma mensagem. E NÃO diga que você registrou, abriu protocolo, ' +
+      'dois formulários nunca vão na mesma mensagem. E NÃO diga que você registrou, abriu protocolo, ' +
       'encaminhou ou já cobrou — quem registra é ela, preenchendo. Nada de prazo nem de solução.'
   );
   return linhas.join('\n');
