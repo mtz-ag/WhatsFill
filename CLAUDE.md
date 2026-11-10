@@ -3513,6 +3513,12 @@ mudaram as maos, nao a cabeca.
   CLARAS em todo `.wf-pergunta-fundo`, e herdar da coluna nao basta.
   Conferido com o CSS real numa pagina de teste. Provas em `tests/parar-rodada.test.mjs`: caixas
   fora da coluna derrubam 1; nao sair no fim, 2; a posicao arrastada vencendo, 1.
+  **E O ■ PRECISA FECHAR A PERGUNTA ABERTA** (v3.286, print dele: *"eu parei mas nao retornou ao
+  painel"*): ele so marcava `state.auto.parar`, e a rodada estava no `await` da caixa — o laco nao
+  le a bandeira dentro da espera por um clique, entao a rodada (e a coluna) so acabava quando ele
+  respondesse. Hoje `perguntasAbertas` guarda cada caixa com o valor de "parei": `'parar'` nas da
+  rodada (o mesmo do Esc) e **`CANCELADA` na da cidade**, porque `'parar'` ali cai no ramo que
+  RECUSA a cidade e grava a recusa. **Ao criar espera nova dentro da rodada, ela tem de ouvir o ■.**
 
 - **`so-um-sinal` NAO QUER DIZER QUE OS DOIS DISCORDARAM: QUER DIZER QUE UM NAO ESTA DESENHADO**
   (09/11/2026, print dele apertando a tecla 3 com a conversa certa na tela e o rascunho no campo:

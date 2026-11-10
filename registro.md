@@ -1,4 +1,29 @@
-## 2026-11-10 - v3.285.0 - ESTADO DE AGORA - os quadros da rodada tomam o LUGAR do painel
+## 2026-11-10 - v3.286.0 - ESTADO DE AGORA - o ■ fecha a pergunta aberta e o painel volta
+
+Print dele com a 3.285: a caixa da tecla 6 aberta na coluna e o controle ainda dizendo "Andando..."
+depois de ele apertar o ■ - "eu parei mas nao retornou ao painel".
+
+Causa raiz (anterior a coluna, so ficou visivel agora): o ■ so marcava `state.auto.parar`, e a
+rodada estava parada no `await` da pergunta. O laco le a bandeira em varios pontos, nenhum deles
+DENTRO da espera por um clique: a rodada so terminava quando ele respondesse a caixa, e e o fim da
+rodada que devolve o painel. O Esc sempre funcionou porque e a propria caixa que o escuta e se
+fecha com 'parar'.
+
+O que mudou: toda pergunta aberta se registra (`perguntasAbertas`) com o valor que para ela vale
+"parei", e o clique no ■ fecha todas. As da rodada fecham com 'parar' - o mesmo valor do Esc, que
+todos os chamadores ja tratam. A da cidade fecha CANCELADA: 'parar' cairia no ramo que RECUSA a
+cidade e anota a recusa no armazenamento, e parar a rodada nao e dizer que a cidade esta errada;
+cancelada, o palpite fica pendente e nao grava, como na troca de contato. As duas esperas longas
+(Eu mando / voce conclui) ja liam a bandeira e nao mudaram.
+
+Provas (tests/parar-rodada.test.mjs): sem o fechamento no clique cai 1; a cidade fechando com
+'parar' cai 1; sem tirar a pergunta do registro ao fechar caem 4. 49 suites, checar-modulos e
+checar-referencias limpos. Nao conferido na tela dele.
+
+Pendente: ver na tela dele parar com uma pergunta aberta e o painel voltando; o resto das
+pendencias da 3.285 continua.
+
+## 2026-11-10 - v3.285.0 - HISTORICO (substituida pela 3.286.0) - os quadros da rodada tomam o LUGAR do painel
 
 Print dele com a v3.284: o controle da rodada e o popup das teclas flutuando por cima da conversa -
 "ficou solto, era pra substituir o painel pra nao ficar em cima da conversa".

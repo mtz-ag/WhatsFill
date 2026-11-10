@@ -120,16 +120,18 @@ const caixa = (() => {
   grupo('parada pela pergunta preserva o controle: execução do fechamento real');
   const inicio = painel.indexOf('      function fechar(valor) {', painel.indexOf('function perguntarNaRodada'));
   const fimCorpo = painel.indexOf('      fecharDeFora = fechar;', inicio);
-  const executar = new Function('state', 'document', 'fundo', 'resolve', 'aoTeclar', 'valor',
-    painel.slice(inicio, fimCorpo) + '\nfechar(valor);');
+  const executar = new Function('state', 'document', 'fundo', 'resolve', 'aoTeclar', 'perguntasAbertas', 'valor',
+    painel.slice(inicio, fimCorpo) + '\nperguntasAbertas.set(fechar, "parar");\nfechar(valor);');
   for (const valor of ['parar', 'pular', 'concluir']) {
     const state = { auto: { rodando: true, parar: false } };
     let devolvido;
     let removido = false;
+    const abertas = new Map();
     executar(state, { removeEventListener() {} }, { remove() { removido = true; } },
-      (v) => { devolvido = v; }, () => {}, valor);
+      (v) => { devolvido = v; }, () => {}, abertas, valor);
     check(state.auto.parar === (valor === 'parar'), `${valor}: só parar marca a parada`);
     check(removido && devolvido === valor, `${valor}: fecha a pergunta e devolve a escolha`);
+    check(abertas.size === 0, `${valor}: sai do registro que o ■ percorre`);
   }
 }
 
@@ -200,5 +202,27 @@ grupo('o CSS encaixa a coluna onde o painel estava');
     'a camada dentro da coluna e clicavel (fora dela ela e transparente de proposito)');
   check(/\.wf-root\.wf-dark ~ \.wf-coluna-rodada \.wf-pergunta-fundo/.test(css),
     'no tema escuro as caixas da coluna tambem ficam escuras');
+}
+
+/**
+ * **O ■ fecha a pergunta aberta** (10/11/2026, print dele: *"eu parei mas nao retornou ao
+ * painel"*). O ■ so marcava a bandeira, e a rodada estava parada no `await` da caixa da tecla 6:
+ * ela so terminava quando ele respondesse, e e o fim da rodada que devolve o painel.
+ */
+grupo('o ■ fecha a pergunta aberta, e a rodada termina');
+{
+  const i = painel.indexOf('function abrirControleDaRodada()');
+  const bloco = painel.slice(i, painel.indexOf('function fecharControleDaRodada()', i));
+  const clique = bloco.slice(bloco.indexOf("parar.addEventListener('click'"), bloco.indexOf("seguir.addEventListener('click'"));
+  check(/fecharPerguntasAoParar\(\)/.test(clique), 'o clique no ■ fecha as perguntas que a rodada espera');
+
+  const pergunta = painel.slice(painel.indexOf('function perguntarNaRodada('), painel.indexOf('function ehCampoDeTexto('));
+  check(/perguntasAbertas\.set\(fechar, aoParar\)/.test(pergunta), 'toda pergunta aberta se registra com o seu valor de "parei"');
+  check(/perguntasAbertas\.delete\(fechar\)/.test(pergunta), 'e sai do registro ao fechar, por qualquer caminho');
+  check(/aoParar = 'parar'/.test(pergunta), "o padrao e 'parar', o mesmo valor do Esc que os chamadores ja tratam");
+
+  const cidade = painel.slice(painel.indexOf("titulo: doCadastro ? 'Cidade do cadastro'"), painel.indexOf('let escolha;', painel.indexOf("titulo: doCadastro ? 'Cidade do cadastro'")));
+  check(/aoParar: CANCELADA/.test(cidade),
+    "a da cidade fecha CANCELADA: 'parar' cairia no ramo que recusa e anota a recusa da cidade");
 }
 fim();

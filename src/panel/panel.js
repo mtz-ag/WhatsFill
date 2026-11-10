@@ -1212,6 +1212,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // cidade", não "para a rodada" — e dizer o contrário na tela é o tipo de mentira que faz
       // ele teclar Esc esperando outra coisa.
       dica: 'Esc descarta a cidade e segue',
+      // O ■ não recusa a cidade: só a deixa sem gravar (pendente), como na troca de contato.
+      aoParar: CANCELADA,
     });
 
     let escolha;
@@ -4985,6 +4987,26 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   let colunaDaRodada = null;
 
+  /**
+   * **As perguntas abertas, para o ■ poder fechá-las** (10/11/2026, print dele: *"eu parei mas
+   * não retornou ao painel"* — a caixa da tecla 6 aberta e o controle ainda dizendo "Andando…").
+   *
+   * O ■ só marcava `state.auto.parar`, e a rodada estava parada num `await` da pergunta: o laço lê
+   * a bandeira em cinco pontos, nenhum deles DENTRO da espera por um clique. A rodada só terminava
+   * quando ele respondesse a caixa — e é o fim da rodada que devolve o painel. O Esc sempre
+   * funcionou porque é a própria caixa que o escuta e se fecha com `'parar'`.
+   *
+   * Cada pergunta diz o que vale "parei": as da rodada, `'parar'` (o mesmo do Esc, que todos os
+   * chamadores já tratam); a da cidade, `CANCELADA`, porque ali `'parar'` cairia no ramo que
+   * RECUSA a cidade e anota a recusa no armazenamento — parar a rodada não é dizer que a cidade
+   * está errada.
+   */
+  const perguntasAbertas = new Map();
+
+  function fecharPerguntasAoParar() {
+    for (const [fechar, valor] of [...perguntasAbertas]) fechar(valor);
+  }
+
   function destinoDaCaixa() {
     return colunaDaRodada || root.parentNode || root;
   }
@@ -6690,6 +6712,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.auto.parar = true;
       pintar();
       registrarNaRodada('rodada', 'pulado', 'você parou a rodada.');
+      // A rodada pode estar esperando uma caixa: sem fechá-la, ela só terminava quando ele a
+      // respondesse, e o painel não voltava. Ver `perguntasAbertas`.
+      fecharPerguntasAoParar();
     });
     seguir.addEventListener('click', () => {
       if (state.auto.rodando || !recomecarRodada) return;
@@ -12970,7 +12995,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    *
    * @returns {Promise<string>} o `valor` da opção escolhida, ou 'parar' no Esc
    */
-  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, semRegra = false, copiarConversa = null, dica = 'Esc para parar a rodada' }) {
+  function perguntarNaRodada({ titulo, linhas = [], pergunta, opcoes, respostas = [], recomendacao = null, semRegra = false, copiarConversa = null, dica = 'Esc para parar a rodada', aoParar = 'parar' }) {
     // `fechar` sai daqui de dentro para virar `promessa.cancelar`: caixa que ficou na tela
     // depois de o contato mudar tem que poder ser tirada de fora. Ver `cancelarPerguntaDeCidade`.
     let fecharDeFora = null;
@@ -13085,11 +13110,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // Parar pela pergunta (botão ou Esc) deve preservar o controle de reinício,
         // assim como o quadrado flutuante. Outras escolhas não mudam a bandeira.
         if (valor === 'parar' && state.auto.rodando) state.auto.parar = true;
+        perguntasAbertas.delete(fechar);
         document.removeEventListener('keydown', aoTeclar, true);
         fundo.remove();
         resolve(valor);
       }
       fecharDeFora = fechar;
+      // O ■ fecha a pergunta com o valor que ELA diz que vale "parei" — ver `perguntasAbertas`.
+      perguntasAbertas.set(fechar, aoParar);
 
       // Captura no documento: o shadow root não recebe tecla quando o foco está na página.
       document.addEventListener('keydown', aoTeclar, true);
