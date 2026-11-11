@@ -5464,8 +5464,10 @@ mudaram as maos, nao a cabeca.
   `CHAVES_DO_PERFIL`, o teste NEM RODA** — `exigirChaveConhecida` estoura, que e a lista de
   permissao de 25/09 fazendo o trabalho dela.
   **O TERCEIRO, o de CURRICULO (10/11/2026), e a excecao da regra 12** — que proibia "mande seu
-  curriculo". So quem QUER MANDAR o curriculo recebe o link; quem so pede emprego continua com
-  "nao estamos contratando", e o link nunca vem com vaga, analise ou retorno prometidos. **A
+  curriculo". Desde 11/11 (decisao dele: *"quem pede emprego tambem"*) o link vai para quem QUER
+  MANDAR o curriculo e para quem PEDE EMPREGO ou vaga, sempre depois de "nao estamos contratando";
+  quem so pergunta o preco ("quanto paga?") continua fora, e o link nunca vem com vaga, analise ou
+  retorno prometidos. **A
   migracao dele e PROPRIA** (`linkDoCurriculo`): a marca `linksDosFormularios` ja estava gravada na
   maquina dele, e uma terceira linha dentro daquela migracao nunca rodaria. **Formulario novo
   ganha marca nova.**

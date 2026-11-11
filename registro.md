@@ -1,4 +1,21 @@
-## 2026-11-10 - v3.292.0 - ESTADO DE AGORA - previa sem IA e remocao ao abrir
+## 2026-11-11 - v3.293.0 - ESTADO DE AGORA - o link de curriculo tambem para quem pede emprego
+
+Decisao dele, respondendo a pergunta da v3.288: "quem pede emprego tambem". Ate aqui o link de
+curriculo so ia para quem dizia que queria MANDAR o curriculo; quem pedia vaga recebia so
+"infelizmente nao estamos contratando".
+
+O que mudou (so prompt, nenhum detector):
+- regra 12: com o link no bloco FORMULARIOS, quem pede emprego ou vaga recebe "infelizmente nao
+  estamos contratando, mas se quiser pode deixar seu curriculo por aqui:" e o link;
+- o bloco do contato diz o mesmo, e que quem so pergunta o preco ("quanto paga?", engano de
+  destinatario pela regra 9) nao recebe o link;
+- continua proibido prometer vaga, analise, retorno ou prazo. Sem o link na Config, a regra 12
+  vale inteira como antes.
+
+Prova: com o ia.js anterior caem 4 assercoes em formularios.test.mjs.
+Recarregar a extensao e F5 no CRM; conferir 3.293.0.
+
+## 2026-11-10 - v3.292.0 - HISTORICO - previa sem IA e remocao ao abrir
 
 Previa chamava encerrouAConversa, que consultava IA paga. Em simulacao usa apenas detector local.
 Pedido do usuario: lista de remover tambem se aplica ao carregar contato, antes do automatico e

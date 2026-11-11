@@ -1902,9 +1902,11 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **Não dê a impressão de que existe chance**: nada de "as contratações são limitadas",',
     '    "depende da necessidade", "vou registrar seu interesse", "a assessoria avalia", "mande seu',
     '    currículo" nem "procure a equipe". O TAMANHO é o do item 22, mensagem simples.',
-    '    **A ÚNICA EXCEÇÃO é o CURRÍCULO:** se ela QUER MANDAR o currículo e o bloco FORMULÁRIOS do',
-    '    contato traz o link de currículo, mande esse link — e só isso, sem prometer vaga nem retorno.',
-    '    Sem esse link no bloco, a regra vale inteira.',
+    '    **A ÚNICA EXCEÇÃO é o CURRÍCULO:** se o bloco FORMULÁRIOS do contato traz o link de',
+    '    currículo, ele vai para QUEM PEDE EMPREGO OU VAGA e para quem quer mandar o currículo:',
+    '    "infelizmente não estamos contratando, mas se quiser pode deixar seu currículo por aqui:" e o',
+    '    link. Só isso — sem prometer vaga, análise, retorno nem prazo. Sem esse link no bloco, a',
+    '    regra vale inteira. Quem só PERGUNTA O PREÇO continua fora (o parágrafo acima).',
     '    Se ela pediu mais alguma coisa (dinheiro, passagem, ajuda), responda essa parte pelo item 9',
     '    do padrão, numa frase.',
     '    **NÃO PEÇA O ENDEREÇO NESTA MENSAGEM.** O endereço e o assessor são o caminho do MATERIAL,',
@@ -3015,11 +3017,13 @@ export function blocoDosFormularios(formularios = {}) {
   if (curriculo) {
     linhas.push(
       `- CURRÍCULO — ${curriculo}\n` +
-        '  Para quem QUER MANDAR O CURRÍCULO: diz que quer mandar ou deixar, pergunta para onde ' +
-        'mandar, ou já mandou o currículo aqui pela conversa. Mande o link e diga que é por ali que o ' +
+        '  Para QUEM PEDE EMPREGO, VAGA OU TRABALHO conosco e para quem QUER MANDAR O CURRÍCULO ' +
+        '(diz que quer mandar ou deixar, pergunta para onde, ou já mandou pela conversa). Quem pede ' +
+        'emprego recebe "infelizmente não estamos contratando, mas se quiser pode deixar seu ' +
+        'currículo por aqui:" e o link; quem quer mandar recebe o link e que é por ali que o ' +
         'currículo entra. Esta é a exceção da regra 12, e só ela: NÃO diga que estamos contratando, ' +
         'que há vaga, que o currículo vai ser analisado, que alguém vai entrar em contato, nem prazo. ' +
-        'Quem só pede emprego, sem falar em currículo, continua na regra 12.'
+        'Quem só pergunta o preço ("quanto paga?") não pediu emprego: não mande o link.'
     );
   }
   linhas.push(

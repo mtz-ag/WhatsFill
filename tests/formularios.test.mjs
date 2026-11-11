@@ -211,10 +211,13 @@ grupo('currículo: o bloco e a exceção da regra 12');
   const bloco = ia.blocoDosFormularios({ curriculo: CURRICULO });
   check(bloco.includes(CURRICULO), 'o endereço vai literal');
   check(/NÃO diga que estamos contratando/.test(bloco) && /analisado/.test(bloco), 'sem prometer vaga nem análise');
-  check(/continua na regra 12/.test(bloco), 'quem só pede emprego segue a regra 12');
+  check(/QUEM PEDE EMPREGO, VAGA OU TRABALHO/.test(bloco), 'quem pede emprego também recebe o link (decisão dele, 11/11)');
+  check(/não estamos contratando, mas se quiser pode deixar seu currículo/.test(bloco), 'a frase nega a vaga antes do link');
+  check(/quanto paga\?/.test(bloco) && /não mande o link/.test(bloco), 'pergunta de preço continua fora');
   check(!ia.blocoDosFormularios({ demanda: DEMANDA }).includes('CURRÍCULO'), 'sem link, nada de currículo no bloco');
   const sistema = ia.montarSistemaRascunho();
   check(/ÚNICA EXCEÇÃO é o CURRÍCULO/.test(sistema), 'a regra 12 aponta para a exceção');
+  check(/QUEM PEDE EMPREGO OU VAGA e para quem quer mandar o currículo/.test(sistema), 'a regra 12 estende a exceção a quem pede emprego');
   const avisos = ia.revisarRascunho(`Pode mandar por aqui: ${CURRICULO}`, agora, { linksPermitidos: [CURRICULO] }).avisos || [];
   check(ia.rascunhoPodeSairSozinho(avisos), 'o link do cadastro passa pela trava');
 }
