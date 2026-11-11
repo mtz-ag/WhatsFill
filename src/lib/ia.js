@@ -1815,11 +1815,14 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * **A regra 11 acima é dele (a Irema, 10/09) e continua valendo para o resto.** Esta é a exceção
      * estreita que ele abriu, e mora COLADA nela: separadas, a de cima ganha por estar antes.
      */
-    '    EXCEÇÃO — SAÚDE: se o problema é doença, dela ou de alguém da família, NÃO despache. Acolha com',
-    '    cuidado e PERGUNTE o que está acontecendo ("o que você tem?", "o que os médicos disseram?") —',
-    '    é a única situação em que perguntar sobre o caso é certo. Não mande posto de saúde, UPA, CRAS',
-    '    nem Cadastro Único na primeira resposta, e não negue ajuda que ela não pediu. Pedido de dinheiro',
-    '    por outro motivo continua sendo negado de uma vez; doença, não.',
+    '    SAÚDE: acolha com cuidado, sem assumir cuidado pessoal, pagamento ou execução. Não diga',
+    '    "quero cuidar de você", "vou cuidar de você", "conte comigo" ou "sigo firme com você" como',
+    '    compromisso aberto. Não prometa custear, resolver, acompanhar tratamento ou intervir.',
+    '    Doença mencionada num desabafo NÃO é pedido de ajuda médica. Sem pedido explícito, não pergunte',
+    '    o que ela tem, o que os médicos disseram, como está o tratamento ou sobre cirurgia.',
+    '    Se houver pedido concreto de atendimento, pergunte apenas o necessário para orientar o canal',
+    '    responsável, sem coletar detalhes clínicos desnecessários. Não negue ajuda que ela não pediu.',
+    '    Para desabafo com menção a doença, basta acolher e desejar recuperação, sem abrir nova demanda.',
     /**
      * **Não dê a impressão de que há chance** — anotação da Solange (08/09/2026, lida em 10/09). Ela
      * pediu para trabalhar na campanha e ajuda para ir embora para São Paulo, e o rascunho respondeu
@@ -3768,12 +3771,11 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'disso, e sem prometer presença.'
       : '',
     saude
-      ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Doença não se despacha. Acolha ` +
-        'com cuidado, no tempo dela, e PERGUNTE o que está acontecendo (o que ela tem, como está o ' +
-        'tratamento, o que os médicos disseram) — aqui perguntar sobre o caso é o certo. NÃO mande posto ' +
-        'de saúde, UPA, CRAS nem Cadastro Único nesta mensagem, e não negue ajuda que ela não pediu. Se ' +
-        'ela pediu dinheiro ou remédio, o "não podemos" vem DEPOIS de ela contar o que tem, nunca na ' +
-        'primeira resposta.'
+      ? `SAÚDE — EXCEÇÃO À REGRA ACIMA: ela ${saude.motivo}. Acolha sem compromisso pessoal. ` +
+        'Mencionar doença não é pedir atendimento: sem pedido explícito, não faça perguntas sobre ' +
+        'diagnóstico, cirurgia ou tratamento. Deseje recuperação brevemente. Não diga "quero cuidar ' +
+        'de você" ou "conte comigo", nem ofereça pagamento, acompanhamento ou solução. Havendo pedido ' +
+        'concreto, pergunte apenas o necessário para orientar o canal responsável; não negue ajuda não pedida.'
       : '',
     /**
      * **NÃO OFEREÇA O QUE ELA NÃO PEDIU** — print da Margarida (16/09/2026): as três opções ofereciam a

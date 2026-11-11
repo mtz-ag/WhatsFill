@@ -1,4 +1,11 @@
-## 2026-11-11 - v3.299.0 - ESTADO DE AGORA - o formulario da agenda pede VISITA, nao conversa
+## 2026-11-11 - v3.300.0 - ESTADO DE AGORA - acolhimento sem compromisso pessoal
+
+Removido conte comigo dos exemplos de voz. Regra de saude nao manda mais investigar qualquer
+mencao a doenca. Desabafo recebe acolhimento breve, sem perguntas clinicas nem promessa aberta
+de cuidado, pagamento, acompanhamento ou solucao. Pedido explicito permite somente perguntas
+necessarias para orientar o canal responsavel. Recarregar extensao e F5; conferir 3.300.0.
+
+## 2026-11-11 - v3.299.0 - HISTORICO - o formulario da agenda pede VISITA, nao conversa
 
 Print dele: o rascunho mandou "Para solicitar uma conversa com o Capitao Martim, preencha este
 formulario de agenda: <link>". Ele: "solicitar uma conversa ficou estranho, seria solicitar uma

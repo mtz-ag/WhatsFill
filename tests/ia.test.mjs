@@ -3290,10 +3290,10 @@ grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
    * uma frase, dizer onde se resolve e PARAR, sem perguntas sobre o caso.
    */
   const sistema = montarSistemaRascunho({});
-  check(/EXCEÇÃO — SAÚDE/.test(sistema), 'a excecao esta no sistema');
+  check(/SAÚDE: acolha/.test(sistema), 'a excecao esta no sistema');
   const linhas11 = sistema.split('\n');
   const regra11 = linhas11.findIndex((l) => /^11\. CANAL DE ATENDIMENTO/.test(l));
-  const excecao = linhas11.findIndex((l) => /EXCEÇÃO — SAÚDE/.test(l));
+  const excecao = linhas11.findIndex((l) => /SAÚDE: acolha/.test(l));
   check(regra11 >= 0 && excecao > regra11 && excecao - regra11 <= 10, 'e COLADA na regra que ela excepciona');
 
   const doente = montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'Boa tarde, estou doente e preciso de ajuda' }] });
@@ -3301,9 +3301,10 @@ grupo('saude nao se despacha: a excecao da regra 11 (17/09/2026)');
   const iCanal = l.findIndex((x) => x.startsWith('ATENDIMENTO RESPONSÁVEL'));
   const iSaude = l.findIndex((x) => x.startsWith('SAÚDE — EXCEÇÃO'));
   check(iCanal >= 0 && iSaude === iCanal + 1, 'no bloco do contato a excecao vem logo depois da regra');
-  check(/PERGUNTE o que está acontecendo/.test(doente), 'e manda perguntar o que ela tem');
-  check(/NÃO mande posto de saúde, UPA, CRAS/.test(doente), 'e proibe o despacho nesta mensagem');
-  check(/"não podemos" vem DEPOIS/.test(doente), 'a negativa vem depois de ela contar');
+  check(/sem pedido explícito, não faça perguntas/.test(doente), 'nao investiga relato de saude sem pedido');
+  check(/nem ofereça pagamento, acompanhamento ou solução/.test(doente), 'nao assume compromisso pessoal');
+  check(!/PERGUNTE o que está acontecendo/.test(doente), 'instrucao antiga foi retirada');
+
 
   check(!/SAÚDE — EXCEÇÃO/.test(montarContatoRascunho({ mensagens: [{ de: 'contato', texto: 'preciso de ajuda com o aluguel' }] })),
     'pedido de dinheiro sem doenca continua sem a excecao — ele disse que ali pode descartar rapido');
