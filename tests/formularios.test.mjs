@@ -102,6 +102,10 @@ grupo('o bloco do prompt: campo vazio não vira bloco');
   check(/Chame o pedido de VISITA/.test(soAgenda) && /Para solicitar uma visita, preencha/.test(soAgenda),
     'o pedido da agenda se chama visita, com a frase dele');
   check(/nunca de "conversa"/.test(soAgenda), 'e nunca de conversa');
+  // 11/11/2026: a frase do formulario saiu sozinha, como a mensagem inteira ("ficou seca").
+  const iFecho = soAgenda.indexOf('Essa frase é o FECHO, nunca a mensagem inteira');
+  check(iFecho > soAgenda.indexOf('Para solicitar uma visita, preencha') && /Antes dela, responda ao que ELA/.test(soAgenda),
+    'a frase do formulario e o fecho, colada logo depois dela: antes vem a resposta ao que ela disse');
   // 11/11/2026: convite carinhoso sem data recebeu o formulario; ele queria o agradecimento.
   check(/CONVITE DE CARINHO, sem data/.test(soAgenda) && /sem o\s+link e sem prometer ir/.test(soAgenda),
     'convite de carinho se agradece, sem o link');

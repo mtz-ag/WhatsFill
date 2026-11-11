@@ -1,4 +1,25 @@
-## 2026-11-11 - v3.301.0 - ESTADO DE AGORA - a fala de dentro do video nao e fala dela
+## 2026-11-11 - v3.302.0 - ESTADO DE AGORA - o link da agenda e o fecho, nao a mensagem
+
+Print dele: ela escreveu que espera conversar com ele antes de ele assumir a secretaria, no
+gabinete, e o rascunho saiu so com "Para solicitar uma visita ao Capitao Martim, preencha este
+formulario da agenda:" e o link. Ele: "a resposta ficou seca".
+
+**Causa:** a frase-modelo que eu pus na linha da AGENDA na v3.299 virou a mensagem inteira. E a
+mesma classe do ima da v3.296: texto-modelo numa regra e copiado quando nada diz para quem e e
+onde ele entra.
+
+**Conserto (so prompt):** logo depois da frase-modelo, o bloco FORMULARIOS diz que ela e o FECHO.
+Antes dela vem a resposta ao que ela disse, no tom dela, em uma ou duas frases calorosas (acolher
+o pedido, agradecer o carinho ou os parabens, reconhecer o motivo). Continua proibido prometer que
+ele vai receber, dar data ou dizer que ele vai ver o pedido.
+
+**Prova:** com o texto da v3.301 cai 1 assercao em `formularios.test.mjs`. Todas as suites,
+`checar-modulos` e `checar-referencias` passam. **Nao conferido ao vivo.**
+
+**Em aberto (decisao dele, da v3.301):** as regras do fluxo ainda leem a fala transcrita de
+dentro do video como fala dela.
+
+## 2026-11-11 - v3.301.0 - HISTORICO - a fala de dentro do video nao e fala dela
 
 Print dele: link do Instagram e um video repassado ("STF = DONOS DO BRASIL"), e o rascunho
 respondeu "Eu entendo a sua indignacao. O mais preocupante e quando o absurdo deixa de causar

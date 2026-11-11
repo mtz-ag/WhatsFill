@@ -3105,6 +3105,13 @@ export function blocoDosFormularios(formularios = {}) {
         'Chame o pedido de VISITA (ou reunião ou evento, se foi isso que ela disse), nunca de ' +
         '"conversa": "Para solicitar uma visita, preencha este formulário da agenda:" e o link. ' +
         '"Solicitar uma conversa" soa como se fosse preciso formulário para falar com a gente aqui. ' +
+        // 11/11/2026, print dele: a frase do formulário saiu SOZINHA, como a mensagem inteira —
+        // "a resposta ficou seca". A frase-modelo acima virou a resposta, a classe do ímã (3.296).
+        '**Essa frase é o FECHO, nunca a mensagem inteira.** Antes dela, responda ao que ELA ' +
+        'disse, no tom dela: acolha o pedido ("que bom que você quer falar com ele pessoalmente"), ' +
+        'agradeça o carinho ou os parabéns, reconheça o motivo que ela deu. Uma ou duas frases ' +
+        'calorosas, e então o link — sem prometer que ele vai receber, sem data e sem dizer que ' +
+        'ele vai ver o pedido. ' +
         // 11/11/2026: o formulário saiu para quem convidou com carinho, sem data.
         'O link é para quem quer MARCAR (dá data, evento, reunião, ou pergunta como agendar). ' +
         'CONVITE DE CARINHO, sem data ("se um dia passar por aqui, venha me visitar", "quando vier ' +
