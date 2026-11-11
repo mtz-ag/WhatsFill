@@ -3927,4 +3927,22 @@ grupo('esperanca e preocupacao com o pais sao apoio (11/11/2026, a apoiadora do 
   check(!avisos(certo).includes(AVISOS_QUE_IMPEDEM_ENVIO.tomJuridico), 'o texto dele passa limpo');
 }
 
+grupo('deboche do adversario pede o tom dela, e o modelo da esperanca nao vaza (11/11/2026)');
+{
+  /**
+   * Dois reels zombando da "extrema canhota" receberam "obrigado pelo carinho e por estar atento ao
+   * futuro do nosso pais... esperanca e responsabilidade" — o modelo da esperanca, escrito na
+   * vespera, puxado para um caso sem carinho nem esperanca. Nenhum detector casa ali; a fronteira
+   * mora na regra 17, que vale em toda chamada.
+   */
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/Esse modelo é SÓ para quem mandou esperança, fé ou bênção/.test(sis), 'o modelo da esperanca diz onde para');
+  check(/DEBOCHE E IRONIA CONTRA O ADVERSÁRIO TAMBÉM SÃO APOIO/.test(sis), 'o deboche tem regra propria');
+  check(/Obrigado por compartilhar/.test(sis) && /Nada de solenidade/.test(sis), 'com o tom e o exemplo');
+  const i17 = sis.indexOf('17. XINGAR O ADVERSÁRIO');
+  const i18 = sis.indexOf('\n18. ', i17); // o padrao dele tem um "18." antes
+  const iDeb = sis.indexOf('DEBOCHE E IRONIA');
+  check(i17 > 0 && iDeb > i17 && (i18 < 0 || iDeb < i18), 'dentro da regra 17, ao lado da esperanca');
+}
+
 fim();

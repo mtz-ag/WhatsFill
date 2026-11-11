@@ -5421,6 +5421,11 @@ mudaram as maos, nao a cabeca.
   dele como modelo. **A trava do tom juridico nao foi alargada:** o texto aprovado do caminhoneiro
   (22/09) diz *"ainda nao tenho confirmacao"*. **Linha colada puxada pelo dossie vale para quem
   PERGUNTOU — ao escrever uma, diga quem ela NAO cobre.**
+  **E O MODELO DESSA REGRA VAZOU NO DIA SEGUINTE** (v3.296): dois reels zombando da "canhota"
+  receberam *"obrigado pelo carinho... esperanca e responsabilidade"*. Nenhum detector casou, e a
+  IA puxou o exemplo mais proximo — o meu. **Texto-modelo numa regra e ima: escreva junto para
+  quem ele e SO.** O deboche ganhou paragrafo proprio na regra 17 (curto, bem-humorado, citando a
+  ideia dela).
 
 - **EXAGERO DE DESESPERO NO MEIO DA REVOLTA POLITICA NAO E EMERGENCIA — e a plataforma ja resume o
   audio** (10/11/2026, print dele: audio de 2min25 contra os celulares para politicos, com *"ver se

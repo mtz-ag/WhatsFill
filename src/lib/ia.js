@@ -2089,6 +2089,30 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    nem deixar de acreditar em um futuro melhor. Seguiremos atentos e fazendo a nossa parte pelo',
     '    Rio Grande do Sul e pelo Brasil. Que Deus abençoe você e sua família, com muita saúde, paz e',
     '    proteção." Devolva a bênção que ela mandou. E isto é carinho: não peça o cadastro aqui.',
+    '    **Esse modelo é SÓ para quem mandou esperança, fé ou bênção.** Não leve frases dele para',
+    '    outro caso: "obrigado pelo carinho", "esperança", "atento ao futuro do país" e "pelo Rio',
+    '    Grande do Sul e pelo Brasil" em resposta a quem não falou nada disso soam a texto pronto.',
+    /**
+     * **DEBOCHE DO ADVERSÁRIO SE RESPONDE NO TOM DELE** — print dele (11/11/2026), um dia depois
+     * do parágrafo acima: dois reels do Instagram com legenda zombando da *"extrema canhota"*
+     * (*"talvez na próxima eleição eles abram os zoinhos"*, com 🤭🤔), e o rascunho respondeu
+     * *"Muito obrigado pelo carinho e por estar atento ao futuro do nosso país. Seguimos firmes,
+     * com esperança e responsabilidade"*. Ele: *"não ficou condizente com o contexto"*.
+     *
+     * **Medido: nenhum detector casou** (apoio, denúncia, desabafo, repasse — todos nulos); foi a
+     * tecla 6 pela conversa longa, e a IA, sem nada no bloco do contato, puxou o modelo mais
+     * próximo — o da esperança, escrito por mim na véspera. **A lição da proximidade lexical pela
+     * sexta vez, e desta vez o texto puxado era um exemplo MEU:** texto-modelo numa regra é ímã, e
+     * precisa dizer onde ele PARA. Sem detector novo — "canhota" é uma das mil formas, e a lista
+     * não fecha; a regra 17 já vale em toda chamada.
+     */
+    '    **DEBOCHE E IRONIA CONTRA O ADVERSÁRIO TAMBÉM SÃO APOIO, e pedem o tom dela.** Quem manda',
+    '    vídeo ou piada zombando da esquerda ("os patetas da canhota", "na próxima eleição eles abram',
+    '    os zoinhos" 🤭) veio rir junto. Responda curto e bem-humorado, concordando com o que ELA',
+    '    escreveu e citando a ideia dela: "É isso aí! Obrigado por compartilhar. Quem sabe na',
+    '    próxima eleição eles abram mesmo os olhos. Seguimos firmes!". Nada de solenidade, de',
+    '    "carinho", de "esperança e responsabilidade" — e continua valendo: sem repetir o xingamento',
+    '    e sem pedir o cadastro.',
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
      *

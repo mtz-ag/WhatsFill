@@ -1,4 +1,35 @@
-## 2026-11-11 - v3.295.0 - ESTADO DE AGORA - esperanca e preocupacao com o pais sao apoio
+## 2026-11-11 - v3.296.0 - ESTADO DE AGORA - deboche do adversario pede o tom dela
+
+Print dele, um dia depois da v3.295: dois reels do Instagram com legenda zombando da "extrema
+canhota" ("talvez na proxima eleicao eles abram os zoinhos", com emojis de riso), e o rascunho
+respondeu "Muito obrigado pelo carinho e por estar atento ao futuro do nosso pais. Seguimos firmes,
+com esperanca e responsabilidade, pelo Rio Grande do Sul e pelo Brasil". Ele: "resposta nao ficou
+condizente com o contexto".
+
+Medido (as duas mensagens da print, com links ficticios):
+- apoio, denuncia, desabafo, repasse, agradecimento, pergunta, sem interesse: todos nulos;
+- so conversaPedeRespostaPessoal casou (2 mensagens, 348 caracteres) -> tecla 6 -> IA;
+- o bloco do contato nao tinha linha nenhuma sobre o caso, e a IA puxou o modelo mais proximo:
+  o texto da esperanca que eu pus na regra 17 na vespera ("carinho", "esperanca", "RS e Brasil").
+
+Causa raiz: texto-modelo numa regra e ima, e o da v3.295 nao dizia onde parava. Proximidade
+lexical pela sexta vez, e desta vez o texto puxado era um exemplo meu.
+
+Conserto (so o que a IA le, sem detector novo — "canhota" e uma das mil formas):
+- o modelo da esperanca agora diz que e SO para quem mandou esperanca, fe ou bencao, e nomeia as
+  frases que soam a texto pronto fora dele;
+- a regra 17 ganhou o deboche e a ironia contra o adversario: responder curto e bem-humorado,
+  concordando com a ideia dela ("E isso ai! Obrigado por compartilhar. Quem sabe na proxima
+  eleicao eles abram mesmo os olhos. Seguimos firmes!"), sem solenidade, sem repetir o xingamento,
+  sem cadastro.
+
+Prova: com o ia.js anterior caem 4 assercoes. Todas as suites, checar-modulos e
+checar-referencias passando.
+
+Nao medido ao vivo: o texto novo depende do modelo seguir a regra. Se ele escrever "carinho" de
+novo num deboche, a proxima alavanca e uma linha colada no bloco do contato, que exige detector.
+
+## 2026-11-11 - v3.295.0 - HISTORICO - esperanca e preocupacao com o pais sao apoio
 
 Print dele: audio de uma apoiadora com fe num RS melhor, "sera que vai ter outra eleicao? O Lula
 vai ser cassado?" no meio, e bencaos no fim. O rascunho respondeu "nao tenho confirmacao sobre uma
