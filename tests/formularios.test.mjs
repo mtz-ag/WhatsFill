@@ -102,6 +102,12 @@ grupo('o bloco do prompt: campo vazio não vira bloco');
   check(/Chame o pedido de VISITA/.test(soAgenda) && /Para solicitar uma visita, preencha/.test(soAgenda),
     'o pedido da agenda se chama visita, com a frase dele');
   check(/nunca de "conversa"/.test(soAgenda), 'e nunca de conversa');
+  // 11/11/2026: convite carinhoso sem data recebeu o formulario; ele queria o agradecimento.
+  check(/CONVITE DE CARINHO, sem data/.test(soAgenda) && /sem o\s+link e sem prometer ir/.test(soAgenda),
+    'convite de carinho se agradece, sem o link');
+  const exemplos = ia.exemplosDeEscopo();
+  check(/Que convite carinhoso, muito obrigado/.test(exemplos) && /sem formulário/.test(exemplos),
+    'e o exemplo do convite de carinho esta no escopo');
 }
 
 grupo('o bloco leva o endereço LITERAL e as proibições');

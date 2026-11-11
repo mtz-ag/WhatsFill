@@ -1280,6 +1280,12 @@ export function exemplosDeEscopo(candidato = null) {
   linhas.push(
     `Ela: "Queria convidar ${ELE.tratamento} para a festa da nossa comunidade em Canoas, dia 20."`,
     `Resposta: "Que convite bonito, obrigado! 🙏\\n\\nMe manda o horário e o local que eu passo para ${NOSSA_AGENDA}."`,
+    '',
+    // 11/11/2026, print dele: convite carinhoso para visitar a casa dela recebeu o formulário da
+    // agenda. "Ela pediu uma visita caso passe por perto, a resposta devia ser um agradecimento."
+    `Ela: "Se um dia ${ELE.tratamento} estiver por Venâncio, venha aqui fazer uma visita, eu ia adorar."`,
+    'Resposta: "Que convite carinhoso, muito obrigado! 🙏 Fico muito feliz com o seu carinho. Um abraço!"',
+    '(Convite sem data, de carinho, se agradece: sem formulário, sem passar para a agenda e sem prometer ir.)',
     ''
   );
   return linhas.join('\n');
@@ -3075,7 +3081,12 @@ export function blocoDosFormularios(formularios = {}) {
         // — "solicitar uma conversa ficou estranho, seria solicitar uma visita".
         'Chame o pedido de VISITA (ou reunião ou evento, se foi isso que ela disse), nunca de ' +
         '"conversa": "Para solicitar uma visita, preencha este formulário da agenda:" e o link. ' +
-        '"Solicitar uma conversa" soa como se fosse preciso formulário para falar com a gente aqui.'
+        '"Solicitar uma conversa" soa como se fosse preciso formulário para falar com a gente aqui. ' +
+        // 11/11/2026: o formulário saiu para quem convidou com carinho, sem data.
+        'O link é para quem quer MARCAR (dá data, evento, reunião, ou pergunta como agendar). ' +
+        'CONVITE DE CARINHO, sem data ("se um dia passar por aqui, venha me visitar", "quando vier ' +
+        'a Venâncio, passe aqui") NÃO é pedido de agenda: agradeça o convite com carinho, sem o ' +
+        'link e sem prometer ir.'
     );
   }
   /**

@@ -1,4 +1,28 @@
-## 2026-11-11 - v3.300.0 - ESTADO DE AGORA - acolhimento sem compromisso pessoal
+## 2026-11-11 - v3.300.0 - ESTADO DE AGORA - convite de carinho se agradece, sem o formulario
+
+Print dele: audio de uma apoiadora convidando o candidato a visitar a casa dela "se um dia
+estiver por Venancio", e o rascunho respondeu "Que carinho bom receber. Para solicitar uma
+visita, preencha este formulario da agenda: <link>". Ele: "ela fez o contrario, pediu uma visita
+caso passe por perto; a resposta devia ser um agradecimento pelo convite".
+
+Causa: a linha AGENDA do bloco FORMULARIOS dizia para que serve o link (visita, reuniao,
+evento...) e, desde a v3.299, como chamar o pedido — e nao dizia onde ela PARA. Convite de
+carinho, sem data, casa com "visita" e puxou o formulario. Regra sem escopo cumprida ate onde
+nao devia ir (08/09), agora com uma frase minha da vespera ajudando.
+
+Conserto (so o que a IA le):
+- a linha AGENDA diz que o link e para quem quer MARCAR (data, evento, reuniao, ou pergunta como
+  agendar), e que convite de carinho sem data se agradece, sem o link e sem prometer ir;
+- exemplosDeEscopo ganhou o caso, ao lado do convite com data (que continua indo para a agenda):
+  "Que convite carinhoso, muito obrigado! Fico muito feliz com o seu carinho. Um abraco!".
+
+Prova: com o ia.js anterior caem 2 assercoes. Todas as suites e os verificadores passando.
+
+Em aberto, esperando ele: a transcricao de VIDEO vai para a IA marcada como audio dela
+(medido: 686 de 806 videos da semana tem transcricao) — o conserto proposto e marca-la como
+conteudo do video, quase sempre repassado.
+
+## 2026-11-11 - v3.300.0 - HISTORICO - acolhimento sem compromisso pessoal
 
 Removido conte comigo dos exemplos de voz. Regra de saude nao manda mais investigar qualquer
 mencao a doenca. Desabafo recebe acolhimento breve, sem perguntas clinicas nem promessa aberta
