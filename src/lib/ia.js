@@ -3067,7 +3067,12 @@ export function blocoDosFormularios(formularios = {}) {
       `- AGENDA — ${agenda}\n` +
         '  Para pedir visita, reunião, evento, entrevista, live ou caminhada. Com este link, NÃO ' +
         'diga que vai passar para o responsável pela agenda (regra 21): mande o endereço, que é ' +
-        'por onde o pedido entra.'
+        'por onde o pedido entra. ' +
+        // 11/11/2026, print dele: "Para solicitar uma conversa com o Capitão Martim, preencha..."
+        // — "solicitar uma conversa ficou estranho, seria solicitar uma visita".
+        'Chame o pedido de VISITA (ou reunião ou evento, se foi isso que ela disse), nunca de ' +
+        '"conversa": "Para solicitar uma visita, preencha este formulário da agenda:" e o link. ' +
+        '"Solicitar uma conversa" soa como se fosse preciso formulário para falar com a gente aqui.'
     );
   }
   /**

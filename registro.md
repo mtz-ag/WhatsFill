@@ -1,4 +1,20 @@
-## 2026-11-11 - v3.298.0 - ESTADO DE AGORA - a plataforma grava a cidade em maiusculas
+## 2026-11-11 - v3.299.0 - ESTADO DE AGORA - o formulario da agenda pede VISITA, nao conversa
+
+Print dele: o rascunho mandou "Para solicitar uma conversa com o Capitao Martim, preencha este
+formulario de agenda: <link>". Ele: "solicitar uma conversa ficou estranho, seria solicitar uma
+visita".
+
+Causa: o bloco FORMULARIOS dizia para que serve o link da agenda (visita, reuniao, evento...) e nao
+dizia como CHAMAR o pedido; o modelo escolheu "conversa", que soa como se fosse preciso formulario
+para falar com a gente no proprio WhatsApp.
+
+Conserto: a linha da AGENDA manda chamar o pedido de visita (ou reuniao/evento, se foi o que ela
+disse), nunca de "conversa", com a frase dele como modelo: "Para solicitar uma visita, preencha
+este formulario da agenda:" e o link.
+
+Prova: com o ia.js anterior caem 2 assercoes. Todas as suites e os verificadores passando.
+
+## 2026-11-11 - v3.298.0 - HISTORICO - a plataforma grava a cidade em maiusculas
 
 Print dele: "Gravado: nada — PROBLEMA: Cidade: gravar: a plataforma aceitou e NAO gravou cidade —
 releitura nao bate | Cidade: a API aceitou mas nao gravou", com ela tendo escrito "Sou de Porto

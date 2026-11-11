@@ -98,6 +98,10 @@ grupo('o bloco do prompt: campo vazio não vira bloco');
   check(ia.blocoDosFormularios({ demanda: '', agenda: '' }) === '', 'campo em branco é o mesmo que não ter');
   const soAgenda = ia.blocoDosFormularios({ agenda: AGENDA });
   check(soAgenda.includes(AGENDA) && !soAgenda.includes('DEMANDA —'), 'com um só, só ele entra');
+  // 11/11/2026: "solicitar uma conversa ficou estranho, seria solicitar uma visita".
+  check(/Chame o pedido de VISITA/.test(soAgenda) && /Para solicitar uma visita, preencha/.test(soAgenda),
+    'o pedido da agenda se chama visita, com a frase dele');
+  check(/nunca de "conversa"/.test(soAgenda), 'e nunca de conversa');
 }
 
 grupo('o bloco leva o endereço LITERAL e as proibições');
