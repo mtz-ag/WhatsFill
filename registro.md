@@ -1,4 +1,21 @@
-## 2026-11-11 - v3.293.0 - ESTADO DE AGORA - o link de curriculo tambem para quem pede emprego
+## 2026-11-11 - v3.294.0 - ESTADO DE AGORA - "com revisao": para so no que a IA escreveu
+
+Pedido dele: "adicione um box de marcar para a opcao com revisao no automatizado para parar para
+revisao somente quando a IA escrever mensagem".
+
+O que mudou:
+- no box "Quem manda a mensagem" (aba Automatizado e Config), com "A extensao manda sozinha"
+  marcado, aparece a caixa "Com revisao: parar so quando a IA escrever a mensagem"
+  (`settings.revisarIA`);
+- marcada, a resposta pronta continua saindo e concluindo sozinha; o rascunho da IA vai para o
+  campo e a rodada espera o Enter dele (o mesmo caminho do "Eu mando": espera, grava, conclui);
+- `autoSend` nao mudou de significado: a caixa e lida so no ramo do rascunho, por
+  `revisaOQueAIaEscreve()`. Sem escolha gravada fica desmarcada, o comportamento de antes.
+
+Prova: devolvendo a funcao a `!autoSend` cai 1 assercao em page-mob.test.mjs.
+Nao conferido ao vivo. Recarregar a extensao e F5 no CRM; conferir 3.294.0.
+
+## 2026-11-11 - v3.293.0 - HISTORICO - o link de curriculo tambem para quem pede emprego
 
 Decisao dele, respondendo a pergunta da v3.288: "quem pede emprego tambem". Ate aqui o link de
 curriculo so ia para quem dizia que queria MANDAR o curriculo; quem pedia vaga recebia so

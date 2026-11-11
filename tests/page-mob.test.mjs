@@ -1992,6 +1992,32 @@ grupo('O ROTULO DA ETIQUETA SAI DO CONTATO — o catalogo aqui e uma AMOSTRA');
     'o contato traz `tags` com `{id, name}` ao lado de `tagsId`');
 }
 
+grupo('"COM REVISAO": A EXTENSAO MANDA SOZINHA, MENOS O QUE A IA ESCREVEU');
+{
+  /**
+   * Pedido dele (11/11/2026): *"adicione um box de marcar para a opcao com revisao no
+   * automatizado para parar para revisao somente quando a IA escrever mensagem"*.
+   */
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const ini = painel.indexOf('function revisaOQueAIaEscreve() {');
+  check(ini > 0, 'a funcao que decide existe');
+  const fimF = painel.indexOf('\n  }', ini);
+  const decide = new Function('state', painel.slice(ini + 'function revisaOQueAIaEscreve() {'.length, fimF));
+  check(decide({ settings: { autoSend: false } }) === true, 'Eu mando: a IA para no campo, como antes');
+  check(decide({ settings: { autoSend: true } }) === false, 'automatico sem a caixa: a IA manda sozinha, como antes');
+  check(decide({ settings: { autoSend: true, revisarIA: true } }) === true, 'automatico COM revisao: a IA para no campo');
+
+  const box = painel.slice(painel.indexOf('function boxDoModoDeEnvio'), painel.indexOf('function checkbox('));
+  check(box.includes("salvarAjuste({ revisarIA: v })"), 'a caixa grava `settings.revisarIA`');
+  check(/if \(state\.settings\.autoSend\) \{\s*caixa\.append\(\s*checkbox\('Com revis/.test(box),
+    'a caixa so aparece com "A extensao manda sozinha" (no Eu mando ela nao muda nada)');
+
+  // A resposta pronta continua lendo `autoSend` puro: a caixa nao alcanca o `sendTemplate`.
+  const st = painel.indexOf('async function sendTemplate');
+  check(st > 0 && !painel.slice(st, st + 20000).includes('revisarIA') && !painel.slice(st, st + 20000).includes('revisaOQueAIaEscreve'),
+    'a resposta pronta nao olha a caixa: continua saindo sozinha');
+}
+
 grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');
 {
   /**
@@ -2006,7 +2032,7 @@ grupo('O MODO "EU MANDO" VALE TAMBEM PARA O RASCUNHO DA IA');
    */
   const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
-  const i = painel.indexOf('const euMando = !state.settings.autoSend;\n        const avisosDuros');
+  const i = painel.indexOf('const euMando = revisaOQueAIaEscreve();\n        const avisosDuros');
   check(i > 0, 'achei o ramo do envio automatico do rascunho');
   const corpo = painel.slice(i, i + 6000);
 

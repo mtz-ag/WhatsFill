@@ -11980,7 +11980,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * (*"volte a mensagem automática da IA"*): eu a criei diagnosticando como alucinação da IA
          * uma mensagem que era do determinístico. Ver `rascunhoPodeSairSozinho`.
          */
-        const euMando = !state.settings.autoSend;
+        const euMando = revisaOQueAIaEscreve();
         const avisosDuros = [...(rascunho.avisos || [])];
         if (rascunho.ok) {
           const daRegua = iaLib.reguaDoRascunho(rascunho, state.ia || {});
@@ -19380,6 +19380,24 @@ const CONTATOS_POR_PAGINA = 200;
    * **O rotulo diz o que cada modo FAZ, e o aviso diz o preco do escolhido** — nao os dois precos
    * ao mesmo tempo, que e ruido.
    */
+  /**
+   * **"COM REVISÃO": A EXTENSÃO MANDA SOZINHA, MENOS O QUE A IA ESCREVEU** — pedido dele
+   * (11/11/2026): *"adicione um box de marcar para a opção com revisão no automatizado para parar
+   * para revisão somente quando a IA escrever mensagem"*.
+   *
+   * **Resposta pronta é texto dele, byte a byte; o rascunho da IA não é** — e é aí que mora o erro
+   * que ele apaga. Então, marcada, a resposta pronta continua saindo sozinha e o rascunho da IA
+   * entra no caminho do "Eu mando": fica no campo e a rodada espera o Enter dele.
+   *
+   * **Uma chave nova e uma função só para ler as duas.** `autoSend` continua dizendo quem manda a
+   * RESPOSTA PRONTA (são dezenas de leitores, e mudar o significado dela mudaria todos);
+   * `revisarIA` só vale com ela ligada, e só no ramo do rascunho. Sem escolha gravada é `false`, o
+   * comportamento de antes.
+   */
+  function revisaOQueAIaEscreve() {
+    return !state.settings.autoSend || !!state.settings.revisarIA;
+  }
+
   function boxDoModoDeEnvio({ sufixo = '' } = {}) {
     const caixa = h('div', { class: 'wf-card' }, [h('h4', {}, 'Quem manda a mensagem')]);
     caixa.append(
@@ -19388,11 +19406,21 @@ const CONTATOS_POR_PAGINA = 200;
         { valor: true, rotulo: 'A extensão manda sozinha' },
       ], !!state.settings.autoSend, (v) => salvarAjuste({ autoSend: v }).then(renderAll))
     );
+    if (state.settings.autoSend) {
+      caixa.append(
+        checkbox('Com revisão: parar só quando a IA escrever a mensagem', !!state.settings.revisarIA,
+          (v) => salvarAjuste({ revisarIA: v }).then(renderAll))
+      );
+    }
     caixa.append(
       h('div', { class: 'wf-origin', 'data-fica': '1' },
         state.settings.autoSend
-          ? 'A rodada envia e conclui sem perguntar o envio. Você continua decidindo a tecla, a ' +
-              'menos que "Automatizar" também esteja marcado.'
+          ? (state.settings.revisarIA
+              ? 'Resposta pronta sai e conclui sozinha. Quando quem escreve é a IA, a rodada põe o ' +
+                'texto no campo e PARA: você revisa, dá Enter, e ela conclui e abre o próximo.'
+              : 'A rodada envia e conclui sem perguntar o envio — inclusive o texto que a IA ' +
+                'escreveu. Você continua decidindo a tecla, a menos que "Automatizar" também ' +
+                'esteja marcado.')
           : 'A rodada escreve no campo e PARA. Você revisa, dá Enter, e aí ela conclui e abre o ' +
               'próximo. Cuidado: APAGAR o texto sem enviar também esvazia o campo, e ela entende ' +
               'que saiu — para pular um contato, use o botão Parar. Sem Enter por 10 minutos ela ' +

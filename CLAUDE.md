@@ -611,6 +611,10 @@ mudaram as maos, nao a cabeca.
   **E a ORDEM dos dois cartoes inverteu, a pedido dele:** *"devia estar primeiro os novos e em
   seguida as minhas"* — a fila que enche sozinha vem antes da que sobrou para dar continuidade.
   Estava invertida desde que os dois foram juntados (02/10), **por nenhuma razao escrita**.
+  **"COM REVISAO" (11/11/2026, v3.294):** com "A extensao manda sozinha", a caixa
+  `settings.revisarIA` faz SO o rascunho da IA parar no campo esperando o Enter dele; a resposta
+  pronta continua saindo sozinha. Quem le e `revisaOQueAIaEscreve()`, so no ramo do rascunho:
+  `autoSend` tem dezenas de leitores e continua significando "quem manda a resposta pronta".
 
 - **A PROSA DA TELA ENVELHECEU COM A PLATAFORMA, E ELA MANDAVA FAZER O QUE NAO FUNCIONA MAIS**
   (28/10/2026, *"revise o painel"*). Tres textos diziam coisas da plataforma velha:
