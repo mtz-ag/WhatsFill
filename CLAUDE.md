@@ -348,6 +348,14 @@ mudaram as maos, nao a cabeca.
   nao vale para todos: gravar na coluna errada e *"a API responde 200 e IGNORA o valor"* voltando
   com outro nome. A sonda no Thiago Tim decide, antes de qualquer fila.
 
+- **A CIDADE VOLTA EM MAIUSCULAS, e conferencia letra a letra acusa falha numa escrita que deu
+  certo** (11/11/2026, *"Gravado: nada — a plataforma aceitou e NAO gravou cidade"*). Medido: as
+  40 cidades mais recentes de `base_dados` estao em caixa alta com acento (`PORTO ALEGRE`); a
+  plataforma normaliza ao gravar, e em 30/10 nao normalizava. As duas releituras
+  (`api-mob.mesmoTextoGravado` e o `mesmoValor` do painel) ignoram so caixa e espaco; acento
+  continua contando. **Plataforma que normaliza o valor muda o que a releitura recebe: ao ver
+  "aceitou e nao gravou", meca o que voltou antes de culpar a coluna.**
+
 - **`status` TEM TRES VALORES, E `resolvido_em` NAO DIZ SE ACABOU.** Medido: `aberto` (586),
   `em_atendimento` (3), `resolvido` (11) — e **das 11 resolvidas, UMA tinha `resolvido_em`
   preenchido**. E a armadilha do `grupo_id` por outra porta: a coluna que PARECE responder nao

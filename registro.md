@@ -1,4 +1,29 @@
-## 2026-11-11 - v3.297.0 - ESTADO DE AGORA - nome que e numero nao e nome, e fe nao dispensa o cadastro
+## 2026-11-11 - v3.298.0 - ESTADO DE AGORA - a plataforma grava a cidade em maiusculas
+
+Print dele: "Gravado: nada — PROBLEMA: Cidade: gravar: a plataforma aceitou e NAO gravou cidade —
+releitura nao bate | Cidade: a API aceitou mas nao gravou", com ela tendo escrito "Sou de Porto
+alegre. Rs".
+
+Medido na base, so leitura e so a forma (nomes de cidade, nenhum dado de eleitor): as 40 cidades
+gravadas mais recentes em base_dados estao TODAS em caixa alta com acento (PORTO ALEGRE, BAGE com
+acento, SAO GABRIEL com til); codigo_ibge e ibge_code existem e estao nulos.
+
+Causa raiz: a plataforma passou a normalizar a cidade para maiusculas ao gravar. Mandamos "Porto
+Alegre", o banco devolve "PORTO ALEGRE", e as DUAS conferencias (a do PATCH em api-mob e a
+releitura do painel, mesmoValor) comparavam letra a letra. A escrita funcionou; o alarme era falso.
+Em 30/10 ele confirmou a cidade gravando: a normalizacao chegou depois.
+
+Conserto: as duas conferencias ignoram a CAIXA e espaco sobrando (api-mob.mesmoTextoGravado e o
+mesmoValor do painel). Acento continua contando, e qualquer outra diferenca continua sendo "nao
+gravou". Sem loop de reescrita: conferirGrafia ja trata "PORTO ALEGRE" como grafia certa.
+
+Provavel, nao confirmado: a cidade desta contato JA ESTA gravada (o banco aceitou). A tela so
+dizia o contrario.
+
+Prova: sem o conserto do painel cai 1 assercao; sem o do api-mob a suite nem importa. Todas as
+suites, checar-modulos e checar-referencias passando.
+
+## 2026-11-11 - v3.297.0 - HISTORICO - nome que e numero nao e nome, e fe nao dispensa o cadastro
 
 Print dele: Nome no cadastro valendo o proprio telefone, cidade vazia, ela respondeu "Amem. A nos"
 e "Sem Deus nao somos nada... sempre nos dara a vitoria", e o rascunho nao pediu nada. Ele: "o nome

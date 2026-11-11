@@ -15698,6 +15698,8 @@ const CONTATOS_POR_PAGINA = 200;
     const x = String(doCrm).trim();
     const y = String(esperado).trim();
     if (x === y) return true;
+    // O mobiliza.me grava a cidade em MAIUSCULAS (11/11/2026): "PORTO ALEGRE" e o que mandamos.
+    if (x.replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR') === y.replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR')) return true;
     // "2026-08-05T00:00:00" x "2026-08-05"
     return /^\d{4}-\d{2}-\d{2}/.test(x) && /^\d{4}-\d{2}-\d{2}/.test(y) && x.slice(0, 10) === y.slice(0, 10);
   }

@@ -659,6 +659,25 @@ async function rpc(nome, corpo) {
  *
  * **A PRIMEIRA escrita de verdade e a sonda.** Falhando, nada mais e tentado naquela passada.
  */
+/**
+ * **A PLATAFORMA GRAVA A CIDADE EM MAIUSCULAS, e isso nao e "nao gravou"** — print dele
+ * (11/11/2026): *"Gravado: nada — PROBLEMA: Cidade: a plataforma aceitou e NAO gravou cidade —
+ * releitura nao bate"*, com ela tendo escrito "Sou de Porto alegre. Rs".
+ *
+ * **Medido na base, so leitura:** as 40 cidades gravadas mais recentes estao TODAS em caixa alta
+ * com acento (`PORTO ALEGRE`, `BAGÉ`, `SÃO GABRIEL`). Mandamos `Porto Alegre`, o banco devolve
+ * `PORTO ALEGRE`, e a comparacao letra a letra acusava falha numa escrita que funcionou. Em
+ * 30/10 ela passava: a normalizacao chegou depois, do lado da plataforma.
+ *
+ * **So a CAIXA e os espacos sobrando ficam de fora.** Acento continua contando — o banco o
+ * preserva —, e qualquer outra diferenca continua sendo "nao gravou", que e o que esta conferencia
+ * existe para pegar.
+ */
+export function mesmoTextoGravado(volta, escrito) {
+  const n = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+  return n(volta) === n(escrito);
+}
+
 async function gravarNaLinha(contatoId, campos, { conferir = null } = {}) {
   if (!contatoId) throw new Error('gravar: sem contato');
   const sessao = mob.sessaoDaPagina();
@@ -696,7 +715,7 @@ async function gravarNaLinha(contatoId, campos, { conferir = null } = {}) {
   if (!linha) throw new Error('gravar: a plataforma respondeu OK e NAO devolveu a linha — nada foi gravado');
 
   const conferencia = conferir || ((escrito, volta) =>
-    Object.keys(escrito).filter((k) => String(volta?.[k] ?? '') !== String(escrito[k] ?? '')));
+    Object.keys(escrito).filter((k) => !mesmoTextoGravado(volta?.[k], escrito[k])));
   const divergiram = conferencia(campos, linha);
   if (divergiram.length) {
     throw new Error(`gravar: a plataforma aceitou e NAO gravou ${divergiram.join(', ')} — releitura nao bate`);

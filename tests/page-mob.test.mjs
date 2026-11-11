@@ -12,7 +12,7 @@ import { regraDeEncaixe, MIN_WIDTH, MAX_WIDTH } from '../src/lib/dock.js';
 import * as adaptadorApi from '../src/lib/api-mob.js';
 import { grafiasDaEtiqueta, filtroDeEtiqueta, getMessageTemplates } from '../src/lib/api-mob.js';
 import { podeMandar, entregou } from '../src/lib/api-mob.js';
-import { entradaDeEtiqueta } from '../src/lib/api-mob.js';
+import { entradaDeEtiqueta, mesmoTextoGravado } from '../src/lib/api-mob.js';
 import {
   chaveDaEtiqueta,
   etiquetasDoContato,
@@ -2357,6 +2357,18 @@ grupo('Status antigo depois de assumir com composer confirmado');
   check(assumida.sessionId === 'teste-assumido' && assumida.porQuantosSinais === 'os-dois', 'preserva identidade e sinais');
   check(estadoDaConversa(aberta, { hasComposer: false }).isPending, 'sem campo continua pendente');
   check(estadoDaConversa(aberta, { hasComposer: null }).isPending, 'campo desconhecido nao prova que assumiu');
+}
+
+grupo('a plataforma grava a cidade em MAIUSCULAS, e isso nao e "nao gravou" (11/11/2026)');
+{
+  check(mesmoTextoGravado('PORTO ALEGRE', 'Porto Alegre'), 'caixa diferente: gravou');
+  check(mesmoTextoGravado('SÃO GABRIEL', 'São  Gabriel '), 'espaco sobrando: gravou');
+  check(!mesmoTextoGravado('SAO GABRIEL', 'São Gabriel'), 'acento continua contando');
+  check(!mesmoTextoGravado('CANOAS', 'Porto Alegre'), 'outra cidade: nao gravou');
+  check(!mesmoTextoGravado(null, 'Porto Alegre'), 'nada de volta: nao gravou');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  const corpo = painel.slice(painel.indexOf('function mesmoValor('), painel.indexOf('function mesmoValor(') + 2500);
+  check(/toLocaleUpperCase\('pt-BR'\)/.test(corpo), 'a releitura do painel tambem ignora a caixa');
 }
 
 fim();
