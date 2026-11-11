@@ -1,4 +1,28 @@
-## 2026-11-11 - v3.300.0 - ESTADO DE AGORA - convite de carinho se agradece, sem o formulario
+## 2026-11-11 - v3.301.0 - ESTADO DE AGORA - a fala de dentro do video nao e fala dela
+
+Print dele: link do Instagram e um video repassado ("STF = DONOS DO BRASIL"), e o rascunho
+respondeu "Eu entendo a sua indignacao. O mais preocupante e quando o absurdo deixa de causar
+reacao...". Pergunta dele: "de onde saiu esse contexto? a IA abriu os links?".
+
+Medido: a IA NAO abre link (nenhuma ferramenta vai na chamada). A plataforma transcreve a fala
+de dentro dos VIDEOS, nao so dos audios — na base, desde 04/11: video 686 de 806 com
+transcricao, audio 296 de 298, imagem 0 de 1.301. mob.mensagemDoBanco poe a transcricao no
+texto com transcrito: true, e o painel marcava TODA transcricao como "(audio, transcrito
+automaticamente)": a IA leu o discurso do video como a voz da eleitora.
+
+Conserto (decisao dele: "Yes, fix it"): ia.rotuloDaTranscricao da a marca. Video vira "(VIDEO
+que ela mandou — e o que se fala dentro do video... quase sempre material repassado, nao e fala
+dela nem dirigido a nos; responda ao gesto de compartilhar e ao que ELA escreveu)". Audio fica
+como estava, com o resumo da plataforma.
+
+Prova: com o panel.js anterior cai 1 assercao; sem a funcao no ia.js a suite nem importa.
+Todas as suites e os verificadores passando.
+
+Fica de fora, dito a ele: os detectores do fluxo ainda leem a transcricao do video como texto
+dela (pergunta pendente, conversa longa, palpite de cidade rebaixado). ehRepasse ja trata video
+como repasse; mexer nos outros muda quanta gente vai para a tecla 6 e e decisao dele.
+
+## 2026-11-11 - v3.300.0 - HISTORICO - convite de carinho se agradece, sem o formulario
 
 Print dele: audio de uma apoiadora convidando o candidato a visitar a casa dela "se um dia
 estiver por Venancio", e o rascunho respondeu "Que carinho bom receber. Para solicitar uma

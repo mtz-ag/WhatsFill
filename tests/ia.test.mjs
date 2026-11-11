@@ -17,6 +17,7 @@ import { DEFAULT_TEMPLATES } from '../src/lib/store.js';
 import { pedeMaterial, pedeFalarComDeputado, pedeRoupa } from '../src/lib/cortesia.js';
 import {
   resumoDoAudio,
+  rotuloDaTranscricao,
   montarSistemaRascunho,
   montarContatoRascunho,
   nomeCurtoDeAnuncio,
@@ -3897,6 +3898,24 @@ grupo('desabafo politico com exagero de desespero, e o resumo do audio');
   check(resumoDoAudio({ transcrito: false, resumoDaPlataforma: 'x' }) === '', 'mensagem escrita nao leva resumo');
   check(resumoDoAudio({ transcrito: true }) === '', 'audio sem resumo (plataforma velha) nao inventa nada');
   check(resumoDoAudio({ transcrito: true, resumoDaPlataforma: 'a'.repeat(500) }).length <= 201, 'e e cortado');
+}
+
+grupo('a fala de dentro do VIDEO nao e fala dela (11/11/2026, o video "STF = donos do Brasil")');
+{
+  /**
+   * A plataforma transcreve a fala dos videos (686 de 806 na semana), e o painel marcava tudo como
+   * audio dela: a IA respondeu "entendo a sua indignacao" ao discurso de um video repassado.
+   */
+  const video = rotuloDaTranscricao({ transcrito: true, tipo: 'VIDEO' });
+  check(/VÍDEO que ela mandou/.test(video) && /NÃO é fala dela/.test(video), 'video transcrito e conteudo do video');
+  check(!/^\(áudio/.test(video), 'e nao e marcado como audio dela');
+  check(/^\(áudio, transcrito automaticamente\)$/.test(rotuloDaTranscricao({ transcrito: true, tipo: 'AUDIO' })),
+    'audio continua com a marca de sempre');
+  check(rotuloDaTranscricao({ transcrito: false, tipo: 'VIDEO' }) === '', 'video com legenda escrita nao leva marca de transcricao');
+  check(/a plataforma resumiu: "Fala do STF"/.test(rotuloDaTranscricao({ transcrito: true, tipo: 'video', resumoDaPlataforma: 'Fala do STF' })),
+    'o resumo da plataforma vai junto, e o tipo vale em minuscula');
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  check(/iaLib\.rotuloDaTranscricao\(m\)/.test(painel), 'o painel usa a marca nova');
 }
 
 grupo('esperanca e preocupacao com o pais sao apoio (11/11/2026, a apoiadora do "o Lula vai ser cassado?")');

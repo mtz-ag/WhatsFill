@@ -2849,6 +2849,29 @@ export function resumoDoAudio(m) {
   return cortar(String(m?.resumoDaPlataforma || '').replace(/\s+/g, ' ').trim(), 200);
 }
 
+/**
+ * **A marca da TRANSCRIÇÃO diz de onde veio a fala** — print dele (11/11/2026): um vídeo repassado
+ * ("STF = DONOS DO BRASIL") recebeu *"Eu entendo a sua indignação..."*, e ele perguntou se a IA
+ * abriu o link. Não abriu: **a plataforma transcreve o que se FALA dentro dos vídeos** (medido na
+ * semana: 686 de 806 vídeos com `transcricao`), e o painel marcava tudo como "(áudio, transcrito
+ * automaticamente)" — a IA leu o discurso do vídeo como a voz da eleitora.
+ *
+ * **Vídeo é repasse** (`cortesia.ehRepasse` já diz isso desde 05/09): o que se fala nele é material
+ * que circula, não fala dela nem dirigida a nós — a mesma classe do áudio encaminhado (07/09).
+ * Devolve só o PREFIXO, sem o texto; quem monta a linha é o painel.
+ */
+export function rotuloDaTranscricao(m) {
+  if (!m?.transcrito) return '';
+  const resumo = resumoDoAudio(m);
+  const daPlataforma = resumo ? `; a plataforma resumiu: "${resumo}"` : '';
+  if (String(m?.tipo || '').toUpperCase() === 'VIDEO') {
+    return `(VÍDEO que ela mandou — é o que se FALA dentro do vídeo, transcrito automaticamente${daPlataforma}. ` +
+      'Quase sempre é material repassado de outra pessoa: NÃO é fala dela nem é dirigido a nós. ' +
+      'Não responda ao discurso do vídeo; responda ao gesto de compartilhar e ao que ELA escreveu)';
+  }
+  return `(áudio, transcrito automaticamente${daPlataforma})`;
+}
+
 export function marcaDeMidia(m) {
   if (String(m?.texto || '').trim()) return '';
   if (m?.sistema) return '(ela mandou uma mensagem que não chegou legível até aqui)';

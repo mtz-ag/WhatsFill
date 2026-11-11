@@ -356,6 +356,13 @@ mudaram as maos, nao a cabeca.
   continua contando. **Plataforma que normaliza o valor muda o que a releitura recebe: ao ver
   "aceitou e nao gravou", meca o que voltou antes de culpar a coluna.**
 
+- **A PLATAFORMA TRANSCREVE VIDEO TAMBEM, e a fala de dentro dele chegava a IA como voz dela**
+  (11/11/2026, *"a IA abriu os links?"* — nao abriu). Medido desde 04/11: video 686 de 806 com
+  `transcricao`, audio 296 de 298, imagem 0. `mob.mensagemDoBanco` poe a transcricao no texto com
+  `transcrito: true` para QUALQUER tipo, e a marca dizia "(audio...)". Hoje `ia.rotuloDaTranscricao`
+  marca video como conteudo do video, quase sempre repassado. **Os detectores do fluxo ainda leem a
+  fala do video como texto dela** — decisao dele.
+
 - **`status` TEM TRES VALORES, E `resolvido_em` NAO DIZ SE ACABOU.** Medido: `aberto` (586),
   `em_atendimento` (3), `resolvido` (11) — e **das 11 resolvidas, UMA tinha `resolvido_em`
   preenchido**. E a armadilha do `grupo_id` por outra porta: a coluna que PARECE responder nao
