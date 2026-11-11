@@ -5413,6 +5413,15 @@ mudaram as maos, nao a cabeca.
 
 ## Avaliação por IA (só neste branch)
 
+- **ESPERANCA E PREOCUPACAO COM O PAIS SAO APOIO, E A REGRA 14 NAO VALE PARA ELAS** (11/11/2026,
+  v3.295, apoiadora com fe: *"o Lula vai ser cassado? vai ter outra eleicao?"* e bencaos). O dossie
+  foi puxado por "Lula" e "Flavio", e a linha colada da regra 14 mandou *"diga que falta o dado e
+  responda o tema"* — saiu *"nao tenho confirmacao... respeito a lei"* e o pedido da cidade.
+  Hoje as regras 14 e 17 e a colada dizem onde a 14 para (pergunta sobre o MANDATO), com o texto
+  dele como modelo. **A trava do tom juridico nao foi alargada:** o texto aprovado do caminhoneiro
+  (22/09) diz *"ainda nao tenho confirmacao"*. **Linha colada puxada pelo dossie vale para quem
+  PERGUNTOU — ao escrever uma, diga quem ela NAO cobre.**
+
 - **EXAGERO DE DESESPERO NO MEIO DA REVOLTA POLITICA NAO E EMERGENCIA — e a plataforma ja resume o
   audio** (10/11/2026, print dele: audio de 2min25 contra os celulares para politicos, com *"ver se
   morre de uma vez para nao ver isso"* no meio, e o rascunho respondendo SAMU, 192, 193 e CVV).

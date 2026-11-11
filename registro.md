@@ -1,4 +1,33 @@
-## 2026-11-11 - v3.294.0 - ESTADO DE AGORA - "com revisao": para so no que a IA escreveu
+## 2026-11-11 - v3.295.0 - ESTADO DE AGORA - esperanca e preocupacao com o pais sao apoio
+
+Print dele: audio de uma apoiadora com fe num RS melhor, "sera que vai ter outra eleicao? O Lula
+vai ser cassado?" no meio, e bencaos no fim. O rascunho respondeu "nao tenho confirmacao sobre uma
+nova eleicao... o debate precisa ser conduzido com respeito a lei e a vontade dos eleitores" e
+pediu a cidade. Ele reescreveu: agradecer o carinho, animar a fe, "seguiremos atentos e fazendo a
+nossa parte", devolver a bencao, sem cadastro.
+
+Medido:
+- nenhum detector reconheceu o carinho (soAgradeceOuElogia, soExpressaApoio, desabafo: nulos); as
+  perguntas abriram perguntaPendente e falouAlgoProprio, e o caso foi para a IA (tecla 6);
+- o dossie foi puxado ("Lula", "Flavio"), entao entrou a linha colada da regra 14 ("falta o dado:
+  diga em uma frase e responda o TEMA, o que precisa estar no debate") — foi ela que produziu o
+  texto. Regra 14 cumprida fora do escopo;
+- o rascunho saiu com zero avisos.
+
+O que mudou (so prompt):
+- regra 17 ganhou "preocupacao e esperanca com o rumo do pais tambem sao apoio", com o texto dele
+  como modelo e as frases proibidas escritas;
+- regra 14 e a linha colada dela dizem onde param: pergunta sobre o MANDATO, nunca especulacao de
+  apoiador sobre o pais;
+- a excecao do cadastro conta esperanca, fe e bencao como carinho mesmo com pergunta retorica.
+
+A trava do tom juridico NAO foi alargada: o texto que ele aprovou em 22/09 diz "ainda nao tenho
+confirmacao" sobre agenda, e barrar a forma pararia a rodada no texto dele.
+
+Prova: com o ia.js anterior caem 5 assercoes. Nao conferido ao vivo.
+Recarregar a extensao e F5 no CRM; conferir 3.295.0.
+
+## 2026-11-11 - v3.294.0 - HISTORICO - "com revisao": para so no que a IA escreveu
 
 Pedido dele: "adicione um box de marcar para a opcao com revisao no automatizado para parar para
 revisao somente quando a IA escrever mensagem".

@@ -1942,6 +1942,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    Mensagem que é só "não tenho essa informação" (ainda mais duas vezes) é porta fechada na cara',
     '    de quem escreveu. Isso NÃO autoriza inventar: projeto, lei, posição tomada, número e promessa',
     '    de resolver continuam valendo só se estiverem na conversa ou no "Quem é quem".',
+    '    **Vale para pergunta sobre o MANDATO** (projeto, lei, número, agenda). Especular sobre o rumo',
+    '    do país ("o Lula vai ser cassado?", "vai ter outra eleição?") no meio de esperança e carinho',
+    '    não é pergunta de dado: aí vale a regra 17, e nada de dizer que falta confirmação.',
     /**
      * **A regra 15 é dele, de 23/09/2026** — ver a linha colada no pedido, no bloco do contato. Aqui
      * ela fica por ser PROIBIÇÃO: proibição não obriga forma, então vale em toda chamada (17/09), e
@@ -2062,6 +2065,30 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
           '    fez. Perguntando de verdade (quem ganhou, quando foi), responda só o que estiver no "Quem é',
           '    quem" — e o resultado que não estiver lá, você não afirma.',
         ]),
+    /**
+     * **ESPERANÇA E PREOCUPAÇÃO COM O PAÍS TAMBÉM SÃO APOIO** — print dele (11/11/2026): áudio de
+     * uma apoiadora com fé num RS melhor, *"será que vai ter outra eleição? O Lula vai ser
+     * cassado?"* no meio, e bênçãos no fim. O rascunho respondeu *"não tenho confirmação sobre uma
+     * nova eleição... o debate precisa ser conduzido com respeito à lei e à vontade dos eleitores"*
+     * e pediu a cidade. Ele reescreveu como agradecimento, ânimo e bênção de volta.
+     *
+     * **Medido: nenhum detector reconheceu o carinho** (as perguntas a levaram para a tecla 6), e a
+     * linha colada da regra 14 — o dossiê foi puxado por "Lula" e "Flávio" — mandou dizer que falta
+     * o dado e "responder o tema, o que precisa estar no debate". **Foi a regra 14 cumprida fora do
+     * escopo**, e a fronteira mora aqui e lá, ao lado das duas. Sem detector novo: forma de
+     * expressar esperança não fecha em lista.
+     */
+    '    **PREOCUPAÇÃO E ESPERANÇA COM O RUMO DO PAÍS TAMBÉM SÃO APOIO.** "Será que vai ter outra',
+    '    eleição?", "o Lula vai ser cassado?", "como é que vai ficar?", ditos por quem escreve com fé',
+    '    num estado melhor e manda bênção, NÃO são pedido de informação: são ela desabafando e',
+    '    torcendo. **Nunca responda essas perguntas ao pé da letra** — nada de "não tenho',
+    '    confirmação", "não quero te passar informação errada", "isso depende de decisões oficiais",',
+    '    "respeito à lei e à vontade dos eleitores", nem especular sobre cassação ou eleição. O modelo',
+    '    é o dele: "Muito obrigado pelo carinho, pela confiança e por essa esperança em dias melhores.',
+    '    Sei que não é fácil acompanhar tudo o que acontece no nosso país, mas não podemos perder a fé',
+    '    nem deixar de acreditar em um futuro melhor. Seguiremos atentos e fazendo a nossa parte pelo',
+    '    Rio Grande do Sul e pelo Brasil. Que Deus abençoe você e sua família, com muita saúde, paz e',
+    '    proteção." Devolva a bênção que ela mandou. E isto é carinho: não peça o cadastro aqui.',
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
      *
@@ -3393,7 +3420,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
            * tem de estar do lado dela.
            */
           'EXCEÇÃO: se a conversa não der abertura para isso — ela está se despedindo, mandou só',
-          'carinho, disse que não é do Rio Grande do Sul, ou qualquer coisa em que o formulário',
+          'carinho (esperança, fé e bênção contam como carinho mesmo com perguntas retóricas sobre o',
+          'país no meio), disse que não é do Rio Grande do Sul, ou qualquer coisa em que o formulário',
           'soaria como se ninguém tivesse lido o que ela escreveu —, NÃO escreva o bloco e marque',
           'o campo naoCabePedirOCadastro (é um campo do JSON, nunca uma frase para ela). Na dúvida,',
           'peça: o cadastro é o que põe a pessoa no filtro dele.',
@@ -3611,7 +3639,10 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'responda o TEMA que ela trouxe: por que aquilo importa para o Estado e o que precisa estar ' +
         'no debate, e diga que quer conhecer o que ELA vive naquele tema. Isso é conversa de ' +
         `${EM_CAMPANHA ? 'campanha' : 'mandato'}, não é "me conte seu caso". Sem inventar projeto, lei, posição tomada nem ` +
-        'promessa de resolver.'
+        'promessa de resolver. ESTA LINHA NÃO VALE para quem só especula sobre o rumo do país ("o ' +
+        'Lula vai ser cassado?", "vai ter outra eleição?") no meio de esperança, fé ou bênção: isso ' +
+        'é desabafo de apoiador — agradeça o carinho, anime, devolva a bênção (regra 17), sem dizer ' +
+        'que falta confirmação e sem falar de lei ou decisão oficial.'
       : '',
     /** O cargo, em uma frase — ver `perguntouOCargo` (31/10/2026). */
     perguntouOCargoSo

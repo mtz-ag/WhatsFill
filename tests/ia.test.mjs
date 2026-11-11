@@ -3896,4 +3896,35 @@ grupo('desabafo politico com exagero de desespero, e o resumo do audio');
   check(resumoDoAudio({ transcrito: true, resumoDaPlataforma: 'a'.repeat(500) }).length <= 201, 'e e cortado');
 }
 
+grupo('esperanca e preocupacao com o pais sao apoio (11/11/2026, a apoiadora do "o Lula vai ser cassado?")');
+{
+  /**
+   * O rascunho disse *"nao tenho confirmacao sobre uma nova eleicao ou sobre eventual cassacao do
+   * Lula... o debate precisa ser conduzido com respeito a lei"* e pediu a cidade. Medido: a linha
+   * colada da regra 14 foi quem mandou "dizer que falta o dado e responder o tema" — o dossie foi
+   * puxado por Lula e Flavio. A fronteira mora nas duas regras e na colada.
+   */
+  const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/PREOCUPAÇÃO E ESPERANÇA COM O RUMO DO PAÍS TAMBÉM SÃO APOIO/.test(sis), 'a regra 17 cobre a esperanca');
+  check(/não podemos perder a fé/.test(sis) && /Seguiremos atentos e fazendo a nossa parte/.test(sis),
+    'com o texto dele como modelo');
+  check(/não peça o cadastro aqui/.test(sis), 'e sem pedir o cadastro');
+  check(/Vale para pergunta sobre o MANDATO/.test(sis), 'a regra 14 diz onde ela para');
+
+  const pauta = [{ de: 'contato', texto: 'tenho esperanca de um RS melhor. Sera que vai ter outra eleicao? O Lula vai ser cassado? Que Deus abencoe voces' }];
+  const bloco = montarContatoRascunho({ mensagens: pauta, perguntaDoMandato: true });
+  check(/PERGUNTOU DO MANDATO E FALTA O DADO/.test(bloco) && /ESTA LINHA NÃO VALE para quem só especula/.test(bloco),
+    'a colada da regra 14 leva a fronteira junto, ao lado da ordem que ela limita');
+
+  /**
+   * **A trava do tom juridico NAO foi alargada, de proposito:** o texto que ele mesmo aprovou em
+   * 22/09 (o caminhoneiro) diz "ainda nao tenho confirmacao" sobre uma agenda — que e a falta em
+   * UMA frase que a regra 14 permite. Barrar a forma pararia a rodada no texto dele. O conserto
+   * deste caso e o que a IA le.
+   */
+  const avisos = (t) => revisarRascunho(t, new Date('2026-11-11T13:20:00Z'), {}).avisos || [];
+  const certo = 'Bom dia! Muito obrigado pelo carinho e por essa esperanca em dias melhores. Nao podemos perder a fe. Seguiremos atentos e fazendo a nossa parte pelo Rio Grande do Sul e pelo Brasil. Que Deus abencoe voce e sua familia!';
+  check(!avisos(certo).includes(AVISOS_QUE_IMPEDEM_ENVIO.tomJuridico), 'o texto dele passa limpo');
+}
+
 fim();
