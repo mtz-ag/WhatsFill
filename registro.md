@@ -1,4 +1,33 @@
-## 2026-11-11 - v3.296.0 - ESTADO DE AGORA - deboche do adversario pede o tom dela
+## 2026-11-11 - v3.297.0 - ESTADO DE AGORA - nome que e numero nao e nome, e fe nao dispensa o cadastro
+
+Print dele: Nome no cadastro valendo o proprio telefone, cidade vazia, ela respondeu "Amem. A nos"
+e "Sem Deus nao somos nada... sempre nos dara a vitoria", e o rascunho nao pediu nada. Ele: "o nome
+e numeros e sem cidade, preciso do pedido para essa pessoa desses dados".
+
+Medido no bloco que a IA le:
+- "Ja temos no cadastro desta pessoa — Nome: 5551..." e, logo abaixo, a ordem de pedir "Nome ,
+  Cidade": duas ordens opostas, e a IA ficou com a que dispensava. pedidoDeCadastroDoRascunho ja
+  sabia que telefone nao e nome; a linha do "ja temos" nao;
+- a EXCECAO do pedido listava "mandou so carinho (esperanca, fe e bencao contam como carinho...)",
+  que eu alarguei na v3.295 — a mensagem dela e exatamente isso.
+
+Conserto:
+- nomeDoCadastroServe, uma conta so para o pedido e para a linha do "ja temos": telefone, "contato",
+  "[NOVO]" nao contam como nome;
+- carinho, fe, bencao, apoio e deboche SAIRAM da excecao: agradece-se no tom dela e fecha-se com o
+  bloco. Ficam a despedida e quem disse que nao e do RS;
+- a regra 17 (esperanca e deboche) deixou de proibir o cadastro: ele segue o bloco do contato.
+
+Consequencia dita a ele: o caso da apoiadora da v3.295, com cadastro incompleto, passa a receber o
+pedido no fim, depois da bencao. Com cadastro completo, nada muda.
+
+Nao conferido: se este contato ja tinha recebido o formulario antes (jaPediramDados). Nesse caso o
+painel nao pede no rascunho, e isso nao mudou.
+
+Prova: com o ia.js anterior caem 5 assercoes. Todas as suites, checar-modulos e
+checar-referencias passando.
+
+## 2026-11-11 - v3.296.0 - HISTORICO - deboche do adversario pede o tom dela
 
 Print dele, um dia depois da v3.295: dois reels do Instagram com legenda zombando da "extrema
 canhota" ("talvez na proxima eleicao eles abram os zoinhos", com emojis de riso), e o rascunho

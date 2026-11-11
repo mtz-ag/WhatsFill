@@ -97,6 +97,8 @@ import {
   PROVEDOR_OPENROUTER,
   PROVEDOR_ANTHROPIC,
   montarRequisicaoCidade,
+  pedidoDeCadastroDoRascunho,
+  nomeDoCadastroServe,
 } from '../src/lib/ia.js';
 
 const IDS = ['pedir-dados', 'link-grupo', 'agradecimento', 'pedido-ajuda', 'pedido-emprego'];
@@ -3908,7 +3910,8 @@ grupo('esperanca e preocupacao com o pais sao apoio (11/11/2026, a apoiadora do 
   check(/PREOCUPAÇÃO E ESPERANÇA COM O RUMO DO PAÍS TAMBÉM SÃO APOIO/.test(sis), 'a regra 17 cobre a esperanca');
   check(/não podemos perder a fé/.test(sis) && /Seguiremos atentos e fazendo a nossa parte/.test(sis),
     'com o texto dele como modelo');
-  check(/não peça o cadastro aqui/.test(sis), 'e sem pedir o cadastro');
+  // 11/11/2026: o cadastro deixou de ser proibido aqui — segue o bloco do contato.
+  check(/O cadastro segue o bloco do contato/.test(sis), 'e o cadastro segue o bloco do contato');
   check(/Vale para pergunta sobre o MANDATO/.test(sis), 'a regra 14 diz onde ela para');
 
   const pauta = [{ de: 'contato', texto: 'tenho esperanca de um RS melhor. Sera que vai ter outra eleicao? O Lula vai ser cassado? Que Deus abencoe voces' }];
@@ -3943,6 +3946,27 @@ grupo('deboche do adversario pede o tom dela, e o modelo da esperanca nao vaza (
   const i18 = sis.indexOf('\n18. ', i17); // o padrao dele tem um "18." antes
   const iDeb = sis.indexOf('DEBOCHE E IRONIA');
   check(i17 > 0 && iDeb > i17 && (i18 < 0 || iDeb < i18), 'dentro da regra 17, ao lado da esperanca');
+}
+
+grupo('nome que e numero nao e nome, e fe nao dispensa o cadastro (11/11/2026)');
+{
+  /**
+   * Nome no cadastro = o telefone, cidade vazia, "Amem" e "Sem Deus nao somos nada" — e o rascunho
+   * nao pediu nada. O bloco dizia "Ja temos — Nome: 5551..." e a excecao listava fe e bencao.
+   */
+  const m = [
+    { de: 'nos', texto: 'Bom dia! Muito obrigado pelas palavras e pela oracao.' },
+    { de: 'ela', texto: 'Amem. A nos' },
+    { de: 'ela', texto: 'Sem Deus nao somos nada. Com Deus sempre nos dara a vitoria.' },
+  ];
+  const campos = { Nome: '5551999990000' };
+  check(!nomeDoCadastroServe('5551999990000') && !nomeDoCadastroServe('[NOVO] contato') && nomeDoCadastroServe('Maria Souza'),
+    'telefone e rotulo nao servem como nome; nome de gente serve');
+  check(pedidoDeCadastroDoRascunho(m, campos) === PEDIDO_DE_DADOS_NO_RASCUNHO, 'o pedido e o completo');
+  const bloco = montarContatoRascunho({ mensagens: m, campos, pedirDados: true });
+  check(!/Já temos no cadastro desta pessoa — Nome: 5551/.test(bloco), 'o telefone nao aparece como nome que ja temos');
+  check(/Carinho, fé,\s*\n?\s*bênção, apoio e deboche do adversário NÃO são exceção/.test(bloco), 'fe e bencao nao dispensam o pedido');
+  check(!/mandou só\s+carinho/.test(bloco), 'a excecao do carinho saiu');
 }
 
 fim();

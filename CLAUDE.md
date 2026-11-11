@@ -5426,6 +5426,11 @@ mudaram as maos, nao a cabeca.
   IA puxou o exemplo mais proximo — o meu. **Texto-modelo numa regra e ima: escreva junto para
   quem ele e SO.** O deboche ganhou paragrafo proprio na regra 17 (curto, bem-humorado, citando a
   ideia dela).
+  **E A EXCECAO DO CADASTRO TAMBEM VOLTOU ATRAS** (v3.297): Nome = o telefone, sem cidade, "Amem"
+  e "Sem Deus nao somos nada", e nada foi pedido. O bloco dizia *"Ja temos — Nome: 5551..."* (o
+  "ja temos" nao usava a conta que o pedido usa: hoje e `nomeDoCadastroServe`, uma so) e a excecao
+  que eu alarguei listava fe e bencao. **Carinho, fe, apoio e deboche nao dispensam o cadastro** —
+  agradece-se e pede-se no fim; ficam a despedida e quem nao e do RS.
 
 - **EXAGERO DE DESESPERO NO MEIO DA REVOLTA POLITICA NAO E EMERGENCIA — e a plataforma ja resume o
   audio** (10/11/2026, print dele: audio de 2min25 contra os celulares para politicos, com *"ver se

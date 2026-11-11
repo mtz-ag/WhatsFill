@@ -2088,7 +2088,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    Sei que não é fácil acompanhar tudo o que acontece no nosso país, mas não podemos perder a fé',
     '    nem deixar de acreditar em um futuro melhor. Seguiremos atentos e fazendo a nossa parte pelo',
     '    Rio Grande do Sul e pelo Brasil. Que Deus abençoe você e sua família, com muita saúde, paz e',
-    '    proteção." Devolva a bênção que ela mandou. E isto é carinho: não peça o cadastro aqui.',
+    '    proteção." Devolva a bênção que ela mandou. O cadastro segue o bloco do contato: faltando',
+    '    nome ou cidade, ele vem no fim, depois da bênção.',
     '    **Esse modelo é SÓ para quem mandou esperança, fé ou bênção.** Não leve frases dele para',
     '    outro caso: "obrigado pelo carinho", "esperança", "atento ao futuro do país" e "pelo Rio',
     '    Grande do Sul e pelo Brasil" em resposta a quem não falou nada disso soam a texto pronto.',
@@ -2111,8 +2112,8 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    os zoinhos" 🤭) veio rir junto. Responda curto e bem-humorado, concordando com o que ELA',
     '    escreveu e citando a ideia dela: "É isso aí! Obrigado por compartilhar. Quem sabe na',
     '    próxima eleição eles abram mesmo os olhos. Seguimos firmes!". Nada de solenidade, de',
-    '    "carinho", de "esperança e responsabilidade" — e continua valendo: sem repetir o xingamento',
-    '    e sem pedir o cadastro.',
+    '    "carinho", de "esperança e responsabilidade" — e continua valendo: sem repetir o xingamento.',
+    '    O cadastro segue o bloco do contato, como em qualquer apoio.',
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
      *
@@ -2533,13 +2534,23 @@ const PEDIDO_SO_DA_CIDADE =
 const PEDIDO_SO_DO_NOME =
   'Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, o seu nome.';
 
+/**
+ * **O nome do cadastro só conta se for nome de gente** — print dele (11/11/2026): Nome valendo o
+ * próprio TELEFONE ("5551…") e cidade vazia, e o rascunho não pediu nada. O bloco do contato dizia
+ * "Já temos no cadastro — Nome: 5551…" e, duas linhas abaixo, mandava pedir o nome: duas ordens
+ * opostas, e a IA ficou com a que dispensava. Uma conta só, para o pedido e para a linha do que
+ * já temos, senão elas voltam a discordar.
+ */
+export function nomeDoCadastroServe(nome) {
+  const n = String(nome || '').replace(/\[[^\]]*\]/g, '').trim();
+  return plausivelNome(n) && !/^(?:sem nome|desconhecido|contato|novo|cliente)$/i.test(n);
+}
+
 export function pedidoDeCadastroDoRascunho(mensagens = [], campos = {}, { cidadeNoTexto = false } = {}) {
   const temCidade = !!String(campos.Cidade || '').trim() || !!cidadeNoTexto;
   const outroFalante = mensagens.some((m) => m.de !== 'nos' &&
     /(?:usando|com) (?:o )?(?:telefone|celular) (?:do|da|de)|(?:telefone|celular) do meu marido/i.test(m.texto || ''));
-  const nomeCadastro = String(campos.Nome || '').replace(/\[[^\]]*\]/g, '').trim();
-  const temNomeCadastro = !outroFalante && plausivelNome(nomeCadastro) &&
-    !/^(?:sem nome|desconhecido|contato|novo|cliente)$/i.test(nomeCadastro);
+  const temNomeCadastro = !outroFalante && nomeDoCadastroServe(campos.Nome);
   if (!nomeApresentado(mensagens) && !temNomeCadastro) return temCidade ? PEDIDO_SO_DO_NOME : PEDIDO_DE_DADOS_NO_RASCUNHO;
   return temCidade ? '' : PEDIDO_SO_DA_CIDADE;
 }
@@ -3275,6 +3286,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    */
   const sabidos = Object.entries(campos || {})
     .filter(([k, v]) => (!identidadeIncerta || !/^(nome|genero|gênero|sexo)$/i.test(k)) && v != null && String(v).trim() !== '')
+    // Nome que é número, "contato" ou "[NOVO]" não é nome que já temos (11/11/2026).
+    .filter(([k, v]) => !/^nome$/i.test(k) || nomeDoCadastroServe(v))
     .map(([k, v]) => `${k}: ${String(v).trim()}`);
 
   const cadastro = sabidos.length
@@ -3443,12 +3456,19 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
            * escreve não é cumprida — e esta contradiz a ordem que está duas linhas acima, então
            * tem de estar do lado dela.
            */
-          'EXCEÇÃO: se a conversa não der abertura para isso — ela está se despedindo, mandou só',
-          'carinho (esperança, fé e bênção contam como carinho mesmo com perguntas retóricas sobre o',
-          'país no meio), disse que não é do Rio Grande do Sul, ou qualquer coisa em que o formulário',
-          'soaria como se ninguém tivesse lido o que ela escreveu —, NÃO escreva o bloco e marque',
-          'o campo naoCabePedirOCadastro (é um campo do JSON, nunca uma frase para ela). Na dúvida,',
-          'peça: o cadastro é o que põe a pessoa no filtro dele.',
+          /**
+           * **Carinho, fé e bênção SAÍRAM da exceção** — print dele (11/11/2026): "Amém. A nós" e
+           * "Sem Deus não somos nada", nome no cadastro sendo o telefone e sem cidade, e o
+           * rascunho não pediu nada. Ele: *"preciso do pedido para essa pessoa desses dados"*. A
+           * v3.295 tinha alargado a exceção com fé e bênção; quem manda carinho é justamente quem
+           * responde o cadastro. Agradece-se primeiro e pede-se depois.
+           */
+          'EXCEÇÃO: se a conversa não der abertura para isso — ela está se DESPEDINDO, disse que',
+          'não é do Rio Grande do Sul, ou qualquer coisa em que o formulário soaria como se ninguém',
+          'tivesse lido o que ela escreveu —, NÃO escreva o bloco e marque o campo',
+          'naoCabePedirOCadastro (é um campo do JSON, nunca uma frase para ela). **Carinho, fé,',
+          'bênção, apoio e deboche do adversário NÃO são exceção:** agradeça primeiro, no tom dela,',
+          'e feche com o bloco. Na dúvida, peça: o cadastro é o que põe a pessoa no filtro dele.',
         ].join('\n')
       : '',
     /**
