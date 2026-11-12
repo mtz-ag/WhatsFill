@@ -1,4 +1,13 @@
-## 2026-11-12 - v3.309.0 - ESTADO DE AGORA - post encaminhado, e a fila que caia no primeiro "Failed to fetch"
+## 2026-11-12 - v3.310.0 - ESTADO DE AGORA - o Andamento na coluna da rodada
+
+Pedido dele: *"adicione o log do automatizado no painel que fica ao iniciar"*. Na rodada o painel
+some e a coluna (`wf-coluna-rodada`) toma o lugar dele, entao o Andamento ficava escondido justo
+enquanto a rodada anda. Hoje o controle da rodada traz as mesmas linhas, pela mesma funcao
+(`linhaDoLog`), repintadas a cada `registrarNaRodada` e rolando para a mais nova. So aparece NA
+COLUNA (a janelinha solta tem 150px). Prova: tirando a repintura, cai 1 assercao em
+`parar-rodada.test.mjs`. **Nao conferido ao vivo.** O resto do estado e o da v3.309 abaixo.
+
+## 2026-11-12 - v3.309.0 - HISTORICO - post encaminhado, e a fila que caia no primeiro "Failed to fetch"
 
 **1. Post encaminhado nao e fala dela** (a Suely). Ela repassou o post de um senador — titulo em
 negrito, a assinatura dele, o link do Instagram e "Faca parte do meu canal do WhatsApp", 1.952

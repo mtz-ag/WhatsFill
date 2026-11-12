@@ -811,4 +811,11 @@
 }
 .wf-root .wf-subnav button.wf-active { color: var(--wf-accent); border-color: var(--wf-accent); }
 
+.wf-controle-log { display: none; }
+.wf-coluna-rodada .wf-controle-log {
+  display: block; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--wf-border, #3334);
+  max-height: calc(100vh - 190px); overflow-y: auto; font-size: 12px; line-height: 1.35;
+}
+.wf-controle-log .wf-preview { margin: 0 0 4px; overflow-wrap: anywhere; color: var(--wf-text, inherit); }
+.wf-controle-log .wf-preview.wf-log-ia { color: var(--wf-err); }
 .wf-controle-prazo { margin: 6px 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }

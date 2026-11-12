@@ -6658,6 +6658,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function abrirControleDaRodada() {
     if (controleDaRodada) {
       controleDaRodada.pintar();
+      controleDaRodada.pintarLog();
       return;
     }
 
@@ -6689,6 +6690,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     );
     linha.append(parar, seguir);
     caixa.append(linha);
+    /**
+     * **O ANDAMENTO DENTRO DA COLUNA DA RODADA** (12/11/2026, pedido dele: *"adicione o log do
+     * automatizado no painel que fica ao iniciar"*). Na rodada o painel some e a coluna toma o lugar
+     * dele, entao o Andamento — que mora na aba Automatizado — ficava escondido justo enquanto a
+     * rodada anda. Mesmas linhas, pela mesma funcao (`linhaDoLog`). So aparece NA COLUNA (CSS): a
+     * janelinha solta tem 150px e o log ali seria ilegivel.
+     */
+    const logDaRodada = h('div', { class: 'wf-controle-log', 'data-fica': '1', role: 'log' });
+    caixa.append(logDaRodada);
+    function pintarLog() {
+      logDaRodada.replaceChildren(...state.auto.log.map(linhaDoLog));
+      logDaRodada.scrollTop = logDaRodada.scrollHeight;
+    }
 
     function pintar() {
       const rodando = !!state.auto.rodando;
@@ -6817,8 +6831,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     pintar();
 
     const timerPrazoResposta = setInterval(pintar, 1000);
+    pintarLog();
     controleDaRodada = {
       pintar,
+      pintarLog,
       fechar() {
         clearInterval(timerPrazoResposta);
         document.removeEventListener('keydown', aoTeclar);
@@ -7096,16 +7112,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       logNode.append(h('p', { class: 'wf-hint' }, 'Nenhuma rodada ainda nesta sessão do painel.'));
       return;
     }
-    for (const linha of state.auto.log) {
-      const sinal = SINAL_RODADA[linha.resultado] || '·';
-      const texto = `${sinal} ${linha.nome}${linha.motivo ? ` — ${linha.motivo}` : ''}`;
-      logNode.append(h('div', { class: `wf-preview${ehLinhaDeIA(linha) ? ' wf-log-ia' : ''}` }, texto));
-    }
+    for (const linha of state.auto.log) logNode.append(linhaDoLog(linha));
+  }
+
+  /** Uma linha do Andamento — a mesma na aba Automatizado e na coluna da rodada. */
+  function linhaDoLog(linha) {
+    const sinal = SINAL_RODADA[linha.resultado] || '·';
+    const texto = `${sinal} ${linha.nome}${linha.motivo ? ` — ${linha.motivo}` : ''}`;
+    return h('div', { class: `wf-preview${ehLinhaDeIA(linha) ? ' wf-log-ia' : ''}` }, texto);
   }
 
   function registrarNaRodada(nome, resultado, motivo) {
     state.auto.log.push({ nome, resultado, motivo });
     renderAutoLog();
+    controleDaRodada?.pintarLog();
   }
 
   function modeloDaRodada() {

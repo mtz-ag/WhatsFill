@@ -225,4 +225,12 @@ grupo('o ■ fecha a pergunta aberta, e a rodada termina');
   check(/aoParar: CANCELADA/.test(cidade),
     "a da cidade fecha CANCELADA: 'parar' cairia no ramo que recusa e anota a recusa da cidade");
 }
+// O Andamento dentro da coluna da rodada (12/11/2026): cada linha nova chega la tambem.
+{
+  const reg = painel.slice(painel.indexOf('function registrarNaRodada'), painel.indexOf('function modeloDaRodada'));
+  check(/controleDaRodada\?\.pintarLog\(\)/.test(reg), 'registrarNaRodada repinta o log da coluna');
+  check(/wf-controle-log/.test(painel) && /\.wf-coluna-rodada \.wf-controle-log \{\s*display: block/.test(css),
+    'o log aparece na coluna (e so nela)');
+}
+
 fim();
