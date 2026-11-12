@@ -808,8 +808,32 @@ export async function assumirConversa(conversaId) {
  */
 export async function resolverConversa(conversaId) {
   if (!conversaId) throw new Error('resolver: sem conversa');
-  await rpc(mob.RPCS.resolver, { p_conversa_id: conversaId });
-  return conferirStatus(conversaId, RESOLVIDO);
+  const resposta = await rpc(mob.RPCS.resolver, { p_conversa_id: conversaId });
+  const r = await conferirStatus(conversaId, RESOLVIDO);
+  return { ...r, reason: r.ok ? '' : motivoDoResolver(r, resposta) };
+}
+
+/**
+ * **Por que o Resolver não resolveu, em português** (12/11/2026, a Dirce: *"Classificado, mas
+ * undefined. Conclua na aba."*).
+ *
+ * O retorno era só `{ok, estado}` e o painel lia `reason`: todo resolver que falhava virava
+ * "undefined" na tela. E o corpo da função do banco era JOGADO FORA — se ela recusa com
+ * `{ok:false, ...}`, a recusa dela é a melhor explicação que existe, e agora vai junto.
+ */
+export function motivoDoResolver(r = {}, resposta = null) {
+  const dela = resposta && resposta.ok === false
+    ? String(resposta.message || resposta.mensagem || resposta.erro || resposta.error || '').trim()
+    : '';
+  const extra = dela ? ` (a plataforma disse: "${dela}")` : '';
+  if (r.ok === null) {
+    return `não consegui reler a conversa depois de resolver — confira na tela se ela ficou Resolvida${extra}`;
+  }
+  const comoEsta = {
+    [ABERTO]: 'sem atendente (aguardando atendente)',
+    [EM_ATENDIMENTO]: 'ainda em atendimento',
+  }[r.estado] || `no estado "${r.estado || 'desconhecido'}"`;
+  return `a plataforma não resolveu: a conversa continua ${comoEsta}${extra}`;
 }
 
 export async function reabrirConversa(conversaId) {

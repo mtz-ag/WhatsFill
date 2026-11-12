@@ -2212,11 +2212,11 @@ grupo('popup das teclas enquanto ele confere o texto');
 
   /**
    * **Resolver grava ANTES de fechar, e nao fecha se a gravacao falhar** — resolver sem gravar
-   * tira o contato da fila sem a cidade, as etiquetas e a data que o painel acabou de
-   * classificar, e fechar as cegas nao tem volta.
+   * tira o contato da fila sem a cidade e as etiquetas que o painel acabou de classificar
+   * (a data de conclusao saiu em 12/11/2026), e fechar as cegas nao tem volta.
    */
   const ramoResolver = espera.slice(espera.indexOf('async function resolverPelaTecla'));
-  const iGrava = ramoResolver.indexOf('saveClassification({ withCompletionDate: true, quiet: true })');
+  const iGrava = ramoResolver.indexOf('saveClassification({ quiet: true })');
   const iFecha = ramoResolver.indexOf('await concluirPeloPainel()');
   check(iGrava > 0 && iFecha > iGrava, 'a tecla 3 grava a classificacao antes de resolver');
   check(ramoResolver.slice(iGrava, iFecha).includes('a classificação não gravou'),

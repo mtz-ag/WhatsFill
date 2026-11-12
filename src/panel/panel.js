@@ -42,7 +42,7 @@ import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
 import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia } from '../lib/cortesia.js';
-import { SENTINEL, SENTINEL_DATE_NEEDLES, SENTINEL_DATE_HUMANO } from '../lib/contract.js';
+import { SENTINEL } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
 import { momentoDesatualizado, avisoMomentoDesatualizado } from '../lib/data-do-texto.js';
@@ -2378,28 +2378,6 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     /**
-     * **A data do primeiro contato também aparece, pelo mesmo motivo da limpeza da cidade.** Esta
-     * é a única escrita do painel que REESCREVE um dado que já estava no CRM — as outras só
-     * preenchem buraco —, e ela acontece ao concluir, quando ele já não está olhando. A linha
-     * nomeia a FONTE porque é ela que diz se a data faz sentido: cadastro do contato é uma coisa,
-     * mensagem mais antiga que a extensão enxergou é outra.
-     */
-    (() => {
-      const primeiro = primeiroContatoDoContato();
-      if (!primeiro) return;
-      const atual = fieldsLib.diaLocalDe(dataDeConclusaoAtual());
-      if (atual === primeiro) return;
-      const comoSeLe = (d) => d.split('-').reverse().join('/');
-      header.append(
-        h('div', { class: 'wf-origin', 'data-fica': '1' },
-          atual
-            ? `Primeiro contato: está ${comoSeLe(atual)} no CRM — vai corrigir para ` +
-              `${comoSeLe(primeiro)} (${origemDoPrimeiroContato()}).`
-            : `Primeiro contato: vai gravar ${comoSeLe(primeiro)} (${origemDoPrimeiroContato()}).`)
-      );
-    })();
-
-    /**
      * **O FLUXO FARIA: a decisão da rodada para este contato, sem a rodada** — pedido dele
      * (03/11/2026), depois de eu precisar iniciar uma rodada de verdade só para ler isto.
      *
@@ -2703,7 +2681,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     concluir.addEventListener('click', runConcluir);
     body.append(h('div', { class: 'wf-card' }, [
       h('h4', {}, 'Conclui sem enviar nada (tecla 3)'),
-      h('div', { class: 'wf-preview' }, 'Grava a classificação, marca a data de conclusão, conclui e abre o próximo. Não envia mensagem.'),
+      h('div', { class: 'wf-preview' }, 'Grava a classificação, conclui e abre o próximo. Não envia mensagem.'),
       concluir,
     ]));
 
@@ -3160,7 +3138,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/4 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
+      if (!(await saveClassification({ quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus(`2/4 enviando o modelo "${modelo.name}"…`);
       if (!(await enviarModelo(modelo, { send: true }))) return;
@@ -4031,12 +4009,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       return false;
     }
 
-    const proximo = await page.openNextSession(opts);
+    /**
+     * **Concluir e abrir o próximo são DOIS atos, e a mensagem separa os dois** (12/11/2026, o
+     * Gilmar e a Simone: *"nao esta renderizada na lista"* depois de enviar). A conversa JÁ estava
+     * resolvida — quem falhou foi abrir a SEGUINTE, que precisa da linha desenhada na fila. Escrito
+     * colado no "concluído", parecia que o concluir tinha falhado.
+     */
+    const proximo = (await page.openNextSession(opts)) || {};
     // O aviso de aba não invalida o que já foi feito: a mensagem saiu e o atendimento fechou.
     // Só diz que o próximo veio da aba em que a plataforma estava, não da pedida.
-    const aviso = proximo.avisoAba ? ` ${proximo.avisoAba}` : '';
+    const aviso = proximo.avisoAba && proximo.avisoAba !== proximo.reason ? ` ${proximo.avisoAba}` : '';
+    // A plataforma nova devolve `ok`; a velha, `changed`.
+    const abriu = !!(proximo.changed || proximo.ok);
+    // "Resolvido" só onde a releitura do banco o confirmou (a plataforma nova relê o status).
+    const feito = `${jaFeito} e concluído${naPlataformaNova() ? ' (Resolvido, conferido no banco)' : ''}.`;
     setStatus(
-      (proximo.changed ? 'Pronto. Próximo atendimento aberto.' : `${jaFeito} e concluído. ${proximo.reason}`) + aviso,
+      (abriu
+        ? `${feito} Próximo atendimento aberto.`
+        : `${feito} Não abri o próximo: ${proximo.reason || 'a plataforma não disse por quê'}`) + aviso,
       'ok'
     );
     return true;
@@ -4087,7 +4077,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/3 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
+      if (!(await saveClassification({ quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus('2/3 concluindo o atendimento…');
       await concluirEAbrirProximo('Classificado');
@@ -4107,7 +4097,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       setStatus('1/4 gravando classificação…');
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) return;
+      if (!(await saveClassification({ quiet: true, tirarSemRetorno: true }))) return;
 
       setStatus('2/4 enviando o link do grupo…');
       if (!(await sendTemplate(template, { send: true }))) return;
@@ -6598,10 +6588,27 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    */
   let idQueARodadaAbriu = '';
 
+  /**
+   * **Fora da rodada o id é o da conversa que o PAINEL carregou** (12/11/2026, a Dirce, a Simone e
+   * o Gilmar: concluir pela tela com o painel aberto à mão). Sem id, `conversaDaTela` exige os dois
+   * sinais, e a linha da fila — virtualizada — muitas vezes não está desenhada: a recusa era a
+   * regra, não a exceção. `state.session` é a conversa cujo contato o painel acabou de classificar,
+   * então é ESSA que tem de ser resolvida; a tela mostrando outra continua recusando (é a mesma
+   * comparação que protege a rodada). Só na plataforma nova: na velha o concluir é DOM e não usa id.
+   */
+  function idDaConversaParaConcluir() {
+    return idQueARodadaAbriu || (naPlataformaNova() ? String(state.session?.id || '') : '');
+  }
+
   async function concluirPeloPainel() {
-    const id = idQueARodadaAbriu;
-    const r = await page.clickConcluir(id ? { id } : {});
-    if (r?.ok) agendarContagem();
+    const id = idDaConversaParaConcluir();
+    const r = (await page.clickConcluir(id ? { id } : {})) || {};
+    if (r.ok) agendarContagem();
+    // O painel lê `reason`; o resolver da plataforma nova devolvia só `estado`, e a tela dizia
+    // "undefined". Sem motivo nenhum, diz que não houve motivo — nunca a palavra undefined.
+    if (!r.ok && !r.dialogOpen && !String(r.reason || '').trim()) {
+      r.reason = r.motivo || (r.estado ? `a plataforma deixou a conversa em "${r.estado}"` : 'a plataforma não confirmou a conclusão');
+    }
 
     if (r?.avisoDaConfirmacao && !state.auto.avisouConfirmacao) {
       state.auto.avisouConfirmacao = true;
@@ -7575,7 +7582,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * motivo de conclusão, e seguir deixaria um diálogo aberto na frente do próximo contato.
      */
     async function resolverPelaTecla(n) {
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+      if (!(await saveClassification({ quiet: true }))) {
         return { ok: false, motivo: `a tecla ${n} não resolveu: a classificação não gravou — deixei o atendimento aberto` };
       }
       let fechou = null;
@@ -10143,7 +10150,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             });
 
         if (escolhaRemovido === 'concluir') {
-          await saveClassification({ withCompletionDate: true, quiet: true });
+          await saveClassification({ quiet: true });
           const fechouRemovido = await concluirPeloPainel();
           if (!fechouRemovido.ok) {
             return { nome, resultado: 'pulado', motivo: `número removido, mas ${fechouRemovido.reason}` };
@@ -10742,7 +10749,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
               motivo: 'conclusão não confirmada — atendimento continua aberto' };
           }
         }
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         const fechouRespondido = await concluirPeloPainel();
         if (!fechouRespondido.ok) {
           return { nome, resultado: 'pulado', motivo: `já respondido, mas ${fechouRespondido.reason}` };
@@ -12030,7 +12037,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             }
           }
 
-          if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+          if (!(await saveClassification({ quiet: true }))) {
             return euMando
               ? { nome, resultado: 'enviado', parar: true, motivo: 'você mandou o rascunho da IA, mas a classificação não gravou' }
               : { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei o rascunho' };
@@ -12679,14 +12686,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // `rascunharParaEle` já escreve a linha do SUCESSO (com os avisos da revisão junto);
         // aqui só entra o que deu errado, senão a mesma coisa apareceria duas vezes no log.
         if (!r.ok) registrarNaRodada(nome, 'aviso', `não consegui rascunhar (${r.motivo}) — o caso ficou com você`);
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         return esperarVoceConcluir(sessionId, nome);
       }
 
       // Tecla 6: a rodada sai da frente e fica de vigia. Você responde à mão no atendimento que
       // já está aberto; quando concluir, ela retoma sozinha do próximo.
       if (escolha === 'responder') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         return esperarVoceConcluir(sessionId, nome);
       }
 
@@ -12713,7 +12720,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (escolha === 'perguntarajuda') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         if (!(await sendTemplate(perguntarAjuda, { send: true, jaConfirmado: true }))) {
           return pulouPorqueNaoSaiu(nome, 'a pergunta');
         }
@@ -12732,7 +12739,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        * então a escolha caía no fim da função e enviava outra coisa.
        */
       if (typeof escolha === 'string' && escolha.startsWith('arvore:') && doFluxo) {
-        if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+        if (!(await saveClassification({ quiet: true }))) {
           return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
         }
         if (!(await sendTemplate(doFluxo, { send: true, jaConfirmado: true }))) {
@@ -12775,7 +12782,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
                     : 'agradeci o apoio'
                 : 'perguntei o interesse no conteúdo';
 
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         if (!(await sendTemplate(texto, { send: true, jaConfirmado: true }))) {
           return pulouPorqueNaoSaiu(nome, texto.name);
         }
@@ -12841,7 +12848,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           avisoEtiqueta = ' (sem etiqueta configurada na aba Automatizado)';
         }
 
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         const fechouSI = await concluirPeloPainel();
         if (!fechouSI.ok) {
           return { nome, resultado: 'pulado', motivo: `marquei sem interesse, mas ${fechouSI.reason}` };
@@ -12853,7 +12860,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (escolha === 'concluir') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         const fechou = await concluirPeloPainel();
         if (!fechou.ok) {
           // `resolver` sem `reason` imprimia "você mandou concluir, mas undefined" (31/10/2026).
@@ -12877,7 +12884,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         };
       }
 
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true }))) {
+      if (!(await saveClassification({ quiet: true }))) {
         return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
       }
 
@@ -13921,14 +13928,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // A rodada sai da frente e fica de vigia. Ele responde à mão; quando concluir, ela segue.
       // A etiqueta fica com ele: quem conclui é a plataforma, e o botão da aba Dados é o gancho.
       if (escolha === 'responder') {
-        await saveClassification({ withCompletionDate: true, quiet: true });
+        await saveClassification({ quiet: true });
         return esperarVoceConcluir(sessionId, nome);
       }
 
       ctx?.contatosTratados?.add(state.contact.id);
 
       if (escolha === 'concluir') {
-        if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) {
+        if (!(await saveClassification({ quiet: true, tirarSemRetorno: true }))) {
           return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não concluí' };
         }
         return await fecharSemRetorno(nome, 'concluído sem enviar, a seu pedido', 'concluido');
@@ -13939,7 +13946,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Grava e tira a etiqueta ANTES de enviar: se o envio falhar, o contato continua na lista
       // — o inverso (etiqueta fora, mensagem não enviada) o tiraria do trabalho em silêncio.
-      if (!(await saveClassification({ withCompletionDate: true, quiet: true, tirarSemRetorno: true }))) {
+      if (!(await saveClassification({ quiet: true, tirarSemRetorno: true }))) {
         return { nome, resultado: 'erro', motivo: 'a classificação não gravou; não enviei nada' };
       }
 
@@ -14930,7 +14937,7 @@ const CONTATOS_POR_PAGINA = 200;
 
     const saveBtn = h('button', { class: 'wf-btn wf-primary', type: 'button' }, 'Salvar no CRM');
     saveBtn.disabled = !state.hasContract;
-    saveBtn.addEventListener('click', () => withBusy(() => saveClassification({ withCompletionDate: true })));
+    saveBtn.addEventListener('click', () => withBusy(() => saveClassification()));
 
     const linha = [saveBtn];
 
@@ -15287,67 +15294,13 @@ const CONTATOS_POR_PAGINA = 200;
     });
     const temEtiqueta = state.tagSuggestions.some((s) => s.marcada && s.tag && etiquetaConfiavel(s));
 
-    // A data de conclusão entra junto com o resto, e não só no Salvar manual. A regra está em
-    // fields.deveGravarPrimeiroContato, separada para poder ser testada.
-    const faltaData = fieldsLib.deveGravarPrimeiroContato({
-      dataAtual: dataDeConclusaoAtual(),
-      primeiroContato: primeiroContatoDoContato(),
-      temExato,
-      temEtiqueta,
-      temCidade: !!valueNamed('Cidade'),
-    });
-
-    if (!temExato && !temEtiqueta && !faltaData) return;
+    if (!temExato && !temEtiqueta) return;
 
     await saveClassification({
       somenteExatos: true,
       quiet: true,
       automatico: true,
-      withCompletionDate: faltaData,
     });
-  }
-
-  /** O que está gravado hoje no campo da data, do jeito que veio. Vazio devolve `''`. */
-  function dataDeConclusaoAtual() {
-    const campo = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-    if (!campo) return '';
-    const entry = state.draft[campo.id];
-    return entry && entry.value != null ? String(entry.value) : '';
-  }
-
-  /**
-   * **A primeira vez que esta pessoa entrou em contato.**
-   *
-   * Três fontes, e a mais antiga ganha: a criação do contato no CRM (preenchida em 100% da base
-   * medida, e em 98% dela é a própria chegada da pessoa), as mensagens desta sessão, e as da
-   * sessão anterior **quando ela já estiver carregada**.
-   *
-   * **A anterior não é buscada por causa disto, de propósito:** ela custa duas requisições e só é
-   * lida quando falta cidade (a regra de 07/09). Pedi-la aqui poria duas requisições a mais em
-   * todo contato aberto, e é número de requisição que derruba esta API. Quando ela estiver na
-   * mão, entra de graça.
-   *
-   * **O campo `createdAt` do contato nunca foi lido ao vivo neste projeto** — ele aparece na
-   * exportação como "Data de cadastro". Não vindo, as mensagens resolvem sozinhas, e o cabeçalho
-   * diz de onde a data saiu.
-   */
-  function primeiroContatoDoContato() {
-    const momentos = [];
-    for (const m of state.entrantes || []) if (m?.at) momentos.push(m.at);
-    for (const m of state.conversaAnterior?.entrantes || []) if (m?.at) momentos.push(m.at);
-    return fieldsLib.primeiroContato({
-      criadoEm: state.contact?.createdAt || state.contact?.createdat || null,
-      momentos,
-    });
-  }
-
-  /** De onde a data saiu — para o cabeçalho dizer, em vez de o número aparecer do nada. */
-  function origemDoPrimeiroContato() {
-    const dia = primeiroContatoDoContato();
-    if (!dia) return null;
-    const doCadastro = fieldsLib.diaLocalDe(state.contact?.createdAt || state.contact?.createdat);
-    if (doCadastro && doCadastro === dia) return 'cadastro do contato';
-    return state.conversaAnterior ? 'mensagem mais antiga (com a conversa anterior)' : 'mensagem mais antiga desta conversa';
   }
 
   /**
@@ -15451,7 +15404,6 @@ const CONTATOS_POR_PAGINA = 200;
   }
 
   async function saveClassification({
-    withCompletionDate = false,
     quiet = false,
     somenteExatos = false,
     automatico = false,
@@ -15497,46 +15449,6 @@ const CONTATOS_POR_PAGINA = 200;
         'aviso',
         `apagando do CRM: ${limpando.join(', ')} — não é nome de lugar`
       );
-    }
-
-    /**
-     * O campo guarda o PRIMEIRO CONTATO desde 07/10/2026, e **só anda para trás** — reabrir a
-     * conversa não empurra nada para frente, e uma data mais antiga que apareça corrige a que
-     * está lá. A regra inteira mora em `fields.deveGravarPrimeiroContato`, e é a MESMA que a
-     * gravação automática consulta antes de decidir chamar isto aqui: duas cópias divergiriam na
-     * primeira correção.
-     */
-    if (withCompletionDate) {
-      const completion = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-      const primeiro = primeiroContatoDoContato();
-      const corrigindo = fieldsLib.diaLocalDe(dataDeConclusaoAtual());
-      /**
-       * **As âncoras vão satisfeitas aqui de propósito, e isso não é desligar a guarda.** Ela
-       * existe para a gravação AUTOMÁTICA, que abre contato sozinha: `faltaData` a consulta de
-       * verdade antes de chamar. Quem chega até aqui passou `withCompletionDate: true` — é o
-       * Salvar dele, ou uma conclusão —, e nesses casos a decisão já foi tomada por gente. Era
-       * assim antes também: o código velho carimbava direto quando o campo estava vazio.
-       */
-      const pedidoExplicito = { temExato: true, temEtiqueta: true, temCidade: true };
-      if (
-        completion &&
-        fieldsLib.deveGravarPrimeiroContato({
-          dataAtual: dataDeConclusaoAtual(),
-          primeiroContato: primeiro,
-          ...pedidoExplicito,
-        })
-      ) {
-        changes[completion.id] = primeiro;
-        // Corrigir é diferente de preencher, e quem olha o Andamento precisa ver a diferença:
-        // uma data que MUDOU é a única escrita aqui que reescreve dado que já estava no CRM.
-        if (corrigindo && state.auto?.rodando) {
-          registrarNaRodada(
-            state.contact?.name || 'contato',
-            'aviso',
-            `corrigindo a data: ${corrigindo} → ${primeiro} (${origemDoPrimeiroContato()})`
-          );
-        }
-      }
     }
 
     const aplicaveis = state.tagSuggestions.filter(
@@ -15608,10 +15520,10 @@ const CONTATOS_POR_PAGINA = 200;
      * recebe. Etiqueta que não entrou continua aparecendo no status e no log — dá para reprocessar
      * pela aba Cidades a qualquer momento —, mas não impede mais alguém de ser atendido.
      *
-     * Cidade e data de conclusão **continuam** bloqueando: são campos do próprio contato, e
-     * seguir com eles errados é classificar errado.
+     * A cidade **continua** bloqueando: é campo do próprio contato, e seguir com ela errada é
+     * classificar errado. (A data de conclusão saiu em 12/11/2026, a pedido dele.)
      */
-    const essenciais = ['Cidade', fieldsLib.COMPLETION_FIELD];
+    const essenciais = ['Cidade'];
     const bloqueantes = problemas.filter((p) => essenciais.some((e) => p.startsWith(e)));
 
     const prefixo = automatico ? 'Aplicado sozinho' : 'Confirmado no CRM';
@@ -19202,10 +19114,8 @@ const CONTATOS_POR_PAGINA = 200;
     const learnTags = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender etiquetas');
     learnTags.addEventListener('click', () => semTravarOPainel('contrato', learnTagContract));
 
-    const learnDate = h('button', { class: 'wf-btn', type: 'button' }, 'Aprender data (conclusão)');
-    learnDate.addEventListener('click', () => semTravarOPainel('contrato', learnDateContract));
 
-    body.append(h('div', { class: 'wf-row' }, [learnText, learnTags, learnDate]));
+    body.append(h('div', { class: 'wf-row' }, [learnText, learnTags]));
 
     const logBox = h('div', { class: 'wf-mono' }, '');
     const showLog = h('button', { class: 'wf-btn wf-mini', type: 'button' }, 'Ver requisições capturadas');
@@ -19239,25 +19149,6 @@ const CONTATOS_POR_PAGINA = 200;
       },
       todas.map((t) => t.id),
       'Gravando. Agora, no painel "Dados do contato" DA PLATAFORMA (não aqui), abra as Etiquetas deste contato de teste, marque qualquer uma e salve.'
-    );
-  }
-
-  /**
-   * A data de conclusão não é campo de classificação (não aparece na aba Dados), então é
-   * procurada no schema inteiro. Sem contrato DATE próprio, a escrita cai no contrato de
-   * texto — e a API responde 200 sem gravar nada, que foi o bug observado.
-   */
-  async function learnDateContract() {
-    if (!state.contact) return setStatus('Abra um atendimento primeiro.', 'err');
-    const campo = state.schema.find((f) => f.name === fieldsLib.COMPLETION_FIELD);
-    if (!campo) {
-      return setStatus(`Campo "${fieldsLib.COMPLETION_FIELD}" não existe no schema.`, 'err');
-    }
-
-    return runLearn(
-      { id: campo.id, name: campo.name, type: campo.type },
-      SENTINEL_DATE_NEEDLES,
-      `Gravando. Agora, no painel "Dados do contato" DA PLATAFORMA (não aqui), clique em "Alterar" ao lado de "${fieldsLib.COMPLETION_FIELD}", ponha ${SENTINEL_DATE_HUMANO} e salve.`
     );
   }
 

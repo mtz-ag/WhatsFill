@@ -1,4 +1,41 @@
-## 2026-11-12 - v3.307.0 - ESTADO DE AGORA - despedida nao e cidade, anexo com texto vai para a IA, link com opiniao
+## 2026-11-12 - v3.308.0 - ESTADO DE AGORA - concluir fora da rodada, e a data de conclusao saiu
+
+**1. Concluir pelo painel fora da rodada** (a Dirce, a Simone e o Gilmar).
+- **"Classificado, mas undefined"**: o resolver da plataforma nova devolvia so `{ok, estado}`, o
+  painel lia `reason`, e o corpo da funcao do banco era jogado fora. Hoje `resolverConversa`
+  guarda a resposta e devolve `reason` em portugues (`api-mob.motivoDoResolver`: "a conversa
+  continua sem atendente (aguardando atendente)", "ainda em atendimento", "nao consegui reler",
+  com a recusa da plataforma junto quando ela der uma). O painel completa o motivo que faltar.
+- **Sem a rodada o concluir ia SEM id**, e sem id a guarda exige os dois sinais da tela — a linha da
+  fila, virtualizada, muitas vezes nao esta desenhada. Hoje vai o id da conversa que o painel
+  CARREGOU (`state.session.id`, so na plataforma nova); a tela mostrando outra continua recusando.
+- **"nao esta renderizada na lista" NAO era o concluir**: a conversa ja estava resolvida, e quem
+  falhou foi ABRIR A SEGUINTE. A mensagem separa: "concluido (Resolvido, conferido no banco). Nao
+  abri o proximo: ...". E a plataforma nova devolve `ok` (nao `changed`), entao o proximo aberto
+  com sucesso era dito como falha.
+- **"Aguardando atendente" depois da falha — medido na base, so leitura:** a conversa da Dirce
+  manteve `assumido_em` 14:49 e o mesmo atendente; nada liberou e reassumiu. Foi a TELA
+  desatualizada (assumir pela funcao do banco nao avisa o React — o caso da Marileide, 28/10), nao
+  o concluir devolvendo para a fila. Nenhum caminho nosso chama `liberar_conversa`.
+- **O que NAO foi medido:** por que o resolver daquele momento nao virou `resolvido`. A conversa
+  aparece resolvida as 16:14:53 de 12/11 (a unica resolucao em 20 min), e nao deu para saber de
+  qual aba saiu. Da proxima vez o motivo aparece na tela.
+
+**2. A gravacao da "Data de conclusao do contato" saiu, a pedido dele** ("funcao antiga, nao e
+mais usada"). Fora do `saveClassification`, da gravacao automatica, do cabecalho ("Primeiro
+contato: vai gravar..."), dos campos essenciais da conferencia e o botao "Aprender data
+(conclusao)". `fields.js` perdeu `deveGravarPrimeiroContato`, `primeiroContato`, `diaLocalDe` e
+`COMPLETION_FIELD`, com os testes deles. Cidade, nome, etiquetas e a retirada do "sem retorno"
+continuam iguais. **O que ja estava gravado no CRM nesse campo fica la, intocado.**
+
+**Prova:** suite nova `concluir-pelo-painel.test.mjs`; com o resolver antigo ela quebra, sem o id
+da conversa carregada cai 1, com o painel antigo caem 9. 57 suites, `checar-modulos` e
+`checar-referencias` passam. **Nao conferido ao vivo.**
+
+**Em aberto (da v3.301):** as regras do fluxo ainda leem a fala transcrita de dentro do video
+como fala dela.
+
+## 2026-11-12 - v3.307.0 - HISTORICO - despedida nao e cidade, anexo com texto vai para a IA, link com opiniao
 
 Tres ajustes pedidos por ele, com casos reais de 11 e 12/11.
 
