@@ -191,7 +191,7 @@ export function momentoDeNovoNaoCabe(c) {
  * Desabafo entra pelo mesmo motivo: formulário no fim de um acolhimento soa como máquina.
  */
 export const rascunhoSemCadastro = (c) =>
-  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza;
+  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza || !!c?.cortesiaParaRascunho;
 
 /**
  * **A ABSTENÇÃO DA IA NÃO VIRA A MENSAGEM DO DIA EM AGRADECIMENTO, ELOGIO OU REAÇÃO**
@@ -1450,9 +1450,22 @@ export function sugerirAcao(ctx, fluxo) {
     const daConfig = fluxo?.teclas?.[regra.id];
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
-    return { id: regra.id, tecla, motivo: regra.motivo(c) };
+    const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
+    return rascunhoDeCortesia(c, decisao) || decisao;
   }
-  return null;
+  return rascunhoDeCortesia(c, null);
+}
+
+/** Aplica também aos quadros já salvos, sem exigir reimportação do fluxo. */
+export function rascunhoDeCortesia(c, decisao) {
+  if (!c?.cortesiaParaRascunho || c.ultimaEhNossa || c.pedeRespostaPessoal || c.perguntaAberta ||
+      c.perguntaPendente || c.reclamaSemResposta || c.desabafoPessoal || c.denunciaOuCorrente ||
+      c.naoPodeFalarAgora || c.pedeAlgoIndefinido || c.materialPendente || c.pedeAjudaFinanceira ||
+      c.pedeEmprego || c.pedeLigacao || c.pedeFalarComDeputado || c.confirmouPresenca || c.informouEndereco ||
+      c.semInteresse || c.cortesiaDeFechamento || c.conteudoPedido || c.anuncioSemResposta) return null;
+  if (decisao && (!['1', '4', '5', '6', 'i', '3'].includes(decisao.tecla) ||
+      /sem-interesse|etiqueta-so-conclui|ultima-e-nossa/.test(decisao.id || ''))) return null;
+  return { id: 'cortesia-rascunho', tecla: null, resposta: null, ia: true, motivo: c.cortesiaParaRascunho.motivo };
 }
 
 /**

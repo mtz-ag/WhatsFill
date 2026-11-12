@@ -58,6 +58,9 @@ import {
 } from './ia.js';
 
 import { desabafoPessoal } from './cortesia.js';
+import { contextoPublico, TOM_PUBLICO, falhasTomPublico } from './tom-publico.js';
+import { contextoCortesia, TOM_CORTESIA, falhasTomCortesia } from './tom-cortesia.js';
+import { repasseParaIA, contextoDeAutoria, falhasDeAutoria } from './repasse-ia.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
@@ -304,10 +307,18 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
    * `precisaDoDossie` reconheceu que a conversa pergunta do candidato, da chapa ou das pautas.
    * Reaproveitar a conta existente evita a lista nova de formas de perguntar, que nunca fecha.
    */
+  const autoria = contextoDeAutoria(mensagens);
+  const falasProprias = (mensagens || []).filter(m => !repasseParaIA(m));
+  const tomPublico = contextoPublico(falasProprias);
+  const tomCortesia = contextoCortesia(falasProprias);
+  if (autoria.politico) tomCortesia.ativo = false;
+  if (tomCortesia.ativo || tomCortesia.demanda) tomPublico.ativo = false;
   const contato = montarContatoRascunho({
     mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios,
     perguntaDoMandato: !!String(gabinete || '').trim(),
-  });
+  }) + (tomPublico.ativo ? '\n\n' + TOM_PUBLICO : '')
+    + (tomCortesia.ativo ? '\n\n' + TOM_CORTESIA : '')
+    + '\nNunca use beijo, bjs ou beijão no rascunho; na despedida, use um grande abraço ou um abraço.';
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),
@@ -319,7 +330,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     dossie: !!String(gabinete || '').trim(),
   };
   try {
-    const r = await pedirAoWorker({
+    let r = await pedirAoWorker({
       type: MSG_IA,
       modo: 'rascunho',
       sistema,
@@ -328,6 +339,25 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     });
 
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
+    const conferirTom = (resposta) => {
+      const texto = validarRascunho(resposta.decisao, agora, {}).texto || '';
+      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasDeAutoria(texto, autoria)];
+    };
+    const falhasTom = conferirTom(r);
+    if (falhasTom.length) {
+      const primeira = r;
+      r = await pedirAoWorker({
+        type: MSG_IA, modo: 'rascunho', sistema, modelo: modelo || MODELO_PADRAO,
+        contato: contato + '\n\nREESCREVA: a tentativa anterior falhou em: ' + falhasTom.join('; ') + '. Gere uma nova resposta obedecendo todas as regras.',
+      });
+      const custo = primeira.custo || r?.custo
+        ? Object.fromEntries([...new Set([...Object.keys(primeira.custo || {}), ...Object.keys(r?.custo || {})])]
+          .map((chave) => [chave, (primeira.custo?.[chave] || 0) + (r?.custo?.[chave] || 0)]))
+        : null;
+      r = { ...r, custo, custoUsd: (primeira.custoUsd || 0) + (r?.custoUsd || 0) };
+      const restantes = r.ok ? conferirTom(r) : [r.motivo || 'a reescrita não respondeu'];
+      if (restantes.length) return { texto: '', avisos: restantes, precisaDeRevisao: true, confianca: 0, custo: r.custo, custoUsd: r.custoUsd, gastoMes: r.gastoMes, lidoPelaIA };
+    }
     // `validarRascunho` e não `revisarRascunho`: o rascunho passou a vir com esquema (texto +
     // confianca + precisaDeRevisao), e é a confiança que o envio automático precisa. Resposta
     // sem esquema ainda vira rascunho: o texto continua servindo para ele ler e mandar.

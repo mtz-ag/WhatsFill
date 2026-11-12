@@ -19,6 +19,24 @@
  * Puro e sem dependência, como o resto do que decide sobre mensagem de gente real.
  */
 
+import { contextoCortesia } from './tom-cortesia.js';
+
+/** Cortesia elaborada: conteúdo antes do tamanho, sem esconder pendências reais. */
+export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
+  const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(m => !m?.sistema && !m?.geradaPeloAnuncio);
+  if (!pendentes.length) return null;
+  if (pendentes.some(m => TIPOS_QUE_PEDEM_VOCE.has(String(m?.tipo || 'TEXT').toUpperCase()) && !(m?.transcrito && String(m.texto || '').trim()))) return null;
+  const texto = pendentes.map(m => m?.texto || '').join('\n');
+  if (!contextoCortesia(pendentes).ativo) return null;
+  // Agradecer antes de contar da própria vida não torna o relato inteiro uma cortesia.
+  if (/\b(?:tenho|tinha|estou falando|aconteceu|fui|fiz|moro|trabalho|trabalhei|fome)\b/i.test(semAcentos(texto))) return null;
+  if (falouDeSaude(texto) || trouxeDenuncia(texto) || desabafoPessoal(pendentes, null) ||
+      reclamaSemResposta(pendentes, null) || semInteresse(pendentes, null) || denunciaOuCorrente(pendentes, null)) return null;
+  // Cumprimentos simples já têm caminho próprio; esta exceção cobre a cortesia elaborada.
+  if (soCortesia(pendentes)) return null;
+  return { motivo: 'saudação, bênção ou carinho sem pedido — gerar um rascunho curto de cortesia' };
+}
+
 /** Tipos que a plataforma usa para figura. Conferidos no bundle do app (29/08/2026). */
 /**
  * Mídia que a pessoa **repassa**, e não produz: figura, figurinha e vídeo.
@@ -443,6 +461,7 @@ export function pedeRespostaPessoal(msg) {
     return { motivo: `mandou ${comoChama} — só dá para responder depois de abrir` };
   }
   // O corte é mais baixo para o que foi FALADO — ver `TEXTO_FALADO`.
+  if (cortesiaParaRascunho([msg], null)) return null;
   if (texto.trim().length >= (temTranscricao ? TEXTO_FALADO : TEXTO_LONGO)) {
     // "Falou" quando veio de áudio: o motivo aparece na tela, e dizer que a pessoa "escreveu"
     // 700 caracteres que ela falou faz quem lê procurar uma mensagem de texto que não existe.
@@ -833,6 +852,7 @@ export function rajadaFinal(entrantes, nossaUltimaAt) {
 export function conversaPedeRespostaPessoal(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
   const rajada = rajadaFinal(entrantes, nossaUltimaAt);
   if (!rajada.length) return null;
+  if (cortesiaParaRascunho(entrantes, nossaUltimaAt)) return null;
 
   /**
    * Tipo vence tamanho: não dá para responder um áudio sem abrir, venha ele sozinho ou não.
@@ -1130,6 +1150,7 @@ export function pedeColinha(texto) {
 }
 
 export function perguntaPendente(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  if (cortesiaParaRascunho(entrantes, nossaUltimaAt)) return null;
   /**
    * **O texto do ANÚNCIO não é pergunta dela** — print da Lídia (10/09/2026). Ela clicou no anúncio
    * *"Olá! Posso ter mais informações sobre isso?"*, cadastrado na Config com a ação "mandar o modelo
@@ -2698,6 +2719,7 @@ const RESPONDIDA_POR_PRONTA = [
 ];
 
 export function conversaTemPerguntaAberta(entrantes, nossaUltimaAt, padroesDeAnuncio = []) {
+  if (cortesiaParaRascunho(entrantes, nossaUltimaAt)) return false;
   // O texto do anúncio não é pergunta dela (a Lídia, 10/09) — ver `perguntaPendente`.
   const rajada = rajadaFinal(entrantes, nossaUltimaAt).filter((m) => !ehMensagemDeAnuncio(m, padroesDeAnuncio));
   if (!rajada.length) return null;
@@ -4764,6 +4786,7 @@ export function disseQueEDeOutroEstado(entrantes) {
 }
 
 export function falouAlgoProprio(entrantes, nossaUltimaAt, padroesDeAnuncio = [], opcoes = {}) {
+  if (cortesiaParaRascunho(entrantes, nossaUltimaAt)) return null;
   const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(
     (m) => !m?.sistema && !m?.geradaPeloAnuncio && !ehMensagemDeAnuncio(m, padroesDeAnuncio)
   );

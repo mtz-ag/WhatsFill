@@ -1,4 +1,6 @@
 import { plausivelNome } from './extract.js';
+import { semBeijos } from './tom-cortesia.js';
+import { repasseParaIA, contextoDeAutoria, instrucaoDeAutoria } from './repasse-ia.js';
 /**
  * ia.js — a avaliação de contexto, para escolher entre as respostas que já existem.
  *
@@ -3146,6 +3148,7 @@ export function blocoDosFormularios(formularios = {}) {
 }
 
 export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '', formularios = {} } = {}) {
+  const autoria = contextoDeAutoria(mensagens);
   /** Ver `FASE_PADRAO`. As linhas deste bloco que falavam de campanha seguem a mesma chave. */
   const EM_CAMPANHA = emCampanha(fase);
   /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
@@ -3167,6 +3170,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    */
   const lista = (mensagens || [])
     .map((m) => (typeof m === 'string' ? { de: 'contato', texto: m } : m))
+    .map((m) => repasseParaIA(m) ? { ...m, repassado: true, texto: '[REPASSADO: material de terceiro; conteúdo omitido, não é fala dela]' } : m)
     .filter((m) => String(m?.texto || '').trim());
 
   /**
@@ -3291,7 +3295,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const perguntouOCargoSo = cargoPerguntado && !perguntouDaTransicao(dela.map((m) => m.texto));
   const perguntouComoEleEsta = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && perguntaComoEleEsta(m.texto));
   const pendentesTotal = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa).length;
-  const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio).length;
+  const pendentes = lista.filter((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && !m.repassado).length;
   const soCliques = pendentes === 0 && pendentesTotal > 0;
 
   /**
@@ -3313,12 +3317,13 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
        * Sem isto a instrução fica ambígua no caso mais comum: anúncio + "bom dia" davam **duas**
        * linhas marcadas "← SEM RESPOSTA" com a frase no singular logo abaixo.
        */
-      const pendente = m.de !== 'nos' && i > ultimaNossa && !m.anuncio;
+      const pendente = m.de !== 'nos' && i > ultimaNossa && !m.anuncio && !m.repassado;
       const jaRespondida = m.de !== 'nos' && ultimaNossa >= 0 && i < ultimaNossa && !m.anuncio;
       const marca = pendente ? '   ← SEM RESPOSTA' : jaRespondida ? '   ← já respondida' : '';
       // O horário de cada fala — é o que permite o rascunho reconhecer que a conversa esfriou.
       const q = quandoFoi(m.at, agora);
-      return `${quem}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, 4000)}${marca}`;
+      const autoriaDaLinha = m.de !== 'nos' && !m.anuncio && !m.repassado ? ' [FALA DELA]' : '';
+      return `${quem}${q ? ` [${q}]` : ''}: ${umaLinha(m.texto, 4000)}${autoriaDaLinha}${marca}`;
     })
     .join('\n\n');
 
@@ -3450,7 +3455,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      * mudou é a forma — a resposta tem um eixo, e o resto entra reconhecido de passagem, em vez de
      * virar um relatório que responde item por item.
      */
-    soCliques
+    autoria.soRepasse
+      ? 'Só há REPASSADO sem resposta: agradeça o envio brevemente, sem resumir o conteúdo de terceiro.'
+      : soCliques
       ? 'Ela NÃO ESCREVEU nada: o que há sem resposta é só clique em anúncio, e o texto daquelas ' +
         'mensagens é da campanha. Não agradeça o que a campanha escreveu nem trate aquilo como ' +
         'declaração dela. Responda ao que ela pediu AO CLICAR, de forma curta e acolhedora.'
@@ -3466,6 +3473,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       : 'Responda à mensagem marcada "← SEM RESPOSTA".',
     'As falas dela marcadas "← já respondida" NÓS JÁ RESPONDEMOS: elas são contexto, e nada mais.',
     'Não volte a elas, não as responda de novo e não retome assunto que já encerramos.',
+    instrucaoDeAutoria(autoria),
     '',
     cadastro,
     /**
@@ -4590,7 +4598,7 @@ export function eleicaoAindaEmCurso(agora) {
 }
 
 export function revisarRascunho(bruto, agora, contexto = {}) {
-  let texto = String(bruto || '').trim();
+  let texto = semBeijos(String(bruto || '').trim());
   const avisos = [];
   if (!texto) return { texto: '', avisos: ['a IA não devolveu texto'] };
 
@@ -4653,11 +4661,15 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
    * devolver farelo ao eleitor é pior que devolver a repetição para ele ler.
    */
   if (contexto?.nossaUltima) {
-    const semRepetir = semRepetirONosso(texto, contexto.nossaUltima);
+    // A saudação de ontem não invalida a saudação correta de hoje, já resolvida acima.
+    const nossaComparacao = contexto.jaFalamosHoje === false
+      ? contexto.nossaUltima.replace(/\b(?:bom dia|boa tarde|boa noite)\b/gi, '')
+      : contexto.nossaUltima;
+    const semRepetir = semRepetirONosso(texto, nossaComparacao);
     if (semRepetir) {
       texto = semRepetir;
       avisos.push('o rascunho repetia o que a nossa última mensagem já dizia — tirei a parte repetida');
-    } else if (soRepeteONosso(texto, contexto.nossaUltima)) {
+    } else if (soRepeteONosso(texto, nossaComparacao)) {
       avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.sopraRepeticao);
     }
   }

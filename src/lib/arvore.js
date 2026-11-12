@@ -35,7 +35,7 @@
  * Puro e sem dependência de navegador, como tudo que decide sobre gente real neste projeto.
  */
 
-import { REGRAS, SOBRE, TECLAS } from './sugestao.js';
+import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia } from './sugestao.js';
 
 /**
  * Os SINAIS que um ramo pode usar como condição — o menu que ele vê ao criar um nó.
@@ -436,6 +436,8 @@ export function decidir(ctx, arvore, fluxo) {
   };
 
   const escolhida = andar(arvore, []);
+  const cortesia = rascunhoDeCortesia(c, escolhida);
+  if (cortesia) return cortesia;
   const gesto = momentoNoGesto(escolhida, c);
   if (gesto) return gesto;
   return escolhida ? { ...escolhida, empate: empatesDe(escolhida, arvore, c, fixadas) } : null;

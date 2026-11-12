@@ -1,4 +1,57 @@
-## 2026-11-11 - v3.302.0 - ESTADO DE AGORA - o link da agenda e o fecho, nao a mensagem
+## 2026-11-12 - v3.305.0 - ESTADO DE AGORA - Cortesia elaborada gera rascunho sem pedir atendente
+
+Caso Simone: além do tamanho, `falouAlgoProprio` e a pergunta social sobre os galos levavam à
+tecla 6. `cortesiaParaRascunho` agora reconhece a cortesia antes desses critérios, preservando
+perguntas/pedidos reais, saúde, desabafo, denúncia, queixa e mídia sem transcrição. A tabela e
+a árvore (inclusive salva) encaminham o sinal ao ramo existente de geração automática da IA,
+sem "Responda à mão" e sem formulário de cadastro no fecho. Configuração de IA e travas de envio
+continuam valendo. Cumprimentos simples e cortesia de fechamento mantêm seus caminhos.
+
+Mantidos os ajustes de tom das versões 3.303/3.304: reescrita de paráfrase, normalização de
+lugares, bênção/agradecimento/abraço em até três frases e troca de beijo/bjs/beijão por abraço.
+
+Verificação: 54 suítes passaram. Novo teste cobre tabela, árvore padrão e árvore de regras,
+texto longo e transcrição longa, todos os negativos pedidos e decisão seguida de chamada ao
+worker simulado com resposta aprovada. Não testado com API nem navegador ao vivo.
+Versão 3.305.0 no manifest; recarregar a extensão para aplicar, sem reimportar o fluxo.
+Pendência anterior mantida: atribuição da fala transcrita de vídeos ao contato (v3.301).
+
+## 2026-11-12 - v3.304.0 - HISTORICO - Cortesia sem retomar temas incidentais
+
+Caso: bênção carinhosa seguida de "Gratidão" gerava comentário sobre soluções climáticas e
+despedida com beijo. `tom-cortesia.js` considera a rajada pendente inteira, reconhece a pergunta
+social sobre madrugar com os galos e pede bênção, agradecimento pelo carinho e abraço em até
+três frases, sem pergunta nem tema incidental. Perguntas, pedidos e relatos concretos preservam
+o conteúdo; a cortesia não impõe o tratamento de tragédia quando menciona enchentes de passagem.
+
+Checagem normaliza acentos e lugares (nosso estado / Rio Grande do Sul / RS / gaúcho), compara
+expressões e rejeita retomada de tema. Reutiliza uma tentativa de reescrita; reincidência retorna
+rascunho vazio para revisão. Beijo/bjs/beijão são trocados por "um grande abraço" na revisão geral.
+A comparação com nossa mensagem anterior agora preserva a saudação de hoje quando a anterior
+é de outro dia. As demais travas continuam em vigor.
+
+Verificação: 53 suítes passaram, incluindo worker simulado do caso real, aliases de lugar,
+troca de despedida, perguntas/pedidos reais e falha persistente. Checagem de módulos passou.
+Não testado com API ao vivo. Detecção lexical, sem garantia de reconhecer toda paráfrase possível.
+Versão no manifest: 3.304.0. Recarregar a extensão para aplicar.
+
+Pendência anterior mantida: as regras do fluxo leem a fala transcrita de dentro do vídeo como
+fala do contato (v3.301).
+
+## 2026-11-12 - v3.303.0 - HISTORICO - Ajuste de tom em comentários públicos e tragédias
+
+Rascunho: a rajada pendente sobre problemas públicos recebe instrução de acolher em primeira
+pessoa, posicionar-se sem recontar o fato e agradecer, sem perguntas, em até três frases.
+Perguntas explícitas e indiretas preservam resposta ao conteúdo. Mantidas as validações existentes.
+O novo módulo `tom-publico.js` verifica termos específicos compartilhados, abertura proibida,
+acolhimento, posicionamento, agradecimento e extensão. Falha gera uma reescrita pelo mesmo modelo;
+persistindo, devolve texto vazio para revisão. Custos das duas chamadas são somados.
+
+Verificação: 52 suítes passaram, incluindo integração com worker simulado do caso real,
+reescrita persistente e perguntas reais; checagem de módulos passou. Não testado com API ao vivo.
+A detecção é lexical e conservadora, não um classificador semântico universal de paráfrases.
+
+## 2026-11-11 - v3.302.0 - HISTORICO - o link da agenda e o fecho, nao a mensagem
 
 Print dele: ela escreveu que espera conversar com ele antes de ele assumir a secretaria, no
 gabinete, e o rascunho saiu so com "Para solicitar uma visita ao Capitao Martim, preencha este

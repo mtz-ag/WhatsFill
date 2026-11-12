@@ -7,6 +7,7 @@
 
 import * as api from '../lib/api.js';
 import { limitarContextoIA } from '../lib/contexto-ia.js';
+import { preservarFalasPendentes } from '../lib/repasse-ia.js';
 import { avisoJanelaResposta, statusJanelaResposta } from '../lib/janela-resposta.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
@@ -30,7 +31,7 @@ import * as imagemLib from '../lib/imagem.js';
 import * as facebook from '../lib/facebook.js';
 import * as fbCliente from '../lib/facebook-cliente.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
-import { soCortesia } from '../lib/cortesia.js';
+import { soCortesia, cortesiaParaRascunho } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
@@ -11393,6 +11394,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // entrar aqui torna o caso tecla 6 ALTA nos dois ramos (na chegada, acima do recibo) sem ele
         // importar o quadro. **Só sem anúncio reconhecido esperando resposta:** se ela clicou num
         // anúncio cadastrado, o modelo DELE é o que ela pediu, e o recibo responde.
+        cortesiaParaRascunho: cortesiaParaRascunho(state.entrantes, state.nossaUltimaAt),
         pedeRespostaPessoal:
           conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
           pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
@@ -11952,7 +11954,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
         }
 
-        const porQue = sugestao
+        const porQue = sugestao?.id === 'cortesia-rascunho'
+          ? 'o fluxo reconheceu cortesia e pediu um rascunho automático'
+          : sugestao
           ? `o fluxo mandou para você ("${sugestao.id}")`
           : 'nenhuma caixa do fluxo decidiu este caso';
 
@@ -16804,6 +16808,8 @@ const CONTATOS_POR_PAGINA = 200;
     const doAnuncio = nomeDoAnuncioDaSessao();
     const dela = (state.entrantes || []).map((m, i) => ({
       de: 'contato',
+      tipo: m?.tipo || 'TEXT',
+      encaminhado: !!m?.encaminhado,
       /**
        * **Mídia sem texto vira LINHA, em vez de sumir** — pedido dele (16/09/2026). Até aqui o
        * `filter` do fim tirava figura, vídeo, documento e áudio sem transcrição: quem mandava uma
@@ -16831,7 +16837,7 @@ const CONTATOS_POR_PAGINA = 200;
       ordem: i,
     }));
     // 09/11/2026: sem este corte a IA citava assunto velho com a fila recente so de links.
-    return limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido)
+    return preservarFalasPendentes([...dela, ...nossa], limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido))
       .filter((m) => m.texto.trim())
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
       // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
@@ -16844,7 +16850,7 @@ const CONTATOS_POR_PAGINA = 200;
        * que passava só o tipo: função testada não garante nada se quem chama filtrar os campos que ela
        * lê — e aqui o filtro estava no ÚLTIMO passo, depois de o campo ter sido montado.
        */
-      .map(({ de, texto, at, anuncio, transcrito, semConteudo, midia }) => ({ de, texto, at, anuncio, transcrito, semConteudo, midia }));
+      .map(({ de, texto, at, anuncio, transcrito, semConteudo, midia, tipo, encaminhado }) => ({ de, texto, at, anuncio, transcrito, semConteudo, midia, tipo, encaminhado }));
   }
   /**
    * Rascunha com a IA e **deixa o texto no campo de mensagem, para ele mandar.**
