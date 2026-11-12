@@ -32,7 +32,8 @@ export function contextoDeAutoria(mensagens = []) {
 export function instrucaoDeAutoria(contexto) {
   const base = 'AUTORIA: FALA DELA é texto próprio; REPASSADO é material de terceiro, nunca opinião atribuível ao contato. Priorize a fala própria mais recente ainda sem resposta e o ponto central da sequência dela, mesmo que links ou áudios repassados tenham chegado depois. Não resuma o repasse nem responda ao comentarista. Nunca copie ou parafraseie a sequência de argumentos dela. Preserve primeira pessoa, saudação pelo horário real, sem nome, equipe, urgência/prioridade ou promessa de levar ao deputado.';
   if (contexto.soRepasse) return base + ' Só há REPASSADO pendente: agradeça brevemente por mandar e encerre com um abraço, sem resumir assuntos, atribuir preocupações ou fazer pergunta; no máximo 3 frases.';
-  if (contexto.politico) return base + ' COMPARTILHAMENTO POLÍTICO PRÓPRIO: uma frase de posição em primeira pessoa sobre o ponto central (concordo, defendo, sigo firme), sem inventar ações nem endossar acusações contra terceiros. Agradeça calorosamente o apoio quando declarado e feche com abraço, sem pergunta, no máximo 3 frases. Não liste temas, não escreva "Questões como...", "precisam continuar sendo", "devem ser acompanhadas" nem "Obrigado por compartilhar suas preocupações". Voto aberto pede posicionamento sobre transparência, não repetição das acusações sobre celulares/tablets.';
+  if (contexto.politico) return base + ' COMPARTILHAMENTO POLÍTICO PRÓPRIO: uma frase de posição em primeira pessoa sobre o ponto central (concordo, defendo, sigo firme), sem inventar ações nem endossar acusações contra terceiros. Agradeça calorosamente o apoio quando declarado e feche com abraço, sem pergunta, no máximo 3 frases. Não liste temas, não escreva "Questões como...", "precisam continuar sendo", "devem ser acompanhadas" nem "Obrigado por compartilhar suas preocupações".' +
+    (/\b(?:voto aberto|transparencia)\b/.test(normalizar(contexto.texto)) ? ' O ponto próprio é a transparência do voto: posicione-se sobre ela, sem repetir acusações contra terceiros.' : '');
   return base;
 }
 
@@ -54,7 +55,8 @@ export function falhasDeAutoria(texto, contexto) {
   const dela = termos(contexto.texto);
   const terceiros = termos(contexto.repasses.map(m => m.texto).join(' '));
   const repetidos = [...termos(texto)].filter(p => terceiros.has(p) && !dela.has(p));
-  if (contexto.repasses.length && (repetidos.length >= 2 || /\b(?:aposentad\w*|paraguai|cop\d*)\b/.test(t) && !/\b(?:aposentad\w*|paraguai|cop\d*)\b/.test(normalizar(contexto.texto)))) falhas.push('resumiu assunto exclusivo de terceiro');
+  const temasDeTerceiro = normalizar(contexto.repasses.map(m => m.texto).join(' ')).match(/\b(?:aposentad\w*|paraguai|cop\d*)\b/g) || [];
+  if (contexto.repasses.length && (repetidos.length >= 2 || temasDeTerceiro.some(p => t.includes(p) && !normalizar(contexto.texto).includes(p)))) falhas.push('resumiu assunto exclusivo de terceiro');
   if (contexto.soRepasse && /\b(?:preocupac\w*|concordo|defendo|aposentad\w*|paraguai|cop\d*)\b/.test(t)) falhas.push('só agradeça o envio, sem atribuir opinião');
   return falhas;
 }

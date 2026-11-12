@@ -3473,7 +3473,6 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       : 'Responda à mensagem marcada "← SEM RESPOSTA".',
     'As falas dela marcadas "← já respondida" NÓS JÁ RESPONDEMOS: elas são contexto, e nada mais.',
     'Não volte a elas, não as responda de novo e não retome assunto que já encerramos.',
-    instrucaoDeAutoria(autoria),
     '',
     cadastro,
     /**
@@ -3849,6 +3848,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       'conteúdo só entram se ela pediu ou perguntou por isso. Nada de "quer que eu te mande…?", "posso ' +
       'te encaminhar…?" ou "qual prefere?" para criar assunto. Se fechar com pergunta, a pergunta é ' +
       'sobre o que ELA trouxe.',
+    instrucaoDeAutoria(autoria),
     'Escreva o rascunho da resposta.',
   ]
     .filter(Boolean)

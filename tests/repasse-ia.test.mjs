@@ -1,0 +1,52 @@
+import { readFileSync } from 'node:fs';
+import { check, fim, lib } from './_harness.mjs';
+const { repasseParaIA, contextoDeAutoria, falhasDeAutoria, preservarFalasPendentes } = await lib('repasse-ia.js');
+const { montarContatoRascunho } = await lib('ia.js');
+const { rascunhar } = await lib('ia-cliente.js');
+const { limitarContextoIA } = await lib('contexto-ia.js');
+const agora = new Date(); agora.setHours(10, 0, 0, 0);
+const ontem = new Date(agora); ontem.setDate(ontem.getDate() - 1);
+const mensagem = (de, texto, at = ontem, extra = {}) => ({ de, texto, at: at.toISOString(), ...extra });
+const nossa = mensagem('nos', 'Defendo a transparência do voto.');
+const audio = mensagem('contato', 'No nosso encontro de hoje falamos do alarmismo, Paraguai, aposentados e COP. De Brasília, Alexandre Garcia.', agora, { tipo: 'AUDIO', transcrito: true });
+const conversa = [nossa,
+  mensagem('contato', 'A direita tem que se unir, voto aberto para Senado e Câmara.'),
+  mensagem('contato', 'Fora Alcolumbre, fora Motta. Não se vendam por celulares, os tablets do Hugo Motta são um escândalo.'),
+  mensagem('contato', 'Vamos estar sempre ao lado de vcs.'),
+  mensagem('contato', 'https://facebook.com/a'), mensagem('contato', 'https://facebook.com/b'), audio];
+const boa = 'Bom dia! Concordo, o eleitor tem o direito de saber como cada um vota, e eu sigo defendendo a transparência. Obrigado por estar sempre junto, um grande abraço!';
+const ruim = 'Bom dia! Questões como o uso dos recursos públicos, a situação dos aposentados e a responsabilidade nas decisões do governo precisam continuar sendo acompanhadas e cobradas. Obrigado por compartilhar suas preocupações.';
+const contexto = contextoDeAutoria(conversa);
+check(contexto.proprias.length === 3 && contexto.repasses.length === 3 && contexto.politico, 'fala própria pendente antes dos links e áudio');
+check(repasseParaIA(audio), 'assinatura identifica áudio de comentarista sem flag');
+check(!repasseParaIA(mensagem('contato', 'Discordo do Alexandre Garcia sobre voto aberto.')), 'citar comentarista continua fala própria');
+check(!repasseParaIA(mensagem('contato', 'Quero falar da minha aposentadoria.', agora, { tipo: 'AUDIO', transcrito: true })), 'áudio próprio continua próprio');
+for (const m of [{ texto: 'Repasse para seus grupos: uma notícia' }, { texto: 'conteúdo', encaminhado: true }, { texto: 'discurso', tipo: 'VIDEO', transcrito: true }, { texto: 'https://facebook.com/a' }]) check(repasseParaIA(m), 'identifica repasse: ' + JSON.stringify(m));
+const prompt = montarContatoRascunho({ mensagens: conversa, agora });
+check(prompt.includes('[FALA DELA]') && prompt.includes('[REPASSADO:'), 'prompt distingue autoria');
+check(prompt.includes('voto aberto para Senado') && !prompt.includes('Paraguai') && !prompt.includes('aposentados'), 'contexto mantém ponto próprio e omite discurso repassado');
+check(prompt.includes('Ela escreveu 3 mensagens sem resposta'), 'repasses não contam como fala própria pendente');
+check(!falhasDeAutoria(boa, contexto).length, 'resposta aprovada passa');
+check(falhasDeAutoria(ruim, contexto).length > 0, 'rejeita rascunho real');
+check(falhasDeAutoria('As questões devem ser acompanhadas. Obrigado, um abraço!', contexto).length > 0, 'rejeita voz passiva genérica');
+const recentes = limitarContextoIA(conversa, 12, agora);
+check(recentes.length === 1 && preservarFalasPendentes(conversa, recentes).length === 5, 'corte temporal preserva próprias pendentes e nossa âncora');
+const respondida = [...conversa.slice(0, -1), mensagem('nos', 'Já respondi.', agora), audio];
+check(contextoDeAutoria(respondida).proprias.length === 0, 'não retoma falas já respondidas');
+let chamadas = []; let respostas = [];
+chrome.runtime.sendMessage = async pedido => { chamadas.push(pedido); return { ok: true, decisao: { texto: respostas.shift(), confianca: 0.95, precisaDeRevisao: false } }; };
+const args = { mensagens: conversa, agora, templates: [], campos: {}, modelo: 'gpt-5.6-luna' };
+respostas = [ruim, boa];
+let r = await rascunhar(args);
+check(chamadas.length === 2 && r.texto === boa, 'worker reescreve e entrega resposta aprovada');
+check(!/aposentados|Paraguai|\bCOP\b|Questões como|precisam continuar/i.test(r.texto), 'saída não resume o áudio nem usa lista impessoal');
+chamadas = []; respostas = [ruim, 'Bom dia! Obrigado por mandar, um grande abraço!'];
+r = await rascunhar({ ...args, mensagens: [audio] });
+check(chamadas.length === 2 && r.texto === 'Bom dia! Obrigado por mandar, um grande abraço!', 'só repasse recebe agradecimento curto, sem resumo');
+chamadas = []; respostas = [ruim, ruim];
+r = await rascunhar(args);
+check(chamadas.length === 2 && !r.texto && r.precisaDeRevisao, 'não libera reincidência');
+const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+check(painel.includes('midia, tipo, encaminhado }) =>'), 'tecla 8 preserva metadados até o último map');
+check(painel.includes('preservarFalasPendentes([...dela, ...nossa], limitarContextoIA('), 'tecla 8 preserva fala própria pendente no corte');
+fim();

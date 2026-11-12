@@ -1,4 +1,25 @@
-## 2026-11-12 - v3.305.0 - ESTADO DE AGORA - Cortesia elaborada gera rascunho sem pedir atendente
+## 2026-11-12 - v3.306.0 - ESTADO DE AGORA - Fala própria antes de repasse no rascunho
+
+Caso idolesia: o áudio de comentarista chegava como fala do contato e tomava o lugar da fala
+própria pendente sobre transparência do voto. O painel agora preserva tipo e encaminhamento
+até a chamada da IA. `repasse-ia.js` identifica encaminhados, vídeos, links puros, chamadas de
+repasse e assinaturas reconhecíveis de comentarista; mera menção ao nome não basta.
+
+O prompt marca FALA DELA / REPASSADO e omite o discurso do terceiro. Repasses não entram na
+contagem de falas próprias sem resposta. O corte temporal preserva as próprias ainda pendentes
+antes de um repasse recente, junto à última resposta nossa; não reabre assunto já respondido.
+Compartilhamento político próprio pede posição em primeira pessoa, agradecimento caloroso e
+abraço. Só repasse pede agradecimento curto. Voz passiva genérica, lista de temas e resumo de
+assunto exclusivo do terceiro disparam a reescrita já existente; reincidência fica para revisão.
+
+Verificação: 55 suítes passaram, incluindo o caso real, apenas repasse, fala já respondida,
+áudio próprio, menção ao comentarista, corte temporal e worker simulado. Checagem de módulos
+passou. Sem API ou navegador ao vivo. A identificação de autoria é heurística, não universal.
+Versão 3.306.0 no manifest; recarregar a extensão para aplicar.
+Pendência de fluxo da v3.301 mantida: esta mudança resolve atribuição no rascunho, não altera
+todos os classificadores determinísticos de transcrições de vídeo.
+
+## 2026-11-12 - v3.305.0 - HISTORICO - Cortesia elaborada gera rascunho sem pedir atendente
 
 Caso Simone: além do tamanho, `falouAlgoProprio` e a pergunta social sobre os galos levavam à
 tecla 6. `cortesiaParaRascunho` agora reconhece a cortesia antes desses critérios, preservando
