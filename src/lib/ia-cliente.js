@@ -61,6 +61,7 @@ import { desabafoPessoal } from './cortesia.js';
 import { contextoPublico, TOM_PUBLICO, falhasTomPublico } from './tom-publico.js';
 import { contextoCortesia, TOM_CORTESIA, falhasTomCortesia } from './tom-cortesia.js';
 import { repasseParaIA, contextoDeAutoria, falhasDeAutoria } from './repasse-ia.js';
+import { contextoAnexo, TOM_ANEXO, falhasTomAnexo } from './tom-anexo.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
@@ -313,11 +314,16 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
   const tomCortesia = contextoCortesia(falasProprias);
   if (autoria.politico) tomCortesia.ativo = false;
   if (tomCortesia.ativo || tomCortesia.demanda) tomPublico.ativo = false;
+  // Arquivo com texto próprio (12/11/2026): responde ao texto e agradece o material. O tom de
+  // cortesia exige "carinho" e bênção, e aqui o que ele mandou foi apresentação e apoio.
+  const tomAnexo = contextoAnexo(mensagens);
+  if (tomAnexo.ativo) { tomCortesia.ativo = false; tomPublico.ativo = false; }
   const contato = montarContatoRascunho({
     mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   }) + (tomPublico.ativo ? '\n\n' + TOM_PUBLICO : '')
     + (tomCortesia.ativo ? '\n\n' + TOM_CORTESIA : '')
+    + (tomAnexo.ativo ? '\n\n' + TOM_ANEXO : '')
     + '\nNunca use beijo, bjs ou beijão no rascunho; na despedida, use um grande abraço ou um abraço.';
   const lidoPelaIA = {
     contato,
@@ -341,7 +347,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
     const conferirTom = (resposta) => {
       const texto = validarRascunho(resposta.decisao, agora, {}).texto || '';
-      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasDeAutoria(texto, autoria)];
+      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasDeAutoria(texto, autoria)];
     };
     const falhasTom = conferirTom(r);
     if (falhasTom.length) {

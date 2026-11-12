@@ -1,4 +1,50 @@
-## 2026-11-12 - v3.306.0 - ESTADO DE AGORA - Fala própria antes de repasse no rascunho
+## 2026-11-12 - v3.307.0 - ESTADO DE AGORA - despedida nao e cidade, anexo com texto vai para a IA, link com opiniao
+
+Tres ajustes pedidos por ele, com casos reais de 11 e 12/11.
+
+**1. "Abracao" virava Barracao (aproximada)** — o Tenente Fraga, de Imbe. Mesma familia do
+"casada" -> Chapada: a mensagem curta e inteira aceita o aproximado. Causas medidas:
+- a despedida estava a duas letras de um municipio e nao havia lista de palavras de fecho;
+- "Pertenco ao Republicanos de Imbe" nao era lido ("de" sozinho nao e pista, de proposito);
+- entre mensagens, a mais nova vencia mesmo sendo aproximada contra uma exata.
+
+Conserto: despedida, saudacao e apoio (abraco/abracao/abs, beijo/bjs, amem, obrigado/a, grato/a,
+gratidao, parabens, valeu, fe, sucesso) saem antes de casar, provado contra os 5.325 municipios
+(RS + Brasil) — so "fe" (Santa Fe, Maria da Fe) e "sucesso" (Bom Sucesso) aparecem em nome de
+cidade e levam guarda de contexto. "<partido> de X" e "diretorio de X" viram pista, so com
+casamento EXATO ("PL" tambem e projeto de lei). Entre mensagens, o exato vence; o aproximado vira
+reserva. De brinde: "Pertenco ao ..." deixou de virar nome no modo resposta ao formulario.
+
+**2. Arquivo com texto proprio travava o rascunho** (tecla 6, "mandou um arquivo"). Hoje
+`cortesiaParaRascunho` tem um ramo do ANEXO (`tom-anexo.js`): arquivo + texto que basta, sem
+pedido nem pergunta, vira rascunho da IA, que responde ao texto e agradece o material sem dizer
+que leu (conferido: "li sua apresentacao" e reescrito). Continua na tecla 6: so o arquivo, pedido
+sobre ele ("veja o documento", "o que acha?"), audio sem transcricao junto, e as guardas da
+cortesia (saude, denuncia, desabafo, queixa, hostilidade). Vale no quadro salvo, sem importar.
+
+**3. Regra nova: UM link + texto que puxa a nossa opiniao** ("viu isso?", "o que acha?",
+"absurdo", "olha o que fizeram", comentario politico). Sai a resposta pronta `link-compartilhado`
+("{{saudacao}}! Obrigado por compartilhar, darei uma olhada. Um grande abraco!"), sem a IA; ja
+tendo falado hoje (mensagem do momento ou qualquer resposta nossa), a forma sem saudacao.
+Detector `cortesia.linkComOpiniao`, decisao `sugestao.respostaLinkComOpiniao`, aplicada na tabela
+e na arvore DEPOIS da decisao — vale no quadro salvo, sem importar. Fora dela, com o desfecho de
+hoje mantido (ha teste comparando): link sozinho, dois ou mais links, link com so saudacao ou
+bencao, pergunta de conteudo ("isso e verdade?"), pedido, texto acima de 280 caracteres. Nao passa
+por cima de sem interesse, assessor, ultima e nossa, engajado, limite de 48h, pulos e respostas de
+pedido. As duas respostas chegam a lista gravada por migracao.
+
+**Decisao minha, dita a ele:** a forma sem saudacao vale tambem quando ja respondemos hoje por
+outro motivo (nao so a mensagem do momento) — dois "Bom dia!" no mesmo dia e o que denuncia a
+maquina.
+
+**Prova:** suite nova `despedida-anexo-link.test.mjs`. Desligando cada conserto caem 6 (cidade),
+4 (anexo) e 13 (link) assercoes. 56 suites, `checar-modulos` e `checar-referencias` passam.
+**Nao conferido ao vivo.**
+
+**Em aberto (da v3.301):** as regras do fluxo ainda leem a fala transcrita de dentro do video
+como fala dela.
+
+## 2026-11-12 - v3.306.0 - HISTORICO - Fala própria antes de repasse no rascunho
 
 Caso idolesia: o áudio de comentarista chegava como fala do contato e tomava o lugar da fala
 própria pendente sobre transparência do voto. O painel agora preserva tipo e encaminhamento

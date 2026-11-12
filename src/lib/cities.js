@@ -384,6 +384,19 @@ const EXPRESSOES_QUE_NAO_SAO_CIDADE = [
   /(?<!ilha\s)\bsolteir[oa]\b/g,
   /(?<!\bdo\s)\bcasad[oa]\b/g,
   /\b(viuv[oa]|divorciad[oa]|separad[oa]|aposentad[oa]|pensionista)\b/g,
+  /**
+   * **Despedida, saudação e apoio** — print do Tenente Fraga (12/11/2026): a última mensagem dele
+   * foi *"Abração"*, e o cabeçalho mostrava **Cidade: Barracão (aproximada) ← de "abracao"**, com
+   * *"Pertenço ao Republicanos de Imbé"* três mensagens acima. Mesma família do "casada" →
+   * Chapada: a mensagem curta e inteira aceita o aproximado, e a palavra de fecho estava a duas
+   * letras de um município.
+   *
+   * **Provada contra os 5.325 municípios** (RS + Brasil, 12/11/2026): só **fé** e **sucesso** aparecem
+   * em nome de cidade (Santa Fé, Maria da Fé, Bom Sucesso…), e por isso levam guarda de contexto.
+   */
+  /\b(abrac(o|os|ao|oes|inho|inhos)|abs|beij(o|os|ao|inho|inhos)|bjs?|bjos?|bjus?|amem|obrigad[oa]s?|grat[oa]s?|gratidao|parabens|valeu|vlw|tmj)\b/g,
+  /(?<!\b(santa|da)\s)\bfe\b/g,
+  /(?<!\bbom\s)\bsucesso\b/g,
 ];
 
 /**
@@ -616,6 +629,19 @@ const SUFIXO_ESTADO_SOLTO = /[\s,.\/-]+(r\s*[\/.\-]?\s*s|rgs|rgds)\b/gi;
  */
 const SIGLAS_DE_CIDADE = { rg: 'rio grande' };
 
+/**
+ * **O diretório do partido é um lugar** — print do Tenente Fraga (12/11/2026): *"Pertenço ao
+ * Republicanos de Imbé"*. "de" sozinho continua não sendo pista (é a preposição mais comum do
+ * português); o que a torna pista é o PARTIDO colado nela, porque diretório é municipal.
+ *
+ * **Só vale casamento EXATO** (`PISTAS_SO_EXATAS`): "PL" também é projeto de lei, e *"o PL do
+ * aborto"* não pode virar palpite de cidade. Ficam fora `pt` e `novo`, que são palavra comum
+ * (*"de novo"*, abreviação de "parte").
+ */
+const PISTA_DO_PARTIDO =
+  /\b(republicanos|pl|pp|mdb|psdb|podemos|uni[ãa]o brasil|pdt|ptb|psd|psb|solidariedade|avante|cidadania|patriota|diret[óo]rio(?:\s+municipal)?(?:\s+d[oa])?)\s+(de|do|da)\s+/gi;
+const PISTAS_SO_EXATAS = new Set([PISTA_DO_PARTIDO]);
+
 const PISTAS_DE_CIDADE = [
   /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
   /\bmorando\s+(em|no|na)\s+/gi,
@@ -645,6 +671,7 @@ const PISTAS_DE_CIDADE = [
   /\bregi[ãa]o\s+(de|do|da)\s+/gi,
   /\bem\s+/gi, // "material impresso em Pelotas" — preposição de lugar, e a mais comum
   /\/\s*/g, // a resposta ao formulário: "Maria / Santo Ângelo"
+  PISTA_DO_PARTIDO,
 ];
 
 /**
@@ -811,6 +838,7 @@ export async function matchCityComContexto(text) {
       const trecho = bruto.slice(inicio, inicio + ALCANCE_DA_PISTA);
       const hit = await matchCity(trecho);
       if (hit?.confidence === 'exata') return { ...hit, pista: m[0].trim() };
+      if (PISTAS_SO_EXATAS.has(pista)) continue;
       if (hit) {
         const adiante = await matchCity(bruto.slice(inicio, inicio + ALCANCE_DA_PISTA * 2));
         if (adiante?.confidence === 'exata') return { ...adiante, pista: m[0].trim() };

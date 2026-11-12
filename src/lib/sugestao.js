@@ -1451,9 +1451,38 @@ export function sugerirAcao(ctx, fluxo) {
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
-    return rascunhoDeCortesia(c, decisao) || decisao;
+    return respostaLinkComOpiniao(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
   }
-  return rascunhoDeCortesia(c, null);
+  return respostaLinkComOpiniao(c, null) || rascunhoDeCortesia(c, null);
+}
+
+/**
+ * **Link com texto que puxa a nossa opinião** (12/11/2026, regra dele) — ver `cortesia.linkComOpiniao`.
+ *
+ * Sai a resposta pronta `link-compartilhado`: *"{{saudacao}}! Obrigado por compartilhar, darei uma
+ * olhada. Um grande abraço!"*, sem a IA e sem "Responda à mão". Já tendo saído a mensagem do momento
+ * (ou qualquer resposta nossa) hoje, sai a forma SEM saudação: dois "Bom dia!" no mesmo dia é o que
+ * denuncia a máquina.
+ *
+ * **Como `rascunhoDeCortesia`, vale também nos quadros já salvos**, sem ele reimportar o fluxo. E só
+ * troca desfecho que não é proteção: sem interesse, assessor, a conversa que termina em nós, a
+ * etiqueta de engajado, o limite de 48 horas, os pulos (2) e as respostas prontas de pedido (f)
+ * continuam vencendo.
+ */
+export function respostaLinkComOpiniao(c, decisao) {
+  if (!c?.linkComOpiniao || c.ultimaEhNossa || c.semInteresse || c.pedeAjudaFinanceira || c.pedeEmprego ||
+      c.pedeLigacao || c.pedeFalarComDeputado || c.materialPendente || c.confirmouPresenca ||
+      c.informouEndereco || c.desabafoPessoal || c.naoPodeFalarAgora || c.reclamaSemResposta) return null;
+  if (decisao && (decisao.resposta || !['1', '4', '5', '6', 'i', '3', 'a', null, undefined].includes(decisao.tecla) ||
+      /sem-interesse|etiqueta-so-conclui|ultima-e-nossa|etiqueta-dispensa-da-fila|contexto-de-outro-dia/.test(decisao.id || ''))) return null;
+  const semSaudacao = !!(c.momentoJaEnviado || c.respondidoHoje);
+  return {
+    id: 'link-com-opiniao',
+    tecla: null,
+    resposta: semSaudacao ? 'link-compartilhado-sem-saudacao' : 'link-compartilhado',
+    ia: false,
+    motivo: c.linkComOpiniao.motivo,
+  };
 }
 
 /** Aplica também aos quadros já salvos, sem exigir reimportação do fluxo. */

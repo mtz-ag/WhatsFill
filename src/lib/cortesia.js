@@ -20,11 +20,25 @@
  */
 
 import { contextoCortesia } from './tom-cortesia.js';
+import { contextoAnexo } from './tom-anexo.js';
 
 /** Cortesia elaborada: conteúdo antes do tamanho, sem esconder pendências reais. */
 export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
   const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(m => !m?.sistema && !m?.geradaPeloAnuncio);
   if (!pendentes.length) return null;
+  /**
+   * **Arquivo com texto próprio que basta** (12/11/2026, o Tenente Fraga) — ver `tom-anexo.js`. O
+   * arquivo deixa de travar o rascunho: a IA responde ao texto e só agradece o material. As mesmas
+   * guardas da cortesia valem (saúde, denúncia, desabafo, queixa, hostilidade); só o arquivo sozinho
+   * ou um pedido sobre ele continuam indo para você.
+   */
+  const anexo = contextoAnexo(pendentes);
+  if (anexo.temAnexo) {
+    if (!anexo.ativo) return null;
+    if (falouDeSaude(anexo.texto) || trouxeDenuncia(anexo.texto) || desabafoPessoal(pendentes, null) ||
+        reclamaSemResposta(pendentes, null) || semInteresse(pendentes, null) || denunciaOuCorrente(pendentes, null)) return null;
+    return { motivo: 'mandou um arquivo com texto próprio — o rascunho responde ao texto e agradece o material, sem dizer que leu', anexo: true };
+  }
   if (pendentes.some(m => TIPOS_QUE_PEDEM_VOCE.has(String(m?.tipo || 'TEXT').toUpperCase()) && !(m?.transcrito && String(m.texto || '').trim()))) return null;
   const texto = pendentes.map(m => m?.texto || '').join('\n');
   if (!contextoCortesia(pendentes).ativo) return null;
@@ -35,6 +49,53 @@ export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
   // Cumprimentos simples já têm caminho próprio; esta exceção cobre a cortesia elaborada.
   if (soCortesia(pendentes)) return null;
   return { motivo: 'saudação, bênção ou carinho sem pedido — gerar um rascunho curto de cortesia' };
+}
+
+/**
+ * **UM link com texto que puxa a nossa opinião** — regra dele (12/11/2026): *"viu isso?"*, *"o que
+ * acha?"*, *"absurdo né"*, *"olha o que fizeram"*, ou comentário político sobre o que o link mostra.
+ * A resposta não opina, não resume e não comenta o tema do link: agradece e diz que vai olhar
+ * (`sugestao.respostaLinkComOpiniao`).
+ *
+ * **O que fica FORA, e cada um já tem caminho:** link sem texto (conclui sem enviar), dois ou mais
+ * links (a resposta de hoje), link com só saudação ou bênção (a cortesia), e qualquer PEDIDO ou
+ * pergunta que não seja de opinião (*"isso é verdade?"*, *"quando é o evento?"*) — esses pedem
+ * resposta ao conteúdo, e "darei uma olhada" responderia ao lado.
+ *
+ * Lê o que veio desde a NOSSA última fala: respondido o link, ele deixa de contar.
+ */
+const LINKS = /https?:\/\/\S+|\bwww\.\S+|\b[a-z0-9-]+\.(?:com|br|net|org|me|tv|app|io)(?:\/\S*)?(?=\s|$)/gi;
+
+/** Formas de puxar a nossa opinião. O "?" colado vai junto: "viu isso?" não é pergunta de conteúdo. */
+const PUXA_OPINIAO = /\b(?:(?:voce|vc|vcs|voces|o senhor|ja|ce)\s+)?(?:viu|viram|vio|ve|veja|vejam|olha|olhem|olhe)\s+(?:so\s+)?(?:isso|isto|so|ai|esse|essa|este|esta|o que|que)\b[^?\n]{0,40}\??|\b(?:o\s+)?que\s+(?:voce|vc|vcs|voces|o senhor|tu)?\s*(?:acha|acham|achou|achas)\b[^?\n]{0,30}\??|\bque acha\w*\b[^?\n]{0,30}\??|\b(?:um\s+|que\s+|e\s+um\s+)?(?:absurdo|vergonha|lamentavel|inacreditavel|revoltante|ridiculo|palhacada|nojo|nojento|escandalo|safadeza|bandidagem|roubalheira)\b[^?\n]{0,20}\??|\bn[ae]\s*\?|\bpode\s+(?:isso|uma coisa dessas)\b\s*\??|\bta\s+vendo\b\s*\??|\be\s+agora\s*\??|\bonde\s+(?:vamos|vai)\s+parar\b\s*\??/g;
+
+/** Comentário político sobre o conteúdo também puxa opinião, mesmo sem a forma de pergunta. */
+const COMENTARIO_POLITICO = /\b(?:lula|pt|petista\w*|stf|moraes|xandao|governo|esquerd\w*|comunis\w*|bolsonar\w*|direita|corrup\w*|ladr\w*|alcolumbre|motta|congresso|senado|ministr\w*|presidente|impost\w*|eleica\w*|urna\w*|democracia|ditadura|censura)\b/;
+
+/** Pedido de verdade: com ele a pessoa espera resposta ao conteúdo, não um "darei uma olhada". */
+const PEDIDO_NO_LINK = /\b(?:quero|queria|gostaria|preciso|precisamos|me (?:manda|mande|envia|envie|passa|passe|ajud\w*|diga|explica)|como (?:faco|eu faco|consigo|posso)|onde (?:fica|consigo|posso)|quando (?:vai|e|sera)|voces podem|o senhor pode|pode(?:m)? me)\b/;
+
+export function linkComOpiniao(entrantes, nossaUltimaAt) {
+  const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter((m) => !m?.sistema && !m?.geradaPeloAnuncio);
+  if (!pendentes.length) return null;
+  // Áudio sem transcrição, documento, contato: algo para abrir, e esta resposta não abre nada.
+  if (pendentes.some((m) => TIPOS_QUE_PEDEM_VOCE.has(String(m?.tipo || 'TEXT').toUpperCase()) && !(m?.transcrito && String(m.texto || '').trim()))) return null;
+  const bruto = pendentes.map((m) => String(m?.texto || '')).join('\n');
+  const links = bruto.match(LINKS) || [];
+  if (links.length !== 1) return null;
+  const resto = semAcentos(bruto.replace(LINKS, ' ')).toLowerCase();
+  if (!/[a-z]/.test(resto)) return null; // link sozinho: conclui sem enviar, como hoje
+  if (resto.length > 280) return null;   // texto longo dela é conversa, não comentário de link
+  if (PEDIDO_NO_LINK.test(resto)) return null;
+  PUXA_OPINIAO.lastIndex = 0;
+  const puxa = PUXA_OPINIAO.test(resto);
+  const politico = COMENTARIO_POLITICO.test(resto);
+  if (!puxa && !politico) return null;     // saudação, bênção ou outra coisa: outros caminhos
+  // Sobrou pergunta depois de tirar as formas de opinião? Então é pergunta de conteúdo.
+  if (resto.replace(PUXA_OPINIAO, ' ').includes('?')) return null;
+  if (falouDeSaude(resto) || desabafoPessoal(pendentes, null) || reclamaSemResposta(pendentes, null) ||
+      semInteresse(pendentes, null)) return null;
+  return { motivo: `mandou um link ${puxa ? 'puxando a nossa opinião' : 'com comentário político'} — agradecer e dizer que vai olhar, sem opinar` };
 }
 
 /** Tipos que a plataforma usa para figura. Conferidos no bundle do app (29/08/2026). */

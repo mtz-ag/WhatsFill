@@ -51,6 +51,7 @@ export async function list({ perfil } = {}) {
     await migrarBoasVindasPrimeiraPessoa();
     await migrarBoasVindasNeutras();
     await migrarFinalidadeCadastro();
+    await migrarRespostaLinkCompartilhado();
   }
   return doPerfil(perfil);
 }
@@ -365,6 +366,14 @@ export const migrarRespostaAgendaGrupo = () =>
  * lista de respostas dele esta gravada — sem esta passada, a resposta nova valeria para uma
  * instalacao nova e para mais ninguem.
  */
+/**
+ * **Link com pedido de opinião** (12/11/2026) — as duas formas (com e sem saudação), que
+ * `sugestao.respostaLinkComOpiniao` escolhe. Migração pelo motivo de sempre: a lista dele está
+ * gravada, e sem esta passada o fluxo pediria uma resposta que não existe nela.
+ */
+export const migrarRespostaLinkCompartilhado = () =>
+  garantirRespostas(['link-compartilhado', 'link-compartilhado-sem-saudacao'], 'respostaLinkCompartilhado');
+
 export const migrarRespostaFalarComDeputado = () =>
   garantirRespostas(['falar-com-deputado'], 'respostaFalarComDeputado');
 

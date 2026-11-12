@@ -750,6 +750,22 @@ export const DEFAULT_TEMPLATES = [
         'Se mudar de ideia depois, é só mandar mensagem por aqui. Um abraço!',
     ],
   },
+  {
+    /**
+     * **Link com texto que puxa a nossa opinião** — regra dele (12/11/2026): *"viu isso?"*, *"o que
+     * acha?"*, *"absurdo né"*. Não opina, não resume e não comenta o tema do link. Quem escolhe esta
+     * resposta é `sugestao.respostaLinkComOpiniao`, e a forma sem saudação logo abaixo sai quando já
+     * falamos com a pessoa hoje.
+     */
+    id: 'link-compartilhado',
+    name: 'Link com pedido de opinião (agradecer e dizer que vai olhar)',
+    text: '{{saudacao}}! Obrigado por compartilhar, darei uma olhada. Um grande abraço!',
+  },
+  {
+    id: 'link-compartilhado-sem-saudacao',
+    name: 'Link com pedido de opinião, sem saudação (já falamos hoje)',
+    text: 'Obrigado por compartilhar, darei uma olhada. Um grande abraço!',
+  },
 ];
 
 const DEFAULTS = {

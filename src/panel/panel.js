@@ -31,7 +31,7 @@ import * as imagemLib from '../lib/imagem.js';
 import * as facebook from '../lib/facebook.js';
 import * as fbCliente from '../lib/facebook-cliente.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
-import { soCortesia, cortesiaParaRascunho } from '../lib/cortesia.js';
+import { soCortesia, cortesiaParaRascunho, linkComOpiniao } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
@@ -11395,6 +11395,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // importar o quadro. **Só sem anúncio reconhecido esperando resposta:** se ela clicou num
         // anúncio cadastrado, o modelo DELE é o que ela pediu, e o recibo responde.
         cortesiaParaRascunho: cortesiaParaRascunho(state.entrantes, state.nossaUltimaAt),
+        // LINK + texto que puxa a nossa opinião (12/11/2026): agradece e diz que vai olhar, sem a IA.
+        linkComOpiniao: linkComOpiniao(state.entrantes, state.nossaUltimaAt),
         pedeRespostaPessoal:
           conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
           pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
@@ -11955,7 +11957,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
 
         const porQue = sugestao?.id === 'cortesia-rascunho'
-          ? 'o fluxo reconheceu cortesia e pediu um rascunho automático'
+          ? (sinaisDoContato?.cortesiaParaRascunho?.anexo
+            ? 'ela mandou um arquivo com texto próprio, e o fluxo pediu um rascunho que agradece o material'
+            : 'o fluxo reconheceu cortesia e pediu um rascunho automático')
           : sugestao
           ? `o fluxo mandou para você ("${sugestao.id}")`
           : 'nenhuma caixa do fluxo decidiu este caso';

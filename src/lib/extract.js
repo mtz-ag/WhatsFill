@@ -155,12 +155,20 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
      * a correção. E procurar por mensagem também impede a pista de uma mensagem alcançar o texto da
      * seguinte, que a junção permitia.
      */
+    /**
+     * **O aproximado de uma mensagem não vence o exato de outra** (12/11/2026, o Tenente Fraga):
+     * *"Abração"*, a última mensagem, virava Barracão aproximado, e *"Pertenço ao Republicanos de
+     * Imbé"*, três acima, nem era olhada. O mais novo continua vencendo entre iguais (a correção
+     * dela vale); o aproximado vira RESERVA, como dentro de `matchCityComContexto` (10/11).
+     */
     const porContexto = await (async () => {
+      let reserva = null;
       for (const texto of [...list].reverse()) {
         const achado = await cities.matchCityComContexto(texto);
-        if (achado) return achado;
+        if (achado?.confidence === 'exata') return achado;
+        if (achado && !reserva) reserva = achado;
       }
-      return null;
+      return reserva;
     })();
 
     const hit = soCidade || naResposta || porContexto;
@@ -242,7 +250,9 @@ export async function extract(texts, { respostaAoPedido = false } = {}) {
  * sempre que ele escrever a cidade antes do nome.
  */
 const NAO_E_NOME =
-  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos|sim|n[aã]o|claro|isso|ok|beleza|positivo|afirmativo|vamos|juntos|mudar|apoio|apoiar|escolho|voto|vote|luta|firme|lado)\b/i;
+  /\b(oi|ol[aá]|bom dia|boa tarde|boa noite|obrigad|quero|queria|sou|moro|resido|aceito|gostaria|pode|tenho|preciso|meu|minha|aqui|somos|sim|n[aã]o|claro|isso|ok|beleza|positivo|afirmativo|vamos|juntos|mudar|apoio|apoiar|escolho|voto|vote|luta|firme|lado|perten[cç]\w*|fa[cç]o parte|fiz parte)\b/i;
+// `perten[cç]\w*`: o ç não é `\w`, e só o `\w*` depois dele deixa o `\b` fechar (o Tenente Fraga, 12/11/2026 — a
+// sobra *"Pertenço ao Republicanos"* virava o nome "Pertenço Ao").
 
 /**
  * Siglas que vêm coladas no nome e nunca são nome de gente.
