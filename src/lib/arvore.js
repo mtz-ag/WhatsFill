@@ -35,7 +35,7 @@
  * Puro e sem dependência de navegador, como tudo que decide sobre gente real neste projeto.
  */
 
-import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao } from './sugestao.js';
+import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao, decisaoDoPostEncaminhado } from './sugestao.js';
 
 /**
  * Os SINAIS que um ramo pode usar como condição — o menu que ele vê ao criar um nó.
@@ -436,6 +436,9 @@ export function decidir(ctx, arvore, fluxo) {
   };
 
   const escolhida = andar(arvore, []);
+  // Post encaminhado (12/11/2026, a Suely): político vira rascunho, comercial conclui. Sem reimportar.
+  const doPost = decisaoDoPostEncaminhado(c, escolhida);
+  if (doPost) return { ...doPost, caminho: ['post encaminhado'] };
   // Link com texto que puxa opinião (12/11/2026): vale no quadro salvo, sem reimportar.
   const doLink = respostaLinkComOpiniao(c, escolhida);
   if (doLink) return { ...doLink, caminho: ['link com opiniao'] };

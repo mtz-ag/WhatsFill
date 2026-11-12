@@ -21,6 +21,25 @@
 
 import { contextoCortesia } from './tom-cortesia.js';
 import { contextoAnexo } from './tom-anexo.js';
+import { contextoPostEncaminhado } from './post-encaminhado.js';
+
+/**
+ * **Post encaminhado** (12/11/2026, a Suely) — ver `post-encaminhado.js`. O texto longo é publicação
+ * de outra pessoa (assinatura, chamada de canal, link de rede), e o tamanho dele não é fala dela.
+ * Político vira rascunho da IA; comercial conclui sem enviar (`sugestao.decisaoDoPostEncaminhado`).
+ */
+export function postEncaminhado(entrantes, nossaUltimaAt, nomeDoContato = '') {
+  const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt);
+  const ctx = contextoPostEncaminhado(pendentes, nomeDoContato);
+  if (!ctx.ativo) return null;
+  return {
+    tipo: ctx.tipo,
+    marcas: ctx.marcas,
+    motivo: ctx.tipo === 'comercial'
+      ? `encaminhou propaganda comercial (${ctx.marcas.join(', ')}) — conclui sem enviar`
+      : `encaminhou um post político de outra pessoa (${ctx.marcas.join(', ')}) — rascunho da IA, não é fala dela`,
+  };
+}
 
 /** Cortesia elaborada: conteúdo antes do tamanho, sem esconder pendências reais. */
 export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {

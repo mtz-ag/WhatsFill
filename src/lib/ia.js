@@ -1,6 +1,7 @@
 import { plausivelNome } from './extract.js';
 import { semBeijos } from './tom-cortesia.js';
 import { repasseParaIA, contextoDeAutoria, instrucaoDeAutoria } from './repasse-ia.js';
+import { contextoPostEncaminhado } from './post-encaminhado.js';
 /**
  * ia.js — a avaliação de contexto, para escolher entre as respostas que já existem.
  *
@@ -3148,7 +3149,16 @@ export function blocoDosFormularios(formularios = {}) {
 }
 
 export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '', formularios = {} } = {}) {
-  const autoria = contextoDeAutoria(mensagens);
+  /**
+   * **Post político encaminhado** (12/11/2026, a Suely) — ver `post-encaminhado.js`. O texto é de
+   * OUTRA pessoa: não é "compartilhamento político PRÓPRIO" (autoria) nem denúncia dela para
+   * desconversar. Quem fala por este caso é `TOM_POST_POLITICO`, que `ia-cliente` cola no fim.
+   */
+  const postPolitico = (() => {
+    const p = contextoPostEncaminhado(mensagens, campos?.Nome || '');
+    return p.ativo && p.tipo === 'politico';
+  })();
+  const autoria = postPolitico ? { ...contextoDeAutoria(mensagens), politico: false } : contextoDeAutoria(mensagens);
   /** Ver `FASE_PADRAO`. As linhas deste bloco que falavam de campanha seguem a mesma chave. */
   const EM_CAMPANHA = emCampanha(fase);
   /** Quem é o candidato desta conversa — 24/09/2026, ver `lib/perfis.js`. */
@@ -3248,7 +3258,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * acusação ontem segue falando dela hoje — na print de 23/09/2026 a mensagem da vez era só *"é
    * assim mesmo que está ocorrendo"*, e foi o SEGUIMENTO que virou lição de moral.
    */
-  const denuncia = lista
+  const denuncia = postPolitico ? null : lista
     .filter((m) => m.de !== 'nos' && !m.anuncio)
     .map((m) => trouxeDenuncia(m.texto))
     .find(Boolean);

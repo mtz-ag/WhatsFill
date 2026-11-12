@@ -31,7 +31,7 @@ import * as imagemLib from '../lib/imagem.js';
 import * as facebook from '../lib/facebook.js';
 import * as fbCliente from '../lib/facebook-cliente.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
-import { soCortesia, cortesiaParaRascunho, linkComOpiniao } from '../lib/cortesia.js';
+import { soCortesia, cortesiaParaRascunho, linkComOpiniao, postEncaminhado } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
@@ -11404,6 +11404,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         cortesiaParaRascunho: cortesiaParaRascunho(state.entrantes, state.nossaUltimaAt),
         // LINK + texto que puxa a nossa opinião (12/11/2026): agradece e diz que vai olhar, sem a IA.
         linkComOpiniao: linkComOpiniao(state.entrantes, state.nossaUltimaAt),
+        // POST ENCAMINHADO (12/11/2026, a Suely): o tamanho é do autor do post, não dela.
+        postEncaminhado: postEncaminhado(state.entrantes, state.nossaUltimaAt, state.contact?.name || ''),
         pedeRespostaPessoal:
           conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
           pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
@@ -11963,7 +11965,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
         }
 
-        const porQue = sugestao?.id === 'cortesia-rascunho'
+        const porQue = sugestao?.id === 'post-encaminhado'
+          ? 'ela encaminhou um post político de outra pessoa, e o fluxo pediu um rascunho que se posiciona sem resumir'
+          : sugestao?.id === 'cortesia-rascunho'
           ? (sinaisDoContato?.cortesiaParaRascunho?.anexo
             ? 'ela mandou um arquivo com texto próprio, e o fluxo pediu um rascunho que agradece o material'
             : 'o fluxo reconheceu cortesia e pediu um rascunho automático')

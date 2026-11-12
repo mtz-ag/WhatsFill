@@ -373,24 +373,113 @@ export async function anon() {
  * O erro carrega a TABELA no texto, pela mesma razao que `api.js` poe a rota no `Failed to fetch`:
  * sem isso, "a plataforma parou de responder" nao diz se foi a fila, a conversa ou o contato.
  */
-export async function buscar(tabela, opcoes = {}) {
-  const sessao = sessaoDaPagina();
-  if (!sessao) throw new Error('mob: sem sessao na plataforma — entre no mobiliza.me e recarregue');
-  if (sessaoExpirada(sessao)) throw new Error('mob: a sessao da plataforma venceu — recarregue a aba');
+/**
+ * **A LEITURA REPETE ANTES DE DESISTIR, E DESISTINDO DIZ POR QUÊ** (12/11/2026, print dele: *"Rodada
+ * encerrada: 0 enviado(s), 0 pulado(s). conversas → Failed to fetch"*, com a aba logada).
+ *
+ * Uma falha só encerrava a rodada inteira — `openQueueSession` trata o erro da fila como o fim do
+ * percurso. E o texto não dizia nada: `Failed to fetch` é o navegador dizendo que a resposta não
+ * chegou, e as causas (rede caída, limitador de taxa, bloqueio do navegador, servidor fora) pedem
+ * ações diferentes.
+ *
+ * Hoje são três tentativas, com 0,8 s e 2 s de espera, e **a sessão é RELIDA a cada tentativa**: o
+ * cliente Supabase da própria aba renova o token sozinho, e é dali que a renovação vem. **A extensão
+ * nunca usa o `refresh_token`** — ele é rotativo, e renovar daqui invalidaria a sessão da aba,
+ * deslogando-o da plataforma.
+ *
+ * **Repete o que passa sozinho:** rede, tempo esgotado, 401 (o token pode ter sido renovado nesse
+ * meio-tempo), 408, 429 e 5xx. **400, 403 e 404 não repetem** — aquilo é defeito, e insistir não
+ * conserta.
+ *
+ * O texto final mantém `<tabela> → <Failed to fetch | status>` na frente, porque é por ele que
+ * `api.ehErroDeRede` reconhece o engasgo, e acrescenta a ROTA (sem a query: ela leva o tenant e os
+ * filtros), o motivo em português e o que fazer.
+ */
+export const ESPERAS_DA_BUSCA = Object.freeze([800, 2000]);
+export const PRAZO_DA_BUSCA_MS = 20000;
+const STATUS_QUE_PASSAM = new Set([401, 408, 429, 500, 502, 503, 504]);
 
-  const endereco = url(tabela, { tenantId: opcoes.tenantId || tenantAtivo(), ...opcoes });
-  const chave = await anon();
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  let res;
-  try {
-    res = await fetch(endereco, {
-      headers: { apikey: chave, Authorization: 'Bearer ' + sessao.token, Accept: 'application/json' },
-    });
-  } catch (err) {
-    throw new Error(`${tabela} → ${err?.message || 'Failed to fetch'}`);
+/** O texto da falha, em português, com a rota e o que fazer. Puro, para ter teste. */
+export function textoDaFalhaDeBusca(tabela, rota, falha = {}, tentativas = 1) {
+  const vezes = tentativas > 1 ? ` (${tentativas} tentativas)` : '';
+  const onde = `em GET ${rota}`;
+  const recarregue = 'Recarregue a aba do Mobiliza (F5) e recomece a rodada.';
+  switch (falha.tipo) {
+    case 'sem-sessao':
+      return `${tabela} → sem sessão ${onde}: não achei o login da plataforma na aba${vezes}. Entre no mobiliza.me de novo e recarregue a aba.`;
+    case 'sessao-vencida':
+      return `${tabela} → sessão vencida ${onde}: a aba não renovou o login${vezes}. ${recarregue} Se pedir, faça login de novo.`;
+    case 'tempo':
+      return `${tabela} → Failed to fetch ${onde}: o servidor não respondeu em ${Math.round(PRAZO_DA_BUSCA_MS / 1000)} s${vezes}. Confira a internet e recomece.`;
+    case 'rede':
+      return `${tabela} → Failed to fetch ${onde}: ` +
+        (falha.offline
+          ? `o computador está sem internet${vezes}. Reconecte e recomece a rodada.`
+          : `a resposta não chegou — rede caída, limitador de taxa da plataforma ou bloqueio do navegador${vezes}. Espere um minuto. ${recarregue}`);
+    case 'http': {
+      const s = falha.status;
+      const detalhe = falha.detalhe ? ` (${falha.detalhe})` : '';
+      if (s === 401) return `${tabela} → 401 ${onde}: a plataforma não aceitou o login${detalhe}${vezes}. ${recarregue} Se pedir, faça login de novo.`;
+      if (s === 403) return `${tabela} → 403 ${onde}: sem permissão para ler esta tabela${detalhe}. Confira se a campanha certa está escolhida na plataforma.`;
+      if (s === 429) return `${tabela} → 429 ${onde}: limite de requisições da plataforma${vezes}. Espere alguns minutos e recomece.`;
+      if (s >= 500) return `${tabela} → ${s} ${onde}: a plataforma está com erro no servidor${detalhe}${vezes}. Espere alguns minutos e recomece.`;
+      return `${tabela} → ${s} ${onde}: a plataforma recusou a consulta${detalhe}.`;
+    }
+    default:
+      return `${tabela} → Failed to fetch ${onde}: falha desconhecida${vezes}. ${recarregue}`;
   }
-  if (!res.ok) throw new Error(`${tabela} → ${res.status}`);
-  return res.json();
+}
+
+/** A mensagem que o PostgREST põe no corpo do erro, curta. Corpo ilegível não vira texto. */
+function mensagemDoCorpo(corpo) {
+  try {
+    const j = JSON.parse(corpo);
+    return String(j?.message || j?.error_description || j?.error || '').slice(0, 120);
+  } catch (_) {
+    return '';
+  }
+}
+
+export async function buscar(tabela, opcoes = {}) {
+  const { esperas = ESPERAS_DA_BUSCA, ...consulta } = opcoes || {};
+  // Tabela desconhecida e consulta sem tenant são defeito: estouram aqui, sem tentar de novo.
+  const endereco = url(tabela, { tenantId: consulta.tenantId || tenantAtivo(), ...consulta });
+  const rota = endereco.slice(endereco.indexOf('/rest/'), endereco.indexOf('?'));
+
+  let falha = null;
+  let tentativas = 0;
+  for (let i = 0; i <= esperas.length; i++) {
+    if (i) await dormir(esperas[i - 1]);
+    tentativas++;
+    // Relida a cada volta: é assim que o token renovado pela aba chega aqui.
+    const sessao = sessaoDaPagina();
+    if (!sessao) { falha = { tipo: 'sem-sessao' }; continue; }
+    if (sessaoExpirada(sessao)) { falha = { tipo: 'sessao-vencida' }; continue; }
+
+    let res;
+    const controle = typeof AbortController === 'function' ? new AbortController() : null;
+    const relogio = controle ? setTimeout(() => controle.abort(), PRAZO_DA_BUSCA_MS) : null;
+    try {
+      const chave = await anon();
+      res = await fetch(endereco, {
+        headers: { apikey: chave, Authorization: 'Bearer ' + sessao.token, Accept: 'application/json' },
+        ...(controle ? { signal: controle.signal } : {}),
+      });
+    } catch (err) {
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      falha = err?.name === 'AbortError' ? { tipo: 'tempo' } : { tipo: 'rede', offline, detalhe: err?.message || '' };
+      continue;
+    } finally {
+      if (relogio) clearTimeout(relogio);
+    }
+    if (res.ok) return res.json();
+    const corpo = await res.text().catch(() => '');
+    falha = { tipo: 'http', status: res.status, detalhe: mensagemDoCorpo(corpo) };
+    if (!STATUS_QUE_PASSAM.has(res.status)) break;
+  }
+  throw new Error(textoDaFalhaDeBusca(tabela, rota, falha, tentativas));
 }
 
 /* ------------------------------------------------------------------ *

@@ -62,6 +62,7 @@ import { contextoPublico, TOM_PUBLICO, falhasTomPublico } from './tom-publico.js
 import { contextoCortesia, TOM_CORTESIA, falhasTomCortesia } from './tom-cortesia.js';
 import { repasseParaIA, contextoDeAutoria, falhasDeAutoria } from './repasse-ia.js';
 import { contextoAnexo, TOM_ANEXO, falhasTomAnexo } from './tom-anexo.js';
+import { contextoPostEncaminhado, TOM_POST_POLITICO, falhasTomPost } from './post-encaminhado.js';
 
 export const MSG_IA = 'whatsfill-ia';
 
@@ -318,12 +319,20 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
   // cortesia exige "carinho" e bênção, e aqui o que ele mandou foi apresentação e apoio.
   const tomAnexo = contextoAnexo(mensagens);
   if (tomAnexo.ativo) { tomCortesia.ativo = false; tomPublico.ativo = false; }
+  // Post político encaminhado (12/11/2026, a Suely): o texto é de outra pessoa. Os outros tons
+  // leriam o post como fala dela; a autoria o leria como "compartilhamento político PRÓPRIO".
+  const tomPost = contextoPostEncaminhado(mensagens, campos?.Nome || '');
+  if (tomPost.ativo && tomPost.tipo === 'politico') {
+    tomCortesia.ativo = false; tomPublico.ativo = false; tomAnexo.ativo = false;
+    autoria.politico = false;
+  } else tomPost.ativo = false;
   const contato = montarContatoRascunho({
     mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   }) + (tomPublico.ativo ? '\n\n' + TOM_PUBLICO : '')
     + (tomCortesia.ativo ? '\n\n' + TOM_CORTESIA : '')
     + (tomAnexo.ativo ? '\n\n' + TOM_ANEXO : '')
+    + (tomPost.ativo ? '\n\n' + TOM_POST_POLITICO : '')
     + '\nNunca use beijo, bjs ou beijão no rascunho; na despedida, use um grande abraço ou um abraço.';
   const lidoPelaIA = {
     contato,
@@ -347,7 +356,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
     const conferirTom = (resposta) => {
       const texto = validarRascunho(resposta.decisao, agora, {}).texto || '';
-      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasDeAutoria(texto, autoria)];
+      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasTomPost(texto, tomPost), ...falhasDeAutoria(texto, autoria)];
     };
     const falhasTom = conferirTom(r);
     if (falhasTom.length) {

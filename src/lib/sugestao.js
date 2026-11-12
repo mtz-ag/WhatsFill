@@ -191,7 +191,7 @@ export function momentoDeNovoNaoCabe(c) {
  * Desabafo entra pelo mesmo motivo: formulário no fim de um acolhimento soa como máquina.
  */
 export const rascunhoSemCadastro = (c) =>
-  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza || !!c?.cortesiaParaRascunho;
+  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza || !!c?.cortesiaParaRascunho || !!c?.postEncaminhado;
 
 /**
  * **A ABSTENÇÃO DA IA NÃO VIRA A MENSAGEM DO DIA EM AGRADECIMENTO, ELOGIO OU REAÇÃO**
@@ -1451,9 +1451,32 @@ export function sugerirAcao(ctx, fluxo) {
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
-    return respostaLinkComOpiniao(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
+    return decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
   }
-  return respostaLinkComOpiniao(c, null) || rascunhoDeCortesia(c, null);
+  return decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || rascunhoDeCortesia(c, null);
+}
+
+/**
+ * **Post encaminhado** (12/11/2026, a Suely) — ver `cortesia.postEncaminhado`. O post de um senador
+ * com 1.952 caracteres caía em `ultima-pede-resposta-pessoal` ("escreveu 1952 caracteres"), que mede
+ * TAMANHO; o tamanho era do senador.
+ *
+ *  - **político** → rascunho da IA (`ia: true`), com o tom de `TOM_POST_POLITICO`;
+ *  - **comercial** → tecla 3, conclui sem enviar nada.
+ *
+ * **Como os outros ajustes depois da decisão, vale no quadro salvo sem reimportar**, e só troca
+ * desfecho que não é proteção: sem interesse, assessor, a conversa que termina em nós, a etiqueta
+ * de engajado, o limite de horas, os pulos (2) e as respostas prontas de pedido continuam vencendo.
+ * `ultima-pede-resposta-pessoal` continua valendo para texto longo ESCRITO por ela com pedido ou
+ * pergunta — `post-encaminhado.js` nem reconhece esse texto como post.
+ */
+export function decisaoDoPostEncaminhado(c, decisao) {
+  const post = c?.postEncaminhado;
+  if (!post || c.ultimaEhNossa || c.semInteresse || c.informouEndereco || c.confirmouPresenca || c.naoPodeFalarAgora) return null;
+  if (decisao && (decisao.resposta || !['1', '4', '5', '6', 'i', '3', 'a', null, undefined].includes(decisao.tecla) ||
+      /sem-interesse|etiqueta-so-conclui|ultima-e-nossa|etiqueta-dispensa-da-fila|contexto-de-outro-dia/.test(decisao.id || ''))) return null;
+  if (post.tipo === 'comercial') return { id: 'post-comercial', tecla: '3', resposta: null, ia: false, motivo: post.motivo };
+  return { id: 'post-encaminhado', tecla: null, resposta: null, ia: true, motivo: post.motivo };
 }
 
 /**

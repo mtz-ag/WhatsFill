@@ -1,4 +1,47 @@
-## 2026-11-12 - v3.308.0 - ESTADO DE AGORA - concluir fora da rodada, e a data de conclusao saiu
+## 2026-11-12 - v3.309.0 - ESTADO DE AGORA - post encaminhado, e a fila que caia no primeiro "Failed to fetch"
+
+**1. Post encaminhado nao e fala dela** (a Suely). Ela repassou o post de um senador — titulo em
+negrito, a assinatura dele, o link do Instagram e "Faca parte do meu canal do WhatsApp", 1.952
+caracteres — e a caixa mandou responder a mao: "escreveu 1952 caracteres". Medido com texto
+ficticio no mesmo formato: o post acende `conversaPedeRespostaPessoal` (TAMANHO) e
+`denunciaOuCorrente`, e cai na tecla 6. O curso de Black Friday encaminhado nao acendia nada.
+- **Detector novo, `post-encaminhado.js`:** texto de 200+ caracteres com DUAS marcas de post, no
+  minimo (assinatura de outra pessoa, chamada de canal, link de rede social, negrito de publicacao;
+  a marca de encaminhada da plataforma conta por duas). Uma marca so nao basta: negrito e link
+  aparecem em texto proprio. Pedido dela dirigido a nos ("preciso de ajuda", "voces podem") desfaz.
+  Junto do post so passam link solto, video, figura e recado curto sem pergunta.
+- **Politico -> rascunho da IA** (`sugestao.decisaoDoPostEncaminhado`, id `post-encaminhado`), com
+  `TOM_POST_POLITICO`: uma ou duas frases na primeira pessoa do candidato com a indignacao ou o apoio
+  que o tema pede, sem resumir, sem citar quem assinou nem o nome dela, sem pergunta, sem "equipe",
+  sem beijo, sem cadastro, saudacao do horario (ou nenhuma, se ja falamos hoje) e "um grande
+  abraco". `falhasTomPost` faz a reescrita que ja existe. No prompt, a linha da denuncia ("agradeca
+  as informacoes... PARE") e a do "compartilhamento politico PROPRIO" saem nesse caso.
+- **Comercial -> tecla 3**, conclui sem enviar (id `post-comercial`).
+- **Vale no quadro salvo sem importar** (ajuste depois da decisao, como a cortesia), e nao passa por
+  cima de: sem interesse, assessor, a conversa que termina em nos, engajado, o limite de horas, os
+  pulos (2) e as respostas prontas de pedido. Texto longo escrito por ela com pedido continua tecla
+  6; com pedido de dinheiro, continua a caixa do dinheiro (IA).
+
+**2. "conversas -> Failed to fetch" encerrava a rodada dos Minhas na primeira falha.** A leitura da
+fila e o fim do percurso em `openQueueSession`, e `mob.buscar` nao repetia nada nem dizia o motivo.
+Hoje sao tres tentativas (0,8 s e 2 s de espera), com a SESSAO RELIDA a cada uma — o cliente
+Supabase da propria aba renova o token, e e dali que a renovacao vem. **A extensao nao usa o
+`refresh_token`:** ele e rotativo, e renovar daqui deslogaria a aba. Repete rede, tempo esgotado
+(20 s), 401, 408, 429 e 5xx; 400, 403 e 404 nao repetem. Desistindo, o texto traz a rota (sem a
+query, que leva o tenant e os filtros), o motivo em portugues e o que fazer ("Recarregue a aba do
+Mobiliza (F5)", "se pedir, faca login de novo", "o computador esta sem internet"). A forma
+`conversas -> Failed to fetch` continua na frente, porque e por ela que `ehErroDeRede` reconhece.
+**O que NAO foi medido:** a causa real daquele `Failed to fetch` na maquina dele. Da proxima vez o
+motivo aparece no Andamento.
+
+**Prova:** suites novas `post-encaminhado.test.mjs` e `busca-mob.test.mjs`. Sem o ajuste do post
+caem 6 assercoes; sem a repeticao da busca caem 4. 59 suites, `checar-modulos` e
+`checar-referencias` passam. **Nao conferido ao vivo.**
+
+**Em aberto (da v3.301):** as regras do fluxo ainda leem a fala transcrita de dentro do video
+como fala dela.
+
+## 2026-11-12 - v3.308.0 - HISTORICO - concluir fora da rodada, e a data de conclusao saiu
 
 **1. Concluir pelo painel fora da rodada** (a Dirce, a Simone e o Gilmar).
 - **"Classificado, mas undefined"**: o resolver da plataforma nova devolvia so `{ok, estado}`, o

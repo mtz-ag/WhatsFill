@@ -90,6 +90,7 @@ src/lib/anuncios.js     ANUNCIOS do momento: texto que reconhece + o que fazer (
 src/lib/perfis.js       os CANDIDATOS: quem atende cada canal e o que e dele (puro, testado)
 src/lib/lote.js         DISPARO: pecas de texto (com arte ou sem), revezando (puro, testado)
 src/lib/observacoes.js  o caderno das sugestoes erradas, com o caso junto (puro, testado)
+src/lib/post-encaminhado.js  POST de outra pessoa que ela repassou: politico/comercial (puro, testado)
 src/lib/facebook.js     COMENTARIOS da pagina: rotas, leitura e guardas (puro, testado)
 src/lib/facebook-cliente.js  ponte painel <-> worker; o token NUNCA volta para a pagina
 src/lib/dom-facebook.js UNICO arquivo com seletores da PAGINA DO FACEBOOK (irmao do dom.js)
@@ -374,6 +375,17 @@ mudaram as maos, nao a cabeca.
   nao o concluir. **"Aguardando atendente" depois de uma falha nao provou que voltou para a fila:**
   medido, `assumido_em` e o atendente nao mudaram — era a tela desatualizada (28/10, a Marileide).
   **Ao ver a tela dizendo um estado, confira o banco antes de culpar a escrita.**
+
+- **POST ENCAMINHADO E A FILA QUE CAIA NO PRIMEIRO "Failed to fetch"** (12/11/2026, v3.309).
+  O post de um senador repassado pela Suely (assinatura, chamada de canal, link do Instagram,
+  negrito; 1.952 caracteres) caia na tecla 6 porque `conversaPedeRespostaPessoal` mede TAMANHO.
+  `post-encaminhado.js` exige DUAS marcas de post; politico vira rascunho com `TOM_POST_POLITICO`
+  e comercial conclui (tecla 3), por `sugestao.decisaoDoPostEncaminhado` — ajuste DEPOIS da
+  decisao, como a cortesia: vale no quadro salvo e nao atravessa as protecoes. **Ao criar outro
+  ajuste desses, ponha-o nos tres lugares:** `sugerirAcao` (com e sem decisao), `arvore.decidir`
+  e o `porQue` do painel. E `mob.buscar` repete tres vezes relendo a sessao da aba, e desistindo
+  diz rota, status e o que fazer. **A extensao nunca usa o `refresh_token`:** ele e rotativo, e
+  renovar daqui deslogaria a aba dele.
 
 - **A PLATAFORMA TRANSCREVE VIDEO TAMBEM, e a fala de dentro dele chegava a IA como voz dela**
   (11/11/2026, *"a IA abriu os links?"* — nao abriu). Medido desde 04/11: video 686 de 806 com
@@ -8047,7 +8059,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 57 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 59 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu duas vezes:** em 03/11/2026 ela tinha 30 nomes e o diretório
 > já tinha 39; em 09/11/2026, 43 contra 48 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -8056,7 +8068,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 57 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/concluir-pelo-painel.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/despedida-anexo-link.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/fluxo-cortesia-longa.test.mjs && node tests/formularios.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/previa-sem-ia.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/remocao-local.test.mjs && node tests/repasse-ia.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/tom-cortesia.test.mjs && node tests/tom-publico.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/busca-mob.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/concluir-pelo-painel.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/despedida-anexo-link.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/fluxo-cortesia-longa.test.mjs && node tests/formularios.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/post-encaminhado.test.mjs && node tests/previa-sem-ia.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/remocao-local.test.mjs && node tests/repasse-ia.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/tom-cortesia.test.mjs && node tests/tom-publico.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,
