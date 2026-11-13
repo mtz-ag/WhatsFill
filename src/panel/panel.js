@@ -5025,7 +5025,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function sairDaColunaDaRodada() {
     if (!colunaDaRodada) return;
     const pai = root.parentNode || root;
-    for (const fundo of [...colunaDaRodada.children]) pai.append(fundo);
+    // So as caixas voltam a flutuar; o Andamento da coluna sai junto com ela.
+    for (const fundo of [...colunaDaRodada.children]) {
+      if (fundo.classList?.contains('wf-pergunta-fundo')) pai.append(fundo);
+    }
     colunaDaRodada.remove();
     colunaDaRodada = null;
     root.classList.remove('wf-oculto-na-rodada');
@@ -6694,17 +6697,39 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * **O ANDAMENTO DENTRO DA COLUNA DA RODADA** (12/11/2026, pedido dele: *"adicione o log do
      * automatizado no painel que fica ao iniciar"*). Na rodada o painel some e a coluna toma o lugar
      * dele, entao o Andamento — que mora na aba Automatizado — ficava escondido justo enquanto a
-     * rodada anda. Mesmas linhas, pela mesma funcao (`linhaDoLog`). So aparece NA COLUNA (CSS): a
+     * rodada anda. Mesmas linhas, pela mesma funcao (`linhaDoLog`). So aparece NA COLUNA: a
      * janelinha solta tem 150px e o log ali seria ilegivel.
+     *
+     * **O LOG E FILHO DA COLUNA, NUNCA DO CONTROLE, e fica POR ULTIMO** (13/11/2026, *"as opcoes de
+     * escrita sumiram ao botar o log"*). Na v3.310 ele morava dentro do controle, que e a PRIMEIRA
+     * caixa da coluna, com quase a tela inteira de altura — e toda caixa que a rodada abre depois
+     * (as teclas da conferencia, a pergunta, a da cidade) entra na coluna DEPOIS dele: foram
+     * empurradas para fora da vista. Hoje a coluna e flex, o log tem `order` alto e ocupa so o
+     * espaco que SOBRA (`flex: 1`, com piso); as caixas de decidir vem antes, sempre visiveis.
      */
-    const logDaRodada = h('div', { class: 'wf-controle-log', 'data-fica': '1', role: 'log' });
-    caixa.append(logDaRodada);
+    const logDaRodada = h('div', { class: 'wf-coluna-log', 'data-fica': '1', role: 'log' }, [
+      h('div', { class: 'wf-coluna-log-titulo' }, 'Andamento'),
+    ]);
+    const linhasDoLog = h('div', { class: 'wf-coluna-log-linhas' });
+    logDaRodada.append(linhasDoLog);
+    /** Fora da coluna (janelinha solta) o log nao aparece; dentro, e filho direto dela. */
+    function posicionarLog() {
+      if (!colunaDaRodada) {
+        logDaRodada.remove();
+        return false;
+      }
+      if (logDaRodada.parentNode !== colunaDaRodada) colunaDaRodada.append(logDaRodada);
+      return true;
+    }
     function pintarLog() {
-      logDaRodada.replaceChildren(...state.auto.log.map(linhaDoLog));
-      logDaRodada.scrollTop = logDaRodada.scrollHeight;
+      if (!posicionarLog()) return;
+      linhasDoLog.replaceChildren(...state.auto.log.map(linhaDoLog));
+      linhasDoLog.scrollTop = linhasDoLog.scrollHeight;
     }
 
     function pintar() {
+      // A coluna nasce e some com a rodada; o tique de 1s acompanha sem repintar as linhas.
+      posicionarLog();
       const rodando = !!state.auto.rodando;
       prazoResposta.textContent = state.contact
         ? `${state.contact.name || 'Contato aberto'} · ${statusJanelaResposta(state.entrantesJanela || [])}`
@@ -6839,6 +6864,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         clearInterval(timerPrazoResposta);
         document.removeEventListener('keydown', aoTeclar);
         fundo.remove();
+        logDaRodada.remove();
         controleDaRodada = null;
       },
     };

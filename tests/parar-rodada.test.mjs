@@ -229,8 +229,14 @@ grupo('o ■ fecha a pergunta aberta, e a rodada termina');
 {
   const reg = painel.slice(painel.indexOf('function registrarNaRodada'), painel.indexOf('function modeloDaRodada'));
   check(/controleDaRodada\?\.pintarLog\(\)/.test(reg), 'registrarNaRodada repinta o log da coluna');
-  check(/wf-controle-log/.test(painel) && /\.wf-coluna-rodada \.wf-controle-log \{\s*display: block/.test(css),
-    'o log aparece na coluna (e so nela)');
+  // 13/11/2026: dentro do controle (a 1a caixa), o log empurrava as teclas para fora da vista.
+  const abrir = painel.slice(painel.indexOf('function abrirControleDaRodada'), painel.indexOf('function fecharControleDaRodada'));
+  check(!/caixa\.append\(logDaRodada\)/.test(abrir), 'o log NAO mora dentro do controle');
+  check(/colunaDaRodada\.append\(logDaRodada\)/.test(abrir), 'o log e filho direto da coluna');
+  check(/\.wf-coluna-log \{\s*order: 99; flex: 1 1 auto; min-height: 120px;/.test(css), 'o log vem por ultimo e ocupa so o que sobra');
+  check(/\.wf-coluna-rodada > \.wf-pergunta-fundo \{ flex: 0 0 auto; \}/.test(css), 'as caixas de decidir nao encolhem');
+  const sair = painel.slice(painel.indexOf('function sairDaColunaDaRodada'), painel.indexOf('function abrirEditorDeVariantesDoMomento'));
+  check(/classList\?\.contains\('wf-pergunta-fundo'\)\) pai\.append/.test(sair), 'ao sair, so as caixas voltam a flutuar');
 }
 
 fim();

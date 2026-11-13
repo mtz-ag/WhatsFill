@@ -1,4 +1,16 @@
-## 2026-11-12 - v3.310.0 - ESTADO DE AGORA - o Andamento na coluna da rodada
+## 2026-11-13 - v3.311.0 - ESTADO DE AGORA - o log empurrava as teclas para fora da coluna
+
+Relato dele: *"as opcoes de escrita sumiram ao botar o log"*. Causa: na v3.310 o log morava DENTRO
+do controle, que e a primeira caixa da coluna, com quase a tela inteira de altura
+(`100vh - 190px`); toda caixa que a rodada abre depois (as teclas da conferencia, a pergunta, a da
+cidade) entra na coluna DEPOIS dele e ficava fora da vista. Hoje o log e filho DIRETO da coluna, a
+coluna e flex, e o log tem `order: 99` com `flex: 1` e piso de 120px: as caixas de decidir vem
+antes e nao encolhem, e o log ocupa so o que sobra, rolando dentro dele. Ao sair da rodada so as
+caixas voltam a flutuar. Medido com o CSS real numa pagina de teste: controle 10-100, teclas
+110-329 (entrando depois do log no DOM), log 339-466. Prova: 5 assercoes novas em
+`parar-rodada.test.mjs`. **Nao conferido na tela dele.**
+
+## 2026-11-12 - v3.310.0 - HISTORICO - o Andamento na coluna da rodada
 
 Pedido dele: *"adicione o log do automatizado no painel que fica ao iniciar"*. Na rodada o painel
 some e a coluna (`wf-coluna-rodada`) toma o lugar dele, entao o Andamento ficava escondido justo

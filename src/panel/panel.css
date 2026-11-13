@@ -134,6 +134,9 @@
   padding: 10px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Flex para o Andamento (`.wf-coluna-log`) ficar por ultimo e ocupar so o que sobra. */
+  display: flex;
+  flex-direction: column;
   background: var(--wf-bg);
   color: var(--wf-fg);
   border-left: 1px solid var(--wf-border);
@@ -811,11 +814,19 @@
 }
 .wf-root .wf-subnav button.wf-active { color: var(--wf-accent); border-color: var(--wf-accent); }
 
-.wf-controle-log { display: none; }
-.wf-coluna-rodada .wf-controle-log {
-  display: block; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--wf-border, #3334);
-  max-height: calc(100vh - 190px); overflow-y: auto; font-size: 12px; line-height: 1.35;
+/*
+  O Andamento da coluna da rodada: filho DIRETO da coluna e sempre POR ULTIMO (order), ocupando so o
+  espaco que sobra. As caixas de decidir (teclas, pergunta, cidade) vem antes e nunca encolhem — na
+  v3.310 o log ficou dentro do controle, no topo, e empurrou as teclas para fora da vista.
+*/
+.wf-coluna-rodada > .wf-pergunta-fundo { flex: 0 0 auto; }
+.wf-coluna-log {
+  order: 99; flex: 1 1 auto; min-height: 120px;
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--wf-border); padding-top: 6px; font-size: 12px; line-height: 1.35;
 }
-.wf-controle-log .wf-preview { margin: 0 0 4px; overflow-wrap: anywhere; color: var(--wf-text, inherit); }
-.wf-controle-log .wf-preview.wf-log-ia { color: var(--wf-err); }
+.wf-coluna-log-titulo { font-weight: 600; margin-bottom: 4px; }
+.wf-coluna-log-linhas { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.wf-coluna-log .wf-preview { margin: 0 0 4px; overflow-wrap: anywhere; }
+.wf-coluna-log .wf-preview.wf-log-ia { color: var(--wf-err); }
 .wf-controle-prazo { margin: 6px 0; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
