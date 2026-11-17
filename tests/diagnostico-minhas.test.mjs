@@ -103,6 +103,23 @@ grupo('o contato do orgao vai em frase natural, sem colar a linha do catalogo (a
   check(/sem colar a linha inteira nem a lista de assuntos/.test(contato), 'e a regra 20 colada no pedido tambem');
 }
 
+grupo('nao repetir o que dissemos nos ultimos dias (o Jandir)');
+{
+  const ia = await lib('ia.js');
+  const agora = new Date('2026-11-17T15:00:00-03:00');
+  const antiga = { texto: 'Boa tarde! O Capitão Martim está bem, na correria do mandato. Agradeço o carinho e os votos de bom trabalho.', at: '2026-11-13T14:41:00-03:00' };
+  const bloco = ia.blocoDoQueJaDissemos([antiga], agora);
+  check(/O QUE JÁ DISSEMOS A ELA NOS ÚLTIMOS DIAS/.test(bloco) && bloco.includes('na correria do mandato'), 'a fala de dias atras chega a IA, fora do limite de horas');
+  check(ia.blocoDoQueJaDissemos([], agora) === '', 'sem falas, nada entra');
+  const contato = ia.montarContatoRascunho({ agora, mensagens: [{ de: 'ela', texto: 'Boa tarde tudo bem com voce', at: '2026-11-17T14:31:00-03:00' }], jaDissemos: [antiga] });
+  check(contato.includes('O QUE JÁ DISSEMOS'), 'e entra no bloco do contato');
+  const rev = ia.revisarRascunho('O Capitão Martim está bem, na correria do mandato. Que Deus abençoe você e sua família, um abraço!', agora,
+    { nossasRecentes: [antiga.texto] });
+  check(!/correria do mandato/.test(rev.texto || rev), 'a frase quase identica a uma resposta recente sai');
+  const painel2 = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
+  check(/jaDissemos: \(\(\) => \{/.test(painel2) && /7 \* 24 \* 3600 \* 1000/.test(painel2), 'o painel manda as nossas falas dos ultimos 7 dias');
+}
+
 grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, decisao dele)');
 {
   const ia = await lib('ia.js');

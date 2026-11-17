@@ -3171,7 +3171,24 @@ export function blocoDosFormularios(formularios = {}) {
   return linhas.join('\n');
 }
 
-export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '', formularios = {} } = {}) {
+/**
+ * As NOSSAS falas dos últimos dias, para a IA não se repetir (17/11/2026, o Jandir). Até 8, as mais
+ * recentes, cortadas em 280 caracteres. Vazio, nada entra.
+ */
+export function blocoDoQueJaDissemos(jaDissemos = [], agora) {
+  const lista = (Array.isArray(jaDissemos) ? jaDissemos : [])
+    .filter((m) => String(m?.texto || '').trim())
+    .slice(-8);
+  if (!lista.length) return '';
+  return [
+    'O QUE JÁ DISSEMOS A ELA NOS ÚLTIMOS DIAS — não repita estas frases nem a mesma ideia com outras ' +
+      'palavras ("na correria do mandato", "obrigado pelo carinho", a mesma bênção). Se precisar dizer algo ' +
+      'parecido, diga de outro jeito; se não houver nada novo a dizer, seja breve:',
+    ...lista.map((m) => `- ${m.at ? quandoFoi(m.at, agora) + ': ' : ''}${cortar(String(m.texto).replace(/\s+/g, ' ').trim(), 280)}`),
+  ].join('\n');
+}
+
+export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedirDados = false, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece = false, anterior = [], perguntaDoMandato = false, candidato = null, provas = [], fase = FASE_PADRAO, orgaos = '', formularios = {}, jaDissemos = [] } = {}) {
   /**
    * **Post político encaminhado** (12/11/2026, a Suely) — ver `post-encaminhado.js`. O texto é de
    * OUTRA pessoa: não é "compartilhamento político PRÓPRIO" (autoria) nem denúncia dela para
@@ -3684,11 +3701,19 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'eleitoral proíbe a campanha de distribuir. Diga isso em uma frase gentil e pare: sem pedir ' +
         'endereço, sem repassar à equipe, sem prometer verificar e sem indicar onde comprar.'
       : '',
+    /**
+     * **O QUE JÁ DISSEMOS NOS ÚLTIMOS DIAS** (17/11/2026, o Jandir: o rascunho saiu *"Estou bem, graças
+     * a Deus, na correria do mandato"* e dias antes tínhamos mandado *"O Capitão Martim está bem, na
+     * correria do mandato"*. Ele: *"não queremos repetição, não em curto prazo ao menos"*). A conversa
+     * que a IA lê é cortada pelo limite de horas do contexto, então a resposta de dias atrás nem
+     * chegava a ela. Este bloco traz só as NOSSAS falas recentes, para ela não repetir frase nem ideia.
+     */
+    blocoDoQueJaDissemos(jaDissemos, agora),
     /** A exceção da regra 4, colada no pedido quando a pergunta está na conversa (17/09/2026). */
     perguntouComoEleEsta
       ? `COMO ELE ESTÁ: ela perguntou como está ${ELE_E.tratamento}. É carinho, não pedido de informação — ` +
         'NÃO diga que não sabe, que não tem a informação nem que vai verificar. Diga que ele está bem e na ' +
-        `correria ${EM_CAMPANHA ? 'da campanha' : 'do mandato'}, e agradeça a lembrança. Se as instruções ou o "Quem é quem" trouxerem ` +
+        `correria ${EM_CAMPANHA ? 'da campanha' : 'do mandato'}, e agradeça a lembrança — e se já dissemos isso a ela nos últimos dias (veja "O QUE JÁ DISSEMOS"), diga de outro jeito, sem "correria". Se as instruções ou o "Quem é quem" trouxerem ` +
         'notícia dele, use a notícia no lugar.'
       : '',
     /**
@@ -4717,6 +4742,19 @@ export function revisarRascunho(bruto, agora, contexto = {}) {
       avisos.push('o rascunho repetia o que a nossa última mensagem já dizia — tirei a parte repetida');
     } else if (soRepeteONosso(texto, nossaComparacao)) {
       avisos.push(AVISOS_QUE_IMPEDEM_ENVIO.sopraRepeticao);
+    }
+  }
+  /**
+   * **E o que dissemos nos ULTIMOS DIAS também** (17/11/2026, o Jandir — ver `blocoDoQueJaDissemos`).
+   * O prompt pede para não repetir; aqui sai a frase que repete quase palavra por palavra uma fala
+   * nossa recente, com a mesma régua da última (80% das palavras de conteúdo).
+   */
+  for (const anterior of contexto?.nossasRecentes || []) {
+    if (!anterior || anterior === contexto?.nossaUltima) continue;
+    const semRepetir = semRepetirONosso(texto, anterior.replace(/\b(?:bom dia|boa tarde|boa noite)\b/gi, ''));
+    if (semRepetir) {
+      texto = semRepetir;
+      avisos.push('o rascunho repetia uma resposta nossa dos últimos dias — tirei a parte repetida');
     }
   }
 

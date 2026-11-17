@@ -1,4 +1,17 @@
-## 2026-11-17 - v3.319.0 - ESTADO DE AGORA - o contato do orgao em frase natural
+## 2026-11-17 - v3.320.0 - ESTADO DE AGORA - nao repetir o que dissemos nos ultimos dias
+
+Rodada de verdade, o Jandir (*"Boa tarde Capitao, ta tudo bem com voce, abencoe"*): o rascunho
+*"Estou bem, gracas a Deus, na correria do mandato"* repetia a nossa resposta de dias antes (*"O
+Capitao Martim esta bem, na correria do mandato"*). Ele: *"nao queremos repeticao, nao em curto
+prazo ao menos"*. **Duas causas:** a conversa que a IA le e cortada pelo limite de horas do contexto
+(16h na config dele), entao a resposta antiga nem chegava a ela; e a regra "como ele esta" mandava a
+frase pronta "esta bem e na correria". Hoje o painel manda as NOSSAS falas dos ultimos 7 dias
+(sessao atual e anterior ja carregada, ate 8) num bloco "O QUE JA DISSEMOS", a regra "como ele esta"
+manda dizer de outro jeito se ja dissemos, e a revisao tira a frase quase identica a uma fala
+recente (a regua de 80% da ultima). Prova: 5 assercoes em `diagnostico-minhas.test.mjs`; o `ia.js`
+anterior derruba-as. **Nao conferido ao vivo.** A rodada da minha aba ficou parada no Jandir.
+
+## 2026-11-17 - v3.319.0 - HISTORICO - o contato do orgao em frase natural
 
 Na mesma rodada, o rascunho da Lia (conteudo certo: o BPC primeiro) colou a linha do catalogo de
 orgaos inteira: *"INSS - Central 135 - aposentadoria, auxilio-doenca, BPC/LOAS, pericia, pensao,

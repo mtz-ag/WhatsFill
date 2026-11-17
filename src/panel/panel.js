@@ -17007,6 +17007,19 @@ const CONTATOS_POR_PAGINA = 200;
         modelo: modeloDoRascunho(),
         // Rascunhar precisa dos DOIS lados — ver `conversaParaIA`.
         mensagens: conversaParaIA(),
+        /**
+         * **As NOSSAS falas dos últimos 7 dias** (17/11/2026, o Jandir: *"não queremos repetição,
+         * não em curto prazo ao menos"*). A conversa acima é cortada pelo limite de horas do
+         * contexto, então a resposta de dias atrás não chegava à IA. Sessão atual mais a anterior
+         * já carregada; nenhuma busca nova.
+         */
+        jaDissemos: (() => {
+          const limite = Date.now() - 7 * 24 * 3600 * 1000;
+          const todas = [...(state.conversaAnterior?.nossas || []), ...(state.nossas || [])]
+            .filter((m) => String(m?.texto || '').trim() && m?.at && new Date(m.at).getTime() >= limite)
+            .sort((a, b) => new Date(a.at) - new Date(b.at));
+          return todas.slice(-8).map((m) => ({ texto: String(m.texto), at: m.at }));
+        })(),
         // O relógio: sem ele a IA não sabe se a conversa é de agora ou da semana passada.
         agora: new Date(),
         /**

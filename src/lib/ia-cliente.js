@@ -288,7 +288,7 @@ export async function avaliar({ templates, regras, gabinete, mensagens, campos, 
  *
  * Nunca lança, pelo mesmo motivo do `avaliar`: falha de IA não pode parar o atendimento.
  */
-export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, expressouApoio = null, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null, linksPermitidos = null, formularios = {} }) {
+export async function rascunhar({ templates, regras, gabinete, mensagens, campos, modelo, agora, pedirDados, chapa, pedeMaterial, expressouApoio = null, cidadeNoTexto = false, soAgradeceOuElogia = false, jaNosConhece, anterior = [], candidato = null, provas = [], fase, orgaos = '', telefonesPermitidos = null, linksPermitidos = null, formularios = {}, jaDissemos = [] }) {
   /**
    * **O QUE A IA LEU, guardado para a tela mostrar** — pergunta dele (16/09/2026): *"preciso saber
    * qual a visão da IA sobre a conversa, o que ela tem acesso e o que não tem"*.
@@ -327,7 +327,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     autoria.politico = false;
   } else tomPost.ativo = false;
   const contato = montarContatoRascunho({
-    mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios,
+    mensagens, campos, agora, pedirDados, cidadeNoTexto, soAgradeceOuElogia, jaNosConhece, anterior, candidato, provas, fase, orgaos, formularios, jaDissemos,
     perguntaDoMandato: !!String(gabinete || '').trim(),
   }) + (tomPublico.ativo ? '\n\n' + TOM_PUBLICO : '')
     + (tomCortesia.ativo ? '\n\n' + TOM_CORTESIA : '')
@@ -439,6 +439,8 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
       ...validarRascunho(r.decisao, agora, {
         jaFalamos, jaNosConhece, recebemosDela, chapa, pedeMaterial, elaSeDesculpou, elaFalouDeTrabalho,
         nossaUltima, jaFalamosHoje, candidato, nome: campos?.Nome || '', fase,
+        // As NOSSAS falas dos ultimos dias (17/11/2026, o Jandir): a repeticao literal sai como a da ultima.
+        nossasRecentes: (jaDissemos || []).map((m) => String(m?.texto || '')).filter(Boolean),
         /** Print de 31/10/2026: o agradecimento da denúncia não sai duas vezes. */
         jaAgradecemosADenuncia: jaAgradecemosADenuncia(mensagens),
         /**
