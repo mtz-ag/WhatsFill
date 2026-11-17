@@ -6,7 +6,8 @@ const fonte = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'u
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const bloco = (inicio, fim) => fonte.slice(fonte.indexOf(inicio), fonte.indexOf(fim, fonte.indexOf(inicio)));
 const carregar = new AsyncFunction('api', 'fieldsLib', 'state', 'sessionId',
-  bloco('const [contact, classify, conversa]', 'state.contact = contact;') +
+  // `obsoleto` (17/11/2026): o load que ficou para tras para; aqui ele nunca fica.
+  'const obsoleto = () => false; ' + bloco('const [contact, classify, conversa]', 'state.contact = contact;') +
   'return { contact, classify, conversa };');
 let liberar;
 const cadastro = new Promise(resolve => { liberar = resolve; });
@@ -25,7 +26,7 @@ await assert.rejects(carregar({
 }, { classifyFields: async () => [] }, { session: {} }, 'sessao'), /leitura falhou/);
 
 const carregarSessao = new AsyncFunction('api', 'page', 'sessionId',
-  bloco('const [session, numeroDoCanal]', 'state.session = session;') +
+  'const obsoleto = () => false; ' + bloco('const [session, numeroDoCanal]', 'state.session = session;') +
   'return { session, numeroDoCanal };');
 for (const numeroDoCanal of [() => { throw new Error('ponte'); }, async () => { throw new Error('ponte'); }]) {
   assert.deepEqual(await carregarSessao({ getSession: async id => ({ id }) }, { numeroDoCanal }, 'sessao'),

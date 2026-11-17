@@ -191,7 +191,7 @@ export function momentoDeNovoNaoCabe(c) {
  * Desabafo entra pelo mesmo motivo: formulário no fim de um acolhimento soa como máquina.
  */
 export const rascunhoSemCadastro = (c) =>
-  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza || !!c?.cortesiaParaRascunho || !!c?.postEncaminhado;
+  casoDeNegativa(c) || !!c?.denunciaOuCorrente || !!c?.desabafoPessoal || !!c?.reacaoDeTristeza || !!c?.cortesiaParaRascunho || !!c?.postEncaminhado || !!c?.respostaAoFormulario;
 
 /**
  * **A ABSTENÇÃO DA IA NÃO VIRA A MENSAGEM DO DIA EM AGRADECIMENTO, ELOGIO OU REAÇÃO**
@@ -460,7 +460,9 @@ export const REGRAS = [
      * o material pedido não vence com o dia (decisão dele, 05/09), e concluir apaga o pedido.
      */
     tecla: (c) => {
-      if (c.perguntaPendente || c.materialPendente) return '6';
+      // `falaPessoalDela` (17/11/2026, a Lia): engajado ja respondido hoje que conta algo DELA em
+      // primeira pessoa nao e concluido calado — a IA escreve, e pode abster-se.
+      if (c.perguntaPendente || c.materialPendente || c.falaPessoalDela) return '6';
       return c.respondidoHoje || c.momentoJaEnviado || !c.podeMandarMomento ? '3' : '5';
     },
     /**
@@ -1451,9 +1453,9 @@ export function sugerirAcao(ctx, fluxo) {
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
-    return decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
+    return decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || decisaoDaRespostaAoFormulario(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
   }
-  return decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || rascunhoDeCortesia(c, null);
+  return decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || decisaoDaRespostaAoFormulario(c, null) || rascunhoDeCortesia(c, null);
 }
 
 /**
@@ -1506,6 +1508,21 @@ export function respostaLinkComOpiniao(c, decisao) {
     ia: false,
     motivo: c.linkComOpiniao.motivo,
   };
+}
+
+/**
+ * **A resposta ao FORMULÁRIO vai para a IA** (17/11/2026, o Itamar — ver
+ * `cortesia.respostaAoFormulario`). Ajuste DEPOIS da decisão, como a cortesia: vale no quadro salvo
+ * sem importar, e não atravessa as proteções (sem interesse, assessor, última é nossa, engajado
+ * que já falou hoje, contexto de outro dia, pulos, respostas prontas de pedido). Quem só agradeceu
+ * ou se despediu fica com o fecho — a IA não ganha a última palavra.
+ */
+export function decisaoDaRespostaAoFormulario(c, decisao) {
+  if (!c?.respostaAoFormulario || c.ultimaEhNossa || c.semInteresse || c.ultimaEhDespedida ||
+      c.cortesiaDeFechamento || c.informouEndereco || c.confirmouPresenca) return null;
+  if (decisao && (decisao.ia || decisao.resposta || !['1', '4', '5', 'i', '3', 'a', null, undefined].includes(decisao.tecla) ||
+      /sem-interesse|etiqueta-so-conclui|ultima-e-nossa|etiqueta-dispensa-da-fila|contexto-de-outro-dia/.test(decisao.id || ''))) return null;
+  return { id: 'resposta-ao-formulario', tecla: null, resposta: null, ia: true, motivo: c.respostaAoFormulario.motivo };
 }
 
 /**

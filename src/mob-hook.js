@@ -282,7 +282,8 @@
     }
 
     if (daLista && doPainel) {
-      if (daLista.id !== doPainel.id) return null;
+      // Discordando, o painel da direita e o que esta na tela: serve para LER (ver dom-mob.js).
+      if (daLista.id !== doPainel.id) return { conversa: doPainel, por: 'discordam' };
       return { conversa: daLista, por: 'os-dois' };
     }
     if (doPainel) return { conversa: doPainel, por: 'so-um-sinal' };

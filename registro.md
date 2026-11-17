@@ -1,4 +1,34 @@
-## 2026-11-17 - v3.314.0 - ESTADO DE AGORA - a cortesia nao passa por cima do "encerrou"
+## 2026-11-17 - v3.315.0 - ESTADO DE AGORA - quatro defeitos achados usando a extensao na fila Minhas
+
+Pedido dele: *"acesse o mobiliza pelo meu navegador, responda as pessoas e faca um diagnostico"* —
+e depois *"a intencao era usar a extensao e chamar a IA dela"*. Feito pelo Chrome dele, na v3.314,
+nove conversas de Minhas, a IA chamada em quatro; **nada enviado**: o modo dele e "a extensao manda
+sozinha", e as respostas prontas sairiam sem conferencia. Os quatro, com causa e conserto:
+- **O painel travava na troca de conversa.** Medido de 500 em 500ms: depois do clique o painel da
+  direita troca na hora e a marca `ativa` da LINHA da fila fica no contato anterior por 3 a 12s;
+  discordando, `conversaAberta` devolvia nada e o painel ficava em "Nenhum atendimento aberto". E o
+  `load()` que estava no meio terminava por cima, com "Cannot read properties of null (reading
+  'name')" — com Elma e Lia ficou preso por minutos. Hoje o gancho devolve o PAINEL com
+  `por: 'discordam'` (serve para LER; enviar e mexer no atendimento continuam recusando, e a recusa
+  leva a marca que faz a rodada PULAR), e cada `load()` tem um numero: o que ficou para tras para
+  antes de por o contato dele, de gravar e de escrever erro.
+- **Quem respondeu ao FORMULARIO recebia a mensagem do momento** (o Itamar: *"Ja fiz agendamento"*
+  depois do link da agenda; o fluxo mandaria o alerta de tempestade). `cortesia.respostaAoFormulario`
+  + `sugestao.decisaoDaRespostaAoFormulario`, ajuste depois da decisao nos tres lugares; quem so
+  agradece continua no fecho. A IA da extensao, chamada a mao, escreveu certo.
+- **A IA sem o que responder mandava REPETIR a mensagem do momento** (o Andre: uma corrente depois
+  da nossa mensagem das 10:44). Na rodada, com a do momento ja saida hoje e sem pergunta, conclui sem
+  enviar; fora dela a tela diz tecla 3 e nao 5.
+- **O engajado ja respondido era concluido mesmo contando algo DELE** (a Lia, preocupada com o BPC).
+  `cortesia.falaPessoalDela`: a ULTIMA fala, em primeira pessoa, curta, sem link, que nao seja
+  agradecimento, apoio, voto ou fe; so a regra do engajado le, e troca o "conclui" pela IA (tecla 6),
+  que ainda pode abster-se.
+Prova: `diagnostico-minhas.test.mjs` (nova) e assercoes em `dom-mob`, `page-mob` e
+`carregamento-paralelo`; cada arquivo voltado a versao anterior derruba as suas. 60 suites e os dois
+verificadores passam. **Ficou sem conferencia:** os tres rascunhos da IA (Lia, Itamar, Iraci) estao
+no campo da conversa, nao enviados.
+
+## 2026-11-17 - v3.314.0 - HISTORICO - a cortesia nao passa por cima do "encerrou"
 
 Pergunta dele, sobre a print da v3.313: *"esse nao e um problema da IA reconhecendo que precisa
 responder?"*. **Era, e a causa nao estava na IA.** Medido: `rascunhoDeCortesia` (o ajuste que

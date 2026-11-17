@@ -41,6 +41,71 @@ export function postEncaminhado(entrantes, nossaUltimaAt, nomeDoContato = '') {
   };
 }
 
+/**
+ * **Ela respondeu ao FORMULÁRIO que mandamos** (17/11/2026, o Itamar: a nossa última fala era o
+ * link do formulário da agenda, ele escreveu *"Já fiz agendamento"* e o fluxo mandaria a mensagem
+ * do momento — o alerta de tempestade — por `ja-respondemos-antes`). A resposta a um formulário é
+ * sobre o formulário, e nenhuma resposta pronta sabe disso; chamada à mão, a IA escreveu certo
+ * (*"Que bom que você conseguiu fazer o agendamento"*).
+ *
+ * Exige a NOSSA última mensagem com um link de `/formulario/` (agenda, demanda, currículo — todos
+ * moram nesse caminho) e uma fala dela depois com letra de verdade: link, emoji ou figura sozinhos
+ * não são resposta, e quem só agradeceu cai no fecho por cortesia antes (`sugestao`).
+ */
+const LINK_DE_FORMULARIO = /https?:\/\/\S*\/formulario\/\S+/i;
+
+export function respostaAoFormulario(entrantes, nossas, nossaUltimaAt) {
+  const lista = Array.isArray(nossas) ? nossas : [];
+  if (!lista.length || !nossaUltimaAt) return null;
+  const corte = new Date(nossaUltimaAt).getTime();
+  // As falas NOSSAS do último bloco (o link pode vir numa mensagem logo depois do texto).
+  const ultimas = lista.filter((m) => {
+    const t = new Date(m?.at || 0).getTime();
+    return Number.isFinite(t) && corte - t <= 10 * 60 * 1000 && t <= corte;
+  });
+  if (!ultimas.some((m) => LINK_DE_FORMULARIO.test(String(m?.texto || '')))) return null;
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => !m?.sistema && !m?.geradaPeloAnuncio);
+  const links = new RegExp(LINK.source, 'gi');
+  const escreveu = dela.some((m) => /\p{L}{2,}/u.test(String(m?.texto || '').replace(links, ' ')));
+  if (!escreveu) return null;
+  return { motivo: 'ela respondeu ao formulário que mandamos — a resposta é sobre o formulário, a IA escreve' };
+}
+
+/**
+ * **A ÚLTIMA fala dela é sobre ELA, em primeira pessoa** (17/11/2026, a Lia: etiqueta ENGAJADO, já
+ * respondida no dia, e *"Eu estou impossibilitada de exercer um ganho extra porque [...] está
+ * ameaçando cortar o BPC"* — o fluxo concluía sem responder).
+ *
+ * Medido antes: dos detectores, só `falouAlgoProprio` casava, e ele casa também com o texto
+ * repassado sobre dieta que ela mandou antes — engajado manda isso o dia inteiro, então usá-lo
+ * faria toda passada de engajado pagar a IA. O que separa é a PESSOA da frase: primeira pessoa
+ * ("eu", "estou", "meu", "minha", "tô"), na ÚLTIMA mensagem, curta (até 400), sem link, e que não
+ * seja só agradecimento, apoio, despedida ou cortesia — esses têm o fecho.
+ *
+ * **Só a regra do engajado lê este sinal**, e ele só troca o desfecho de "conclui" para "a IA
+ * escreve" (tecla 6). A IA ainda pode dizer que não há o que responder — e aí, já tendo falado
+ * hoje, a rodada conclui sem enviar.
+ */
+const PRIMEIRA_PESSOA = /(^|[^\p{L}])(eu|estou|t[ôo]|meu|minha|meus|minhas|comigo|preciso|consigo|tenho)(?![\p{L}])/iu;
+
+export function falaPessoalDela(entrantes, nossaUltimaAt) {
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => m?.de !== 'nos' && !m?.sistema && !m?.geradaPeloAnuncio && String(m?.texto || '').trim());
+  const ultima = dela[dela.length - 1];
+  if (!ultima) return null;
+  const texto = String(ultima.texto || '');
+  if (ultima.transcrito || texto.length > 400 || texto.length < 15) return null;
+  if (new RegExp(LINK.source, 'i').test(texto)) return null;
+  if (!PRIMEIRA_PESSOA.test(texto)) return null;
+  if (mensagemDeFecho(ultima)) return null;
+  if (soAgradeceOuElogia([ultima], null) || soExpressaApoio([ultima], null)) return null;
+  // Declaração de voto e de fé também é carinho, mesmo em primeira pessoa ("minha família é toda
+  // 22"): errar aqui devolve à IA a última palavra que o fecho tirou dela.
+  if (/(^|[^\p{L}\p{N}])(22|10122|vot\p{L}*|apoi\p{L}*|am[ée]m|deus)(?![\p{L}\p{N}])/iu.test(texto)) return null;
+  return { motivo: 'a última fala dela é sobre ela mesma, em primeira pessoa — pede resposta, não conclusão' };
+}
+
 /** Cortesia elaborada: conteúdo antes do tamanho, sem esconder pendências reais. */
 export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
   const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(m => !m?.sistema && !m?.geradaPeloAnuncio);

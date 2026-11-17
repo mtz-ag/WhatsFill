@@ -3939,8 +3939,14 @@ mudaram as maos, nao a cabeca.
   armadilha de *"ao escrever adaptador, leia o CONSUMIDOR"* ao contrario: o produtor cumpre o
   contrato e quem consome o ignora.
   Clicando rapido (uma conversa enquanto a anterior ainda carrega) chega a 16s nesse estado.
-  **NAO CONSERTADO** — o conserto mexe no laco que governa toda troca de contato, e a decisao de
-  faze-lo agora e dele.
+  **CONSERTADO EM 17/11/2026 (v3.315), a pedido dele.** Discordando, `conversaAberta` (no
+  `dom-mob.js` E no `mob-hook.js`) devolve o PAINEL com `por: 'discordam'`: serve para LER, e
+  `conversaDaTela` e `sendText` recusam com a marca do sinal fraco (a rodada PULA). E o pior que a
+  medicao mostrou: o `load()` que estava no meio terminava por cima do contato novo ("Cannot read
+  properties of null (reading 'name')"), e ele GRAVA (`aplicarAutomatico`). Hoje cada `load()` tem
+  um numero (`geracaoDoLoad`), avancado tambem por `agendarLoad`, e o que ficou para tras para antes
+  de por o contato, de gravar e de escrever erro. **Ao por um `await` novo no `load()` antes de
+  uma escrita, ponha `if (obsoleto()) return;` depois dele.**
 
 - **A TABELA VAZIA NAO ERA SO INUTIL: ERA O QUE FAZIA A RESPOSTA DO GRUPO MENTIR** (03/11/2026,
   print do cartao: *"funcao nunca foi utilizada, pode ser removida"*).
@@ -8069,7 +8075,7 @@ mudaram as maos, nao a cabeca.
 > **A varredura é estreita de propósito** — a primeira versão olhava todo comentário de bloco e
 > acusou **1277** ocorrências, porque os JSDoc daqui citam nomes entre crase o tempo todo.
 
-Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 59 suítes** passando.
+Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 60 suítes** passando.
 
 > **Esta lista envelhece, e envelheceu duas vezes:** em 03/11/2026 ela tinha 30 nomes e o diretório
 > já tinha 39; em 09/11/2026, 43 contra 48 — as nove que faltavam (`corrente`, `desabafo`, `fechamento-cortesia`, `memoria`, `modos`,
@@ -8078,7 +8084,7 @@ Node 18+, sem dependência. Antes de dar tarefa por concluída, **as 59 suítes*
 > por ela. Para não depender disso, no Git Bash: `for f in tests/*.test.mjs; do node "$f" || break; done`
 
 ```bash
-node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/busca-mob.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/concluir-pelo-painel.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/despedida-anexo-link.test.mjs && node tests/detalhes.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/fluxo-cortesia-longa.test.mjs && node tests/formularios.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/post-encaminhado.test.mjs && node tests/previa-sem-ia.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/remocao-local.test.mjs && node tests/repasse-ia.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/tom-cortesia.test.mjs && node tests/tom-publico.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
+node tests/acolhimento.test.mjs && node tests/anuncios.test.mjs && node tests/arvore.test.mjs && node tests/atendimento-novo.test.mjs && node tests/busca-mob.test.mjs && node tests/carregamento-paralelo.test.mjs && node tests/categorizar.test.mjs && node tests/concluir-pelo-painel.test.mjs && node tests/contexto-ia.test.mjs && node tests/contract.test.mjs && node tests/conversa.test.mjs && node tests/corrente.test.mjs && node tests/cortesia.test.mjs && node tests/desabafo.test.mjs && node tests/despedida-anexo-link.test.mjs && node tests/detalhes.test.mjs && node tests/diagnostico-minhas.test.mjs && node tests/dom-facebook.test.mjs && node tests/dom-mob.test.mjs && node tests/facebook-ia.test.mjs && node tests/facebook.test.mjs && node tests/fechamento-cortesia.test.mjs && node tests/finalidade-cadastro.test.mjs && node tests/fluxo-cortesia-longa.test.mjs && node tests/formularios.test.mjs && node tests/gabinete.test.mjs && node tests/hsm.test.mjs && node tests/ia-validadores.test.mjs && node tests/ia.test.mjs && node tests/imagem.test.mjs && node tests/janela-resposta.test.mjs && node tests/lote.test.mjs && node tests/memoria.test.mjs && node tests/mob-hook.test.mjs && node tests/mob.test.mjs && node tests/modos.test.mjs && node tests/momento-desatualizado.test.mjs && node tests/momento-no-gesto.test.mjs && node tests/observacoes.test.mjs && node tests/orgaos.test.mjs && node tests/page-mob.test.mjs && node tests/parar-rodada.test.mjs && node tests/parser.test.mjs && node tests/perfis.test.mjs && node tests/post-encaminhado.test.mjs && node tests/previa-sem-ia.test.mjs && node tests/previsao-do-fluxo.test.mjs && node tests/rascunho-vazio.test.mjs && node tests/reclamacao-servico.test.mjs && node tests/remocao-local.test.mjs && node tests/repasse-ia.test.mjs && node tests/respostas-comentario.test.mjs && node tests/rolagem.test.mjs && node tests/sugestao.test.mjs && node tests/tags.test.mjs && node tests/templates.test.mjs && node tests/tom-cortesia.test.mjs && node tests/tom-publico.test.mjs && node tests/vars.test.mjs && node tests/veredito.test.mjs
 ```
 
 Rodam offline: a lista de municípios do `parser.test.mjs` sai de `src/data/coredes-rs.json`,

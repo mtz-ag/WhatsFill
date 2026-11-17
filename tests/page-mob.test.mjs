@@ -742,6 +742,14 @@ grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
   check(semId.includes('UM sinal'),
     'sem id (o clique a mao) a exigencia dos dois sinais continua inteira');
 
+  // 17/11/2026: `conversaAberta` passou a devolver o painel com `por: 'discordam'` para o painel
+  // LER. Mexer nunca: nem com o id certo, e com a marca que faz a rodada PULAR em vez de parar.
+  const discordando = await erro(() => clickConcluir({ id: 'c-1', prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
+  check(discordando.includes('UM sinal') && discordando.includes('conversas diferentes'),
+    'lista e painel discordando: Resolver recusa mesmo com o id, e a rodada pula');
+  const enviaDiscordando = await erro(() => sendText('oi', { prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
+  check(enviaDiscordando.includes('UM sinal'), 'e enviar com os sinais discordando continua recusando');
+
   /**
    * **Assumir devolve o estado da TELA, nao a sonda do banco** (28/10/2026). A sonda e
    * `{ ok, estado, temAtendente }` — sem `hasComposer`. A rodada dos Novos lia a ausencia
@@ -2369,6 +2377,20 @@ grupo('a plataforma grava a cidade em MAIUSCULAS, e isso nao e "nao gravou" (11/
   const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
   const corpo = painel.slice(painel.indexOf('function mesmoValor('), painel.indexOf('function mesmoValor(') + 2500);
   check(/toLocaleUpperCase\('pt-BR'\)/.test(corpo), 'a releitura do painel tambem ignora a caixa');
+}
+
+grupo('o load que ficou para tras nao mexe no contato novo (17/11/2026)');
+{
+  const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const agendar = painel.slice(painel.indexOf('function agendarLoad('), painel.indexOf('function agendarReexame('));
+  check(/geracaoDoLoad\+\+/.test(agendar), 'trocar de conversa invalida na hora o load em voo');
+  const load = painel.slice(painel.indexOf('  async function load(sessionId)'), painel.indexOf('  async function preverOFluxo') > 0 ? painel.indexOf('  async function preverOFluxo') : undefined);
+  check(/const minhaGeracao = \+\+geracaoDoLoad/.test(load), 'cada load tem o seu numero');
+  const iContato = load.indexOf('state.contact = contact;');
+  check(iContato > 0 && /if \(obsoleto\(\)\) return;\s*state\.contact = contact;/.test(load), 'o load velho nao poe o contato dele por cima');
+  const iAplica = load.indexOf('await aplicarAutomatico();');
+  check(iAplica > 0 && /if \(obsoleto\(\)\) return;\s*await aplicarAutomatico\(\);/.test(load), 'nem grava (aplicarAutomatico) no contato errado');
+  check(/catch \(err\) \{[\s\S]{0,120}if \(obsoleto\(\)\) return;/.test(load.slice(iAplica)), 'e o erro dele nao vira o erro do contato novo');
 }
 
 fim();

@@ -1,0 +1,72 @@
+/**
+ * Os quatro defeitos achados usando a extensao na fila "Minhas" dele (17/11/2026), com dados
+ * ficticios no lugar dos eleitores.
+ *
+ *  1. o painel travava na troca de conversa (ver page-mob.test e dom-mob.test);
+ *  2. quem respondeu ao FORMULARIO recebia a mensagem do momento (o Itamar);
+ *  3. a IA sem o que responder mandava repetir a mensagem do momento ja enviada (o Andre);
+ *  4. o engajado que contava algo dele em primeira pessoa era concluido calado (a Lia).
+ */
+import { readFileSync } from 'node:fs';
+import { check, grupo, fim, lib } from './_harness.mjs';
+
+const cortesia = await lib('cortesia.js');
+const sug = await lib('sugestao.js');
+const painel = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+
+const nossaAt = '2026-11-16T10:18:00-03:00';
+const ela = (texto, at = '2026-11-17T14:16:00-03:00') => ({ texto, tipo: 'TEXT', at });
+const formulario = [
+  { texto: 'Bom dia! para podermos passar para o responsável da agenda por favor preencha esse formulário', at: '2026-11-16T10:17:30-03:00' },
+  { texto: 'https://mobiliza.me/capitaomartim/formulario/agenda', at: nossaAt },
+];
+
+grupo('quem responde ao formulario recebe a IA, nao a mensagem do momento (o Itamar)');
+{
+  const r = cortesia.respostaAoFormulario([ela('Ola'), ela('Ja fiz agendamento')], formulario, nossaAt);
+  check(!!r, 'responder depois do link do formulario e reconhecido');
+  check(!cortesia.respostaAoFormulario([ela('https://www.facebook.com/share/r/x/')], formulario, nossaAt), 'link sozinho nao e resposta');
+  check(!cortesia.respostaAoFormulario([ela('Ja fiz agendamento')], [{ texto: 'Bom dia! Que Deus abençoe', at: nossaAt }], nossaAt),
+    'sem formulario na nossa ultima fala, nada muda');
+
+  const decisaoDoFluxo = { id: 'r:ja-respondemos-antes:sem-cidade', tecla: '5' };
+  const d = sug.decisaoDaRespostaAoFormulario({ respostaAoFormulario: r }, decisaoDoFluxo);
+  check(d?.ia === true && d?.tecla == null, 'a mensagem do momento vira rascunho da IA');
+  check(!sug.decisaoDaRespostaAoFormulario({ respostaAoFormulario: r, cortesiaDeFechamento: { motivo: 'x' } }, decisaoDoFluxo),
+    'quem so agradeceu continua no fecho (a IA nao ganha a ultima palavra)');
+  check(!sug.decisaoDaRespostaAoFormulario({ respostaAoFormulario: r }, { id: 'r:etiqueta-so-conclui', tecla: '3' }),
+    'nao atravessa a protecao do assessor');
+  const fonteSug = readFileSync(new URL('../src/lib/sugestao.js', import.meta.url), 'utf8');
+  const fonteArv = readFileSync(new URL('../src/lib/arvore.js', import.meta.url), 'utf8');
+  check((fonteSug.match(/\|\| decisaoDaRespostaAoFormulario\(c, (decisao|null)\)/g) || []).length === 2, 'sugerirAcao aplica o ajuste com e sem decisao');
+  check(/decisaoDaRespostaAoFormulario\(c, escolhida\)/.test(fonteArv), 'e o quadro (arvore.decidir) tambem');
+  check(sug.rascunhoSemCadastro({ respostaAoFormulario: r }), 'e o rascunho nao pede o cadastro de quem acabou de preencher o formulario');
+}
+
+grupo('a IA sem o que responder nao repete a mensagem do momento (o Andre)');
+{
+  const corpo = painel.slice(painel.indexOf('const momentoNaoCabe = sugestaoLib.momentoDeNovoNaoCabe'), painel.indexOf('const escolha = escolhaAutomatica ??'));
+  check(/semOQueResponder && escolhaAutomatica == null && rodadaAutomatica\(\) && momentoNaoCabe && !temPergunta[\s\S]{0,200}escolhaAutomatica = 'concluir'/.test(corpo),
+    'ja tendo falado hoje, a rodada conclui sem enviar');
+  check(/temPergunta = !!\(sinaisDoContato\?\.perguntaAberta \|\| sinaisDoContato\?\.perguntaPendente\)/.test(corpo),
+    'com pergunta, o caso continua com ele');
+  check(painel.includes("'a IA não achou o que responder e já falamos com ela hoje — conclua sem enviar (tecla 3)'"),
+    'e fora da rodada a tela tambem diz para concluir, nao para mandar a tecla 5');
+}
+
+grupo('engajado que conta algo DELE nao e concluido calado (a Lia)');
+{
+  const ate = '2026-11-17T10:00:00-03:00';
+  const lia = 'Eu estou impossibilitada de exercer um ganho extra porque estao ameacando cortar o BPC';
+  check(!!cortesia.falaPessoalDela([ela(lia)], ate), 'primeira pessoa contando a propria situacao');
+  for (const t of ['Eu apoio vocês demais', 'Obrigada meu capitão', 'Bom dia meu querido, Deus abençoe',
+    'Corta, salga, 8 pedaços GARANTE 8 refeições Proteína Força', 'https://www.facebook.com/share/r/x/',
+    'Amém, minha família é toda 22', 'Tamo junto, eu voto no 22']) {
+    check(!cortesia.falaPessoalDela([ela(t)], ate), `nao e fala pessoal: "${t}"`);
+  }
+  const regra = sug.REGRAS.find((r) => r.id === 'etiqueta-dispensa-da-fila');
+  check(regra.tecla({ respondidoHoje: true, falaPessoalDela: { motivo: 'x' } }) === '6', 'com fala pessoal, a IA escreve (tecla 6)');
+  check(regra.tecla({ respondidoHoje: true }) === '3', 'sem ela, o engajado ja respondido continua concluindo');
+}
+
+fim();

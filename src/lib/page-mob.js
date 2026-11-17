@@ -1013,6 +1013,15 @@ async function conversaDaTela(oque, opcoes = {}) {
     throw new Error(`${oque}: a tela mostra outra conversa — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }
   /**
+   * **Os dois sinais DISCORDANDO nunca autorizam mexer** (17/11/2026). `conversaAberta` passou a
+   * devolver o painel da direita com `por: 'discordam'`, para o painel da extensao conseguir LER
+   * enquanto a linha da fila atrasa — e sem esta linha o `id` acima bastaria para resolver.
+   */
+  if (st.porQuantosSinais === 'discordam') {
+    // A MARCA vai no texto de proposito: a rodada a le e PULA o contato em vez de parar a fila.
+    throw new Error(`${oque}: sei qual conversa esta aberta por ${MARCA_SINAL_FRACO} (a lista e o painel da plataforma ainda apontam conversas diferentes) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
+  }
+  /**
    * **`so-um-sinal` NUNCA quer dizer "os dois discordaram"** (09/11/2026, print dele com a tecla 3:
    * *"a tecla 3 nao resolveu: sei qual conversa esta aberta por UM sinal so"*, com a conversa certa
    * na tela e o rascunho no campo).

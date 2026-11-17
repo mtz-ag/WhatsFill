@@ -228,7 +228,11 @@ grupo('QUAL conversa esta aberta: dois sinais que tem de concordar');
    * **Discordando, nao se afirma nada.** A tela esta num estado que ninguem mediu, e afirmar a
    * errada e ele conferir a mensagem de uma pessoa e apertar a tecla que responde a outra.
    */
-  check(conversaAberta({ raiz: tela([linha(a, true)], [painel(b)]) }) === null, 'sinais discordando: devolve NADA');
+  // INVERTIDA em 17/11/2026: medido na tela dele, a linha `ativa` atrasa 3 a 12s depois do clique,
+  // e devolver NADA deixava o painel em "Nenhum atendimento aberto". Discordando, vale o PAINEL para
+  // LER, marcado `discordam` — e agir continua recusando (page-mob.test.mjs).
+  const discorda = conversaAberta({ raiz: tela([linha(a, true)], [painel(b)]) });
+  check(discorda?.por === 'discordam' && discorda?.conversa?.id === b.id, 'sinais discordando: o painel da direita, marcado discordam');
 
   const soPainel = conversaAberta({ raiz: tela([linha(a, false)], [painel(a)]) });
   check(soPainel?.por === 'so-um-sinal', 'so o painel: responde, mas avisa que foi um sinal so');

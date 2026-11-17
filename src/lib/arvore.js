@@ -35,7 +35,7 @@
  * Puro e sem dependência de navegador, como tudo que decide sobre gente real neste projeto.
  */
 
-import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao, decisaoDoPostEncaminhado } from './sugestao.js';
+import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao, decisaoDoPostEncaminhado, decisaoDaRespostaAoFormulario } from './sugestao.js';
 
 /**
  * Os SINAIS que um ramo pode usar como condição — o menu que ele vê ao criar um nó.
@@ -442,6 +442,9 @@ export function decidir(ctx, arvore, fluxo) {
   // Link com texto que puxa opinião (12/11/2026): vale no quadro salvo, sem reimportar.
   const doLink = respostaLinkComOpiniao(c, escolhida);
   if (doLink) return { ...doLink, caminho: ['link com opiniao'] };
+  // Resposta ao formulario que mandamos (17/11/2026, o Itamar): a IA escreve. Sem reimportar.
+  const doFormulario = decisaoDaRespostaAoFormulario(c, escolhida);
+  if (doFormulario) return { ...doFormulario, caminho: ['resposta ao formulario'] };
   const cortesia = rascunhoDeCortesia(c, escolhida);
   if (cortesia) return cortesia;
   const gesto = momentoNoGesto(escolhida, c);

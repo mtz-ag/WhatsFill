@@ -351,8 +351,18 @@ export function conversaAberta({ raiz = document } = {}) {
   const doPainel = painelDaConversa([...raiz.querySelectorAll('div')]);
 
   if (daLista && doPainel) {
-    // Discordaram: a tela esta num estado que ninguem mediu. Calar e o desfecho certo.
-    if (daLista.id !== doPainel.id) return null;
+    /**
+     * **Discordando, quem esta na tela e o PAINEL, e ele serve para LER** (17/11/2026, medido na
+     * tela dele, de 500 em 500ms: depois do clique o painel da direita troca na hora e a marca
+     * `ativa` da LINHA fica no contato anterior por 3 a 12 segundos). Devolver nada ali deixava o
+     * painel da extensao em "Nenhum atendimento aberto" com a conversa aberta — e o `load()` que
+     * estava no meio terminava por cima, com "Cannot read properties of null (reading 'name')".
+     *
+     * **O `por` e `'discordam'`, e AGIR continua recusando:** enviar exige `os-dois`, e
+     * `conversaDaTela` recusa `discordam` mesmo com `id`. O painel le a conversa que ele ve; mexer
+     * no atendimento espera a lista concordar.
+     */
+    if (daLista.id !== doPainel.id) return { conversa: doPainel, por: 'discordam' };
     return { conversa: daLista, por: 'os-dois' };
   }
   if (doPainel) return { conversa: doPainel, por: 'so-um-sinal' };

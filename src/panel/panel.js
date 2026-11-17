@@ -31,7 +31,7 @@ import * as imagemLib from '../lib/imagem.js';
 import * as facebook from '../lib/facebook.js';
 import * as fbCliente from '../lib/facebook-cliente.js';
 import { extract, rebaixarParaPalpite } from '../lib/extract.js';
-import { soCortesia, cortesiaParaRascunho, linkComOpiniao, postEncaminhado } from '../lib/cortesia.js';
+import { soCortesia, cortesiaParaRascunho, linkComOpiniao, postEncaminhado, respostaAoFormulario, falaPessoalDela } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
 import * as arvoreLib from '../lib/arvore.js';
@@ -118,6 +118,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
   let timerLoad = null;
   let timerReexame = null;
+  /**
+   * **Cada `load()` tem um número, e o que ficou para trás para de mexer no estado** (17/11/2026,
+   * medido na tela dele trocando de conversa: um `load()` em voo terminou depois de a troca zerar
+   * `state.contact`, e o painel parou em "não carreguei — Cannot read properties of null (reading
+   * 'name')"). O pior caso nem é o erro: é o carregamento de UM contato terminando por cima do
+   * próximo e gravando nele (`aplicarAutomatico` grava). `agendarLoad` também avança o número, então
+   * a troca de conversa invalida na hora quem estava carregando.
+   */
+  let geracaoDoLoad = 0;
 
   /** A pergunta de cidade em curso, quando há uma. Impede duas caixas iguais na tela. */
   let perguntaDeCidade = null;
@@ -563,6 +572,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * pergunta pela pessoa errada, que já aconteceu aqui.
    */
   function agendarLoad(sessionId) {
+    geracaoDoLoad++;
     clearTimeout(timerLoad);
     clearTimeout(timerReexame);
     cancelarPerguntaDeCidade();
@@ -647,6 +657,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   async function load(sessionId) {
+    const minhaGeracao = ++geracaoDoLoad;
+    const obsoleto = () => minhaGeracao !== geracaoDoLoad;
     // A caixa da cidade pertence ao contato que estava aberto. Trocou de contato, ela é
     // restolho — e restolho aqui não é sujeira de tela, é risco de gravar na pessoa errada:
     // visto ao vivo, painel dizendo "Abra um atendimento" com uma caixa perguntando por
@@ -732,6 +744,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (state.perfil.id !== perfisLib.PERFIL_PADRAO) {
       state.ia = { ...state.ia, regras: String((await perfisLib.ler('iaRegras', state.perfil.id, '')) || '') };
     }
+    if (obsoleto()) return;
     renderAll();
 
     if (!sessionId) {
@@ -746,6 +759,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         api.getSession(sessionId),
         Promise.resolve().then(() => page.numeroDoCanal()).catch(() => ''),
       ]);
+      if (obsoleto()) return;
       state.session = session;
       /**
        * **De quem é esta conversa** — pelo CANAL, que é dado (escolha dele, 24/09/2026).
@@ -778,6 +792,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         fieldsLib.classifyFields(),
         api.getConversation(sessionId),
       ]);
+      if (obsoleto()) return;
       state.contact = contact;
       state.classify = classify;
       const fone = contact?.phonenumber || contact?.telefone || contact?.phone || '';
@@ -960,6 +975,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       await corrigirNomeComCidade(nomeField);
       marcarCidadeParaLimpar(classify);
       await refreshTagSuggestions();
+      if (obsoleto()) return;
       /**
        * A etiqueta por palavra lida da CONVERSA — pega o que saiu por fora do painel. Dentro de
        * `try` porque falha de etiqueta nunca pode derrubar o carregamento do contato (20/08).
@@ -986,14 +1002,20 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
 
       // Depois do status: se houver o que aplicar, a mensagem de "Aplicado sozinho" substitui.
       // A lista configurada vale tambem ao abrir o contato, sem iniciar rodada.
+      // Daqui para baixo o painel GRAVA no contato: carregamento que ficou para trás para aqui.
+      if (obsoleto()) return;
       if (!state.auto.rodando) {
         state.auto.remocao = { sonda: false, avisou: false };
         const remocao = await removerEtiquetasListadas(state.contact.name || 'contato');
         if (remocao?.parar) throw new Error(remocao.motivo);
       }
+      if (obsoleto()) return;
       await aplicarAutomatico();
+      if (obsoleto()) return;
       await preverOFluxo(sessionId);
     } catch (err) {
+      // O erro de um carregamento que ficou para trás não é deste contato.
+      if (obsoleto()) return;
       state.error = err.message;
       setStatus(err.message, 'err');
     }
@@ -11462,6 +11484,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         linkComOpiniao: linkComOpiniao(state.entrantes, state.nossaUltimaAt),
         // POST ENCAMINHADO (12/11/2026, a Suely): o tamanho é do autor do post, não dela.
         postEncaminhado: postEncaminhado(state.entrantes, state.nossaUltimaAt, state.contact?.name || ''),
+        // RESPOSTA AO FORMULARIO (17/11/2026, o Itamar): a nossa ultima fala era o link do formulario.
+        respostaAoFormulario: respostaAoFormulario(state.entrantes, state.nossas, state.nossaUltimaAt),
+        // A ultima fala dela e sobre ELA, em primeira pessoa (17/11/2026, a Lia, engajada).
+        falaPessoalDela: falaPessoalDela(state.entrantes, state.nossaUltimaAt),
         pedeRespostaPessoal:
           conversaPedeRespostaPessoal(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
           pedeRoupa(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio) ||
@@ -12021,7 +12047,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
         }
 
-        const porQue = sugestao?.id === 'post-encaminhado'
+        const porQue = sugestao?.id === 'resposta-ao-formulario'
+          ? 'ela respondeu ao formulário que mandamos, e o fluxo pediu um rascunho sobre isso'
+          : sugestao?.id === 'post-encaminhado'
           ? 'ela encaminhou um post político de outra pessoa, e o fluxo pediu um rascunho que se posiciona sem resumir'
           : sugestao?.id === 'cortesia-rascunho'
           ? (sinaisDoContato?.cortesiaParaRascunho?.anexo
@@ -12555,7 +12583,19 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         registrarNaRodada(nome, 'aviso', `não mandei a mensagem do momento: ${momentoNaoCabe.motivo} — decida você`);
         escolhaAutomatica = null;
       }
-      if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica() && momentoNaoCabe) {
+      /**
+       * **A IA não achou o que responder E já falamos hoje: conclui sem enviar** (17/11/2026, o
+       * André — uma corrente "REPASSEM AOS MILHÕES" depois da nossa mensagem do momento das 10:44).
+       * A mensagem do momento seria a segunda do dia, e "decida você" parava a rodada num caso em
+       * que a IA já disse que não há o que dizer. **Pergunta continua sendo dele:** com pergunta
+       * aberta ou pendente, o caso fica na caixa.
+       */
+      const temPergunta = !!(sinaisDoContato?.perguntaAberta || sinaisDoContato?.perguntaPendente);
+      if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica() && momentoNaoCabe && !temPergunta &&
+          opcoes.some((o) => o.valor === 'concluir')) {
+        registrarNaRodada(nome, 'aviso', `a IA não achou o que responder e ${momentoNaoCabe.motivo} — concluo sem enviar`);
+        escolhaAutomatica = 'concluir';
+      } else if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica() && momentoNaoCabe) {
         registrarNaRodada(nome, 'aviso', `a IA não achou o que responder, mas ${momentoNaoCabe.motivo} — não mando a mensagem do momento; decida você`);
       } else if (semOQueResponder && escolhaAutomatica == null && rodadaAutomatica()) {
         const alvoMomento = opcoes.find((o) => o.valor === 'momento');
@@ -17141,11 +17181,22 @@ const CONTATOS_POR_PAGINA = 200;
           'aviso',
           'a IA leu e não achou o que responder: a fala dela não pede nada e não diz a que se refere'
         );
+        /**
+         * O conselho depende de já termos falado hoje (17/11/2026, o André: a tela mandava a tecla 5
+         * com a mensagem do momento enviada às 10:44). `state.sinais` só existe depois de a rodada
+         * ou a prévia montar o contexto; sem ele vale a conversa — alguma fala nossa de hoje.
+         */
+        const hoje = new Date().toDateString();
+        const falamosHoje = state.sinais
+          ? !!(state.sinais.respondidoHoje || state.sinais.momentoHoje)
+          : !!(state.nossaUltimaAt && new Date(state.nossaUltimaAt).toDateString() === hoje);
         return {
           ok: false,
           enviado: false,
           naoHaOQueResponder: true,
-          motivo: 'a IA não achou o que responder — mande a mensagem do momento (tecla 5)',
+          motivo: falamosHoje
+            ? 'a IA não achou o que responder e já falamos com ela hoje — conclua sem enviar (tecla 3)'
+            : 'a IA não achou o que responder — mande a mensagem do momento (tecla 5)',
         };
       }
       registrarNaRodada(
