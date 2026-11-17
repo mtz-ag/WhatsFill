@@ -1508,9 +1508,18 @@ export function respostaLinkComOpiniao(c, decisao) {
   };
 }
 
-/** Aplica também aos quadros já salvos, sem exigir reimportação do fluxo. */
+/**
+ * Aplica também aos quadros já salvos, sem exigir reimportação do fluxo.
+ *
+ * **Quem decide se ela ENCERROU é a conferência de encerramento, e esta regra não passa por cima**
+ * (17/11/2026, pergunta dele: *"esse não é um problema da IA reconhecendo que precisa
+ * responder?"*). Era: `ultimaEhDespedida` é o veredito do vocabulário, do fecho gratuito OU da IA
+ * (`encerrouAConversa`), e vira a tecla 3 — mas a tecla 3 estava na lista que este ajuste
+ * sobrescreve, então a IA dizia "encerrou" e o rascunho de cortesia mandava escrever "obrigado
+ * pelo carinho" assim mesmo. Medido na frase da print: override verdadeiro sobre a tecla 3.
+ */
 export function rascunhoDeCortesia(c, decisao) {
-  if (!c?.cortesiaParaRascunho || c.ultimaEhNossa || c.pedeRespostaPessoal || c.perguntaAberta ||
+  if (!c?.cortesiaParaRascunho || c.ultimaEhDespedida || c.ultimaEhNossa || c.pedeRespostaPessoal || c.perguntaAberta ||
       c.perguntaPendente || c.reclamaSemResposta || c.desabafoPessoal || c.denunciaOuCorrente ||
       c.naoPodeFalarAgora || c.pedeAlgoIndefinido || c.materialPendente || c.pedeAjudaFinanceira ||
       c.pedeEmprego || c.pedeLigacao || c.pedeFalarComDeputado || c.confirmouPresenca || c.informouEndereco ||

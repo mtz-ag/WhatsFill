@@ -182,6 +182,18 @@ grupo('retribuir o bom dia e o carinho fecha sem a IA ter a ultima palavra (17/1
   ];
   for (const t of diaComConteudo) check(!fecha(t), `nao fecha: "${t}"`);
 
+  // Quando a conferencia de encerramento (vocabulario, fecho ou IA) diz "encerrou", o rascunho de
+  // cortesia NAO passa por cima da tecla 3 — era isso que fazia a IA "querer a ultima palavra".
+  const sug = await lib('sugestao.js');
+  const longa = [{ texto: 'Bom dia, que Deus derrame bênçãos sobre sua vida e a de seus familiares, gratidão pelo carinho e pela lembrança diária', tipo: 'TEXT', at }];
+  const cr = cortesia.cortesiaParaRascunho(longa, nossaAt);
+  check(!!cr, 'a cortesia elaborada ainda e reconhecida para rascunho');
+  const despedida = { id: 'ultima-e-despedida', tecla: '3' };
+  check(!sug.rascunhoDeCortesia({ cortesiaParaRascunho: cr, ultimaEhDespedida: true }, despedida),
+    'com "encerrou", o rascunho de cortesia nao sobrescreve a tecla 3');
+  check(!!sug.rascunhoDeCortesia({ cortesiaParaRascunho: cr, ultimaEhDespedida: false }, { id: 'x', tecla: '6' }),
+    'sem "encerrou", a cortesia elaborada continua indo para o rascunho');
+
   // Com o fecho reconhecido, a conferencia PAGA de encerramento nem sai.
   const corpo = painel.slice(painel.indexOf('async function encerrouAConversa'), painel.indexOf('async function etiquetarEndereco'));
   const iFecho = corpo.indexOf('cortesiaDeFechamento(state.entrantes');

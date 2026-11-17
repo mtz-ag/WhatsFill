@@ -1,4 +1,17 @@
-## 2026-11-17 - v3.313.0 - ESTADO DE AGORA - o dia da semana tambem e cortesia
+## 2026-11-17 - v3.314.0 - ESTADO DE AGORA - a cortesia nao passa por cima do "encerrou"
+
+Pergunta dele, sobre a print da v3.313: *"esse nao e um problema da IA reconhecendo que precisa
+responder?"*. **Era, e a causa nao estava na IA.** Medido: `rascunhoDeCortesia` (o ajuste que
+manda a IA escrever um obrigado curto para cortesia elaborada) sobrescrevia qualquer decisao com
+tecla 3 — inclusive a de `ultima-e-despedida`, que e o veredito de `encerrouAConversa`
+(vocabulario, fecho gratuito OU a conferencia paga da IA). Entao a IA dizia "encerrou" e o
+rascunho escrevia "obrigado pelo carinho" assim mesmo; ampliar o vocabulario (v3.312, v3.313) so
+tapava os casos que a lista conhecia. Hoje `rascunhoDeCortesia` se cala com `ultimaEhDespedida`,
+nos dois motores (a arvore chama a mesma funcao). A cortesia que a conferencia NAO julga encerrada
+continua indo para o rascunho. Prova: 3 assercoes novas em `fechamento-cortesia.test.mjs`; o
+`sugestao.js` anterior derruba 1. **Nao conferido ao vivo.**
+
+## 2026-11-17 - v3.313.0 - HISTORICO - o dia da semana tambem e cortesia
 
 Print dele no mesmo dia, depois da v3.312: *"Bom dia Deus no comando boa terca feira pra voce
 tambem querido obrigada pelo carinho"* recebeu o rascunho "Eu que agradeco pelo carinho. Um grande
