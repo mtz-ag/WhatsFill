@@ -1,4 +1,17 @@
-## 2026-11-17 - v3.315.0 - ESTADO DE AGORA - quatro defeitos achados usando a extensao na fila Minhas
+## 2026-11-17 - v3.316.0 - ESTADO DE AGORA - a preocupacao mais grave do bloco nao some
+
+Primeiro contato da rodada depois da v3.315, a Lia (engajada): ela contou que o governo ameaca
+cortar o BPC e depois escreveu dez mensagens sobre o apartamento. O rascunho da rodada falou so do
+imovel; o que eu gerei pelo "Chamar a IA" tocou o BPC (com o INSS 135), e ele: *"a sua pegou uma
+resposta mais aceitavel"*. **Causa:** o prompt manda o EIXO ser a mensagem mais recente que pede
+algo ("se souber de alguem interessado..."), e a variacao entre chamadas decidia se o BPC entrava.
+Hoje a linha do eixo diz que a preocupacao mais GRAVE do bloco (perder beneficio, renda, salario ou
+moradia, doenca, fome, violencia, fraude) nunca fica de fora. **Desfeito no caminho, antes de
+publicar:** eu tinha condicionado o contato do orgao a ela pedir orientacao e proibido comentar
+assunto particular — os dois empurrariam para o rascunho que ele achou pior. Prova: 3 assercoes em
+`diagnostico-minhas.test.mjs`; o `ia.js` anterior derruba 2. **Nao conferido ao vivo.**
+
+## 2026-11-17 - v3.315.0 - HISTORICO - quatro defeitos achados usando a extensao na fila Minhas
 
 Pedido dele: *"acesse o mobiliza pelo meu navegador, responda as pessoas e faca um diagnostico"* —
 e depois *"a intencao era usar a extensao e chamar a IA dela"*. Feito pelo Chrome dele, na v3.314,

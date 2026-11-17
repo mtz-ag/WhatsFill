@@ -3484,7 +3484,18 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
         'resposta é o que ela quer AGORA: a mais recente que pede ou pergunta alguma coisa. Se a ' +
         'última for só cortesia ("obrigada", "bom dia"), o eixo é a anterior, e a cortesia se ' +
         'responde em duas palavras. As outras você leva em conta e reconhece de passagem, numa ' +
-        'frase — nunca responda uma a uma, nem por tópicos.'
+        'frase — nunca responda uma a uma, nem por tópicos. ' +
+        /**
+         * **A preocupação MAIS GRAVE do bloco não fica de fora** (17/11/2026, a Lia, decisão dele). Ela
+         * contou que o governo ameaça cortar o BPC e depois escreveu dez mensagens sobre o apartamento;
+         * um rascunho seguiu o eixo (a mais recente: "se souber de alguém interessado…") e falou só do
+         * imóvel, o outro tocou o BPC — e o que tocou foi o que ele aceitou. A mais recente decide o
+         * EIXO; a mais grave não pode sumir.
+         */
+        'MAS a preocupação mais GRAVE do bloco nunca fica de fora, mesmo que não seja a última: ' +
+        'medo de perder benefício, renda, salário ou moradia, doença, fome, violência, fraude ou golpe. ' +
+        'Havendo uma dessas, sua resposta fala dela — é por ela que a pessoa escreveu, mesmo que tenha ' +
+        'continuado falando de outra coisa.'
       : 'Responda à mensagem marcada "← SEM RESPOSTA".',
     'As falas dela marcadas "← já respondida" NÓS JÁ RESPONDEMOS: elas são contexto, e nada mais.',
     'Não volte a elas, não as responda de novo e não retome assunto que já encerramos.',

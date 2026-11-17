@@ -69,4 +69,24 @@ grupo('engajado que conta algo DELE nao e concluido calado (a Lia)');
   check(regra.tecla({ respondidoHoje: true }) === '3', 'sem ela, o engajado ja respondido continua concluindo');
 }
 
+grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, decisao dele)');
+{
+  const ia = await lib('ia.js');
+  const agora = new Date('2026-11-17T15:00:00-03:00');
+  const msg = (texto, h) => ({ de: 'ela', texto, at: `2026-11-17T${h}:00-03:00` });
+  const bloco = ia.montarContatoRascunho({
+    agora,
+    campos: { Nome: 'Maria Ficticia', Cidade: 'Porto Alegre' },
+    mensagens: [
+      { de: 'nos', texto: 'Vou orar por você.', at: '2026-11-17T13:05:00-03:00' },
+      msg('Eu estou com medo porque estao ameacando cortar o meu beneficio', '14:27'),
+      msg('O apartamento precisa de conserto', '14:40'),
+      msg('Se souber de alguem interessado...', '14:52'),
+    ],
+  });
+  check(/O EIXO da sua resposta/.test(bloco), 'o eixo continua sendo a mais recente');
+  check(/a preocupação mais GRAVE do bloco nunca fica de fora/.test(bloco), 'e a mais grave e nomeada para nao sumir');
+  check(/perder benefício, renda, salário ou moradia/.test(bloco), 'com os exemplos que a tornam reconhecivel');
+}
+
 fim();
