@@ -699,6 +699,15 @@ const FECHO_DE_CORTESIA = new RegExp(
     String.raw`(sua|seu|tua|teu|meu|minha|nossa|nosso|o|os|as|ao|aos|com|no|na|pelo|pela|toda|todo|te|ti)`,
     String.raw`(querid[oa]s?|amad[oa]s?|equipe|time|senhor|sucessos?|tudo\s+de\s+bom)`,
     String.raw`(semana|vida|caminhada|dias?|fam(í|i)lias?)`,
+    /**
+     * **O DIA DA SEMANA TAMBÉM** (17/11/2026, print dele no mesmo dia, depois da v3.312: *"Bom dia
+     * Deus no comando boa terça feira pra você também querido obrigada pelo carinho"* recebeu o
+     * rascunho "Eu que agradeço pelo carinho"). A lista só conhecia sábado e domingo — "boa terça",
+     * "ótima quinta-feira" e "sexta abençoada" sobravam como conteúdo. Sozinhos, sem o adjetivo,
+     * de propósito: "na quinta tem reunião?" continua aberta pelo "?" e pelo que sobra.
+     */
+    String.raw`(segunda|ter(ç|c)a|quarta|quinta|sexta)(\s*-?\s*feiras?)?|s(á|a)bado|domingo|feriado`,
+    String.raw`bo[am]s?|aben(ç|c)oad[oa]s?|iluminad[oa]s?|maravilhos[oa]s?|feliz(es)?|[óo]tim[oa]s?|lind[oa]s?`,
     String.raw`(muito\s+)?(obrigad[oa]s?|obg|brigad[oa]|grat[oa]s?|gratid(ã|a)o|agrade(ç|c)o|agradecid[oa])`,
     String.raw`(igualmente|idem|tamb(é|e)m|tb|tbm)`,
     String.raw`(pra|para|p\/|a|pro)\s+(voc(ê|e)|vc|o\s+senhor|senhor|tu|ti)`,

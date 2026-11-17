@@ -169,6 +169,19 @@ grupo('retribuir o bom dia e o carinho fecha sem a IA ter a ultima palavra (17/1
   ];
   for (const t of naoPodem) check(!fecha(t), `nao fecha: "${t}"`);
 
+  // A print do mesmo dia, depois da v3.312: o dia da semana ainda sobrava como conteudo.
+  const diasDaSemana = [
+    'Bom dia Deus no comando boa terça feira pra você também querido obrigada pelo carinho',
+    'boa terça-feira', 'Boa quarta', 'ótima quinta feira pra você', 'boa sexta abençoada',
+    'Bom dia, uma boa segunda', 'Bom dia, feliz sexta-feira',
+  ];
+  for (const t of diasDaSemana) check(fecha(t), `fecha: "${t}"`);
+  const diaComConteudo = [
+    'Boa terça, quero o material', 'na quinta tem reunião?', 'Bom dia, quinta vou no posto de saúde',
+    'Boa sexta, minha mãe está internada', 'boa ideia', 'Bom dia, segunda fui no CRAS e não me atenderam',
+  ];
+  for (const t of diaComConteudo) check(!fecha(t), `nao fecha: "${t}"`);
+
   // Com o fecho reconhecido, a conferencia PAGA de encerramento nem sai.
   const corpo = painel.slice(painel.indexOf('async function encerrouAConversa'), painel.indexOf('async function etiquetarEndereco'));
   const iFecho = corpo.indexOf('cortesiaDeFechamento(state.entrantes');

@@ -1,4 +1,17 @@
-## 2026-11-17 - v3.312.0 - ESTADO DE AGORA - retribuir o bom dia e o carinho fecha, sem a IA
+## 2026-11-17 - v3.313.0 - ESTADO DE AGORA - o dia da semana tambem e cortesia
+
+Print dele no mesmo dia, depois da v3.312: *"Bom dia Deus no comando boa terca feira pra voce
+tambem querido obrigada pelo carinho"* recebeu o rascunho "Eu que agradeco pelo carinho. Um grande
+abraco!" — *"como eu havia falado"*. **Medido: a frase nao fechava.** O vocabulario do fecho so
+conhecia sabado e domingo, e "boa" solta (sem dia/tarde/noite colado) sobrava como conteudo; com
+isso a cortesia ia para o rascunho da IA. Hoje entram segunda a sexta (com ou sem "feira"), feriado,
+"boa"/"bom" soltos e os adjetivos depois do dia ("sexta abencoada"). **As guardas nao mudaram** e
+foram medidas com dia da semana: "Boa terca, quero o material", "na quinta tem reuniao?", "quinta
+vou no posto de saude", "segunda fui no CRAS e nao me atenderam" e "boa ideia" continuam abertas.
+Prova: 13 assercoes novas em `fechamento-cortesia.test.mjs`; o vocabulario da v3.312 derruba 7. 59
+suites e `checar-modulos` passam. **Nao conferido ao vivo** — recarregar a extensao e F5.
+
+## 2026-11-17 - v3.312.0 - HISTORICO - retribuir o bom dia e o carinho fecha, sem a IA
 
 Relato dele: *"a IA quer sempre ter a ultima palavra e esta gastando creditos de graca; eu mando o
 bom dia, a pessoa responde bom dia de volta e a IA responde obrigado pelo carinho"*. **Medido em 21
