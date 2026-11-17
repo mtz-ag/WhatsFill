@@ -93,6 +93,16 @@ grupo('boato do adversario: sem aula e sem inventar a vida do candidato (a Evani
   check(/NUNCA AFIRME o que o candidato viu, onde esteve, com quem tem contato/.test(sis), 'e nao se inventa o que o candidato viu ou com quem tem contato');
 }
 
+grupo('o contato do orgao vai em frase natural, sem colar a linha do catalogo (a Lia)');
+{
+  const gab = await lib('gabinete.js');
+  const bloco = gab.blocoDeOrgaos([{ nome: 'INSS', trata: 'aposentadoria, BPC/LOAS, pericia', contatos: [{ tipo: 'telefone', valor: '135', obs: 'seg a sab, 7h-22h' }] }]);
+  check(/NUNCA cole a linha inteira nem a lista de assuntos/.test(bloco), 'o bloco de orgaos manda escrever em frase natural');
+  const ia = await lib('ia.js');
+  const contato = ia.montarContatoRascunho({ mensagens: [{ de: 'ela', texto: 'vao cortar meu BPC, a quem eu recorro?', at: '2026-11-17T14:00:00-03:00' }], orgaos: bloco, agora: new Date('2026-11-17T15:00:00-03:00') });
+  check(/sem colar a linha inteira nem a lista de assuntos/.test(contato), 'e a regra 20 colada no pedido tambem');
+}
+
 grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, decisao dele)');
 {
   const ia = await lib('ia.js');

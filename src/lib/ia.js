@@ -3882,7 +3882,9 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
      */
     orgaos && !desabafo?.perdaMaterial
       ? `${String(orgaos).trim()}\n` +
-        'Regra 20: COPIE o contato do órgão certo exatamente como está acima — nenhum outro número. Não prometa ' +
+        'Regra 20: COPIE o número e o canal do órgão certo exatamente como estão acima — nenhum outro número —, em frase ' +
+        'natural, sem colar a linha inteira nem a lista de assuntos que o órgão trata (17/11/2026, a Lia recebeu ' +
+        '"INSS - Central 135 - aposentadoria, auxílio-doença, BPC/LOAS, perícia, pensão…" colado). Não prometa ' +
         'encaminhar nada ao órgão nem ao governador, e se o assunto é do órgão, NÃO ofereça passar nada para o ' +
         'nosso lado: o contato oficial e pare. EXCEÇÃO: reclamação de serviço público segue a regra 20: identifique onde reclamar com nome e canal oficial verificados; primeiro confira se já houve registro; se houve e não foi atendido, explique o papel de cobrar providências e peça protocolo e retorno apenas se faltarem. Não prometa execução nem solução.' +
         (pediuDinheiro ? ' Se ela só pediu dinheiro sem dizer a dificuldade, vale a linha DINHEIRO: não use esta lista.' : '')

@@ -1,4 +1,15 @@
-## 2026-11-17 - v3.318.0 - ESTADO DE AGORA - boato do adversario sem aula e sem inventar o candidato
+## 2026-11-17 - v3.319.0 - ESTADO DE AGORA - o contato do orgao em frase natural
+
+Na mesma rodada, o rascunho da Lia (conteudo certo: o BPC primeiro) colou a linha do catalogo de
+orgaos inteira: *"INSS - Central 135 - aposentadoria, auxilio-doenca, BPC/LOAS, pericia, pensao,
+beneficio do INSS: tel. 135"*. A ordem era "COPIE o contato exatamente como esta aqui", e o modelo
+copiou a LINHA. Hoje o bloco (`gabinete.blocoDeOrgaos`) e a regra 20 colada no pedido mandam copiar
+o NUMERO, o site e o horario exatos, em frase natural, nunca a linha nem a lista de assuntos. A trava
+dos telefones (`telefoneForaDoDossie`) nao mudou. Prova: 2 assercoes em
+`diagnostico-minhas.test.mjs`; `orgaos.test.mjs` ajustado para a nova ordem. Combinado com ele: na
+rodada eu avalio cada rascunho e PERGUNTO antes de cada envio. **Nao conferido ao vivo.**
+
+## 2026-11-17 - v3.318.0 - HISTORICO - boato do adversario sem aula e sem inventar o candidato
 
 Rodada de verdade em Minhas na v3.317, primeiro contato a Evani: *"qual a tua opiniao sobre que o
 Lula ja tenha morrido em 2022? Voce ja viu ele?"*. O rascunho veio com tom de nota (*"nao tenho

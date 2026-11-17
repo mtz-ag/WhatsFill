@@ -174,7 +174,7 @@ grupo('o bloco do contato leva os orgaos so quando ha');
   check(!/ÓRGÃOS QUE PODEM SER/.test(sem), 'sem bloco, nada');
   const bloco = gabinete.blocoDeOrgaos(gabinete.orgaosParaAConversa([CASO_REAL]));
   const com = ia.montarContatoRascunho({ mensagens: msgs, orgaos: bloco });
-  check(com.includes('(51) 3210-4339') && /COPIE o contato/.test(com), 'com bloco, o contato e a ordem de copiar');
+  check(com.includes('(51) 3210-4339') && /COPIE o (NÚMERO|número)/.test(com), 'com bloco, o contato e a ordem de copiar');
 }
 
 grupo('o esquema e o mesmo de antes: so a resposta, sem campo interno');

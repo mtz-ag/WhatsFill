@@ -411,7 +411,7 @@ export function blocoDeOrgaos(lista, { conferidoEm = CONFERIDO_EM } = {}) {
     (o) => `- ${o.nome} — ${o.trata}: ${o.contatos.map(contatoEmTexto).join(' · ')}${o.obs ? `. Obs.: ${o.obs}` : ''}`
   );
   return [
-    `ÓRGÃOS QUE PODEM SER O CAMINHO CERTO (dossiê de órgãos, conferido em ${conferidoEm}). Use SÓ se o assunto dela for de um deles, e COPIE o contato exatamente como está aqui:`,
+    `ÓRGÃOS QUE PODEM SER O CAMINHO CERTO (dossiê de órgãos, conferido em ${conferidoEm}). Use SÓ se o assunto dela for de um deles. COPIE o NÚMERO, o site e o horário exatamente como estão aqui, mas escreva em frase natural ("o INSS atende pelo 135, de segunda a sábado, das 7h às 22h") — NUNCA cole a linha inteira nem a lista de assuntos que o órgão trata:`,
     ...linhas,
   ].join('\n');
 }
