@@ -1,3 +1,4 @@
+import { contarFrases } from './tom-cortesia.js';
 /** Tom de comentários públicos: só a rajada ainda não respondida, nunca anúncios. */
 const normalizar = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const termos = (s) => new Set((normalizar(s).match(/\b(?:fios?|enchentes?|postes?|ruas?|alagamentos?|acidentes?|buracos?|esgotos?|motoqueiros?|degolad[oa]s?)\b/g) || []).map((t) => t.replace(/s$/, '')));
@@ -27,6 +28,6 @@ export function falhasTomPublico(texto, contexto) {
   if (!/\b(me preocupa|preocupo|defendo|cobro|cobrando|descaso|seguranca|inaceitavel|compromisso)\b/.test(t)) falhas.push('falta posicionamento ou preocupação');
   if (!/\b(obrigado|agradeco)\b/.test(t)) falhas.push('falta agradecimento');
   if (/\?/.test(t)) falhas.push('não faça perguntas');
-  if ((texto.match(/[^.!?]+(?:[.!?]+|$)/g) || []).filter((v) => v.trim()).length > 3) falhas.push('máximo de 3 frases');
+  if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
   return falhas;
 }

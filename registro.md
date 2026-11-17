@@ -1,4 +1,23 @@
-## 2026-11-17 - v3.316.0 - ESTADO DE AGORA - a preocupacao mais grave do bloco nao some
+## 2026-11-17 - v3.317.0 - ESTADO DE AGORA - dois defeitos da rodada de verdade (Ivo e Jandir)
+
+Rodei o automatizado na fila Minhas com a v3.316, a pedido dele (*"mande executar o automatizado"*).
+A Lia saiu com o BPC primeiro, como ele queria, e ele mandou pular; nada enviado por mim. Dois
+defeitos novos, os dois corrigidos:
+- **O Ivo foi PULADO com "os dois sinais nao concordaram a tempo"** — causado pela v3.315: o
+  Resolver passou a recusar `discordam` mesmo com o `id`, e a lista da plataforma atrasa 3 a 12s
+  (a espera e de 4s). Com o `id` que a rodada abriu e o PAINEL mostrando essa conversa, a lista
+  atrasada e atraso e nao conflito: passa. Sem `id` (clique a mao) e com o painel em OUTRA
+  conversa, recusa como antes. Enviar continua exigindo os dois.
+- **O Jandir ("Boa tarde Capitao, ta tudo bem com voce, abencoe, abraco") parou a rodada** com "a
+  IA nao conseguiu rascunhar (maximo de 3 frases)". "Boa tarde!" contava como frase, e responder o
+  "tudo bem?", retribuir a bencao, agradecer o carinho e mandar o abraco nao cabia; a reescrita
+  falhava igual e o rascunho saia vazio. `tom-cortesia.contarFrases` ignora a saudacao e a
+  exclamacao de ate duas palavras, e os tres tons (cortesia, publico, repasse) usam a mesma conta.
+Prova: assercoes em `page-mob.test.mjs` e `diagnostico-minhas.test.mjs`; cada arquivo anterior
+derruba as suas. 60 suites e os dois verificadores passam. **A rodada da aba que eu abri ficou
+parada na caixa do Jandir** — nao respondi por ele.
+
+## 2026-11-17 - v3.316.0 - HISTORICO - a preocupacao mais grave do bloco nao some
 
 Primeiro contato da rodada depois da v3.315, a Lia (engajada): ela contou que o governo ameaca
 cortar o BPC e depois escreveu dez mensagens sobre o apartamento. O rascunho da rodada falou so do

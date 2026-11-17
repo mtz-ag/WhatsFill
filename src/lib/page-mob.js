@@ -1015,9 +1015,16 @@ async function conversaDaTela(oque, opcoes = {}) {
   /**
    * **Os dois sinais DISCORDANDO nunca autorizam mexer** (17/11/2026). `conversaAberta` passou a
    * devolver o painel da direita com `por: 'discordam'`, para o painel da extensao conseguir LER
-   * enquanto a linha da fila atrasa — e sem esta linha o `id` acima bastaria para resolver.
+   * enquanto a linha da fila atrasa. Sem `id` ela nunca autoriza mexer; com `id`, ver abaixo.
    */
-  if (st.porQuantosSinais === 'discordam') {
+  /**
+   * **COM `id` o painel certo basta** (17/11/2026, no mesmo dia, na rodada dele: o Ivo foi PULADO
+   * com "os dois sinais não concordaram a tempo"). A lista atrasa 3 a 12s e a espera é de 4s; com
+   * o `id` que a rodada abriu, a linha acima já provou que o PAINEL mostra essa conversa, e a lista
+   * apontando a anterior é atraso, não conflito — a mesma leitura que o `so-um-sinal` ganhou em
+   * 09/11. **Sem `id` (o clique a mão) a recusa continua.**
+   */
+  if (!alvo && st.porQuantosSinais === 'discordam') {
     // A MARCA vai no texto de proposito: a rodada a le e PULA o contato em vez de parar a fila.
     throw new Error(`${oque}: sei qual conversa esta aberta por ${MARCA_SINAL_FRACO} (a lista e o painel da plataforma ainda apontam conversas diferentes) — recuso, porque errar aqui mexe no atendimento de outra pessoa.`);
   }

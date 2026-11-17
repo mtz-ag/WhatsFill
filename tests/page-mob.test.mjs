@@ -744,9 +744,16 @@ grupo('AS RPCs DE ESTADO — gravadas, e o estado original devolvido no fim');
 
   // 17/11/2026: `conversaAberta` passou a devolver o painel com `por: 'discordam'` para o painel
   // LER. Mexer nunca: nem com o id certo, e com a marca que faz a rodada PULAR em vez de parar.
-  const discordando = await erro(() => clickConcluir({ id: 'c-1', prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
+  // Com o id que a rodada abriu e o PAINEL mostrando ele, a lista atrasada nao impede (o Ivo,
+  // 17/11/2026, pulado por isso). Sem id, recusa; com id de OUTRA conversa, recusa.
+  const discordandoComId = await erro(() => clickConcluir({ id: 'c-1', prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
+  check(!discordandoComId.includes('UM sinal') && !discordandoComId.includes('outra conversa'),
+    'lista atrasada e painel mostrando a conversa que a rodada abriu: Resolver passa');
+  const discordando = await erro(() => clickConcluir({ prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
   check(discordando.includes('UM sinal') && discordando.includes('conversas diferentes'),
-    'lista e painel discordando: Resolver recusa mesmo com o id, e a rodada pula');
+    'lista e painel discordando sem id (clique a mao): Resolver recusa, e a rodada pula');
+  const discordandoOutra = await erro(() => clickConcluir({ id: 'c-OUTRA', prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
+  check(discordandoOutra.includes('a tela mostra outra conversa'), 'e com o painel mostrando OUTRA conversa, recusa');
   const enviaDiscordando = await erro(() => sendText('oi', { prazoMs: 0, janela: janelaQue({ id: 'c-1', status: 'em_atendimento' }, 'discordam') }));
   check(enviaDiscordando.includes('UM sinal'), 'e enviar com os sinais discordando continua recusando');
 

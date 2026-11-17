@@ -69,6 +69,21 @@ grupo('engajado que conta algo DELE nao e concluido calado (a Lia)');
   check(regra.tecla({ respondidoHoje: true }) === '3', 'sem ela, o engajado ja respondido continua concluindo');
 }
 
+grupo('a saudacao nao conta como frase na cortesia (o Jandir)');
+{
+  const tom = await lib('tom-cortesia.js');
+  const resposta = 'Boa tarde! Tudo bem sim, graças a Deus. Que Deus abençoe você também. Obrigado pelo carinho, um grande abraço!';
+  check(tom.contarFrases(resposta) === 3, 'responder o "tudo bem?" com saudacao, bencao e abraco cabe em 3');
+  const ctx = { ativo: true, bencao: true, texto: 'Boa tarde Capitao tudo bem com voce abencoe abraco' };
+  check(!tom.falhasTomCortesia(resposta, ctx).includes('máximo de 3 frases'), 'e a conferencia do tom nao reprova mais');
+  check(tom.contarFrases('Uma frase longa aqui. Outra frase longa aqui. Terceira frase longa aqui. Quarta frase longa aqui.') === 4,
+    'quatro frases de conteudo continuam sendo quatro');
+  for (const arq of ['tom-publico.js', 'repasse-ia.js']) {
+    const fonte = readFileSync(new URL(`../src/lib/${arq}`, import.meta.url), 'utf8');
+    check(/contarFrases\(texto\) > 3/.test(fonte), `${arq} usa a mesma contagem`);
+  }
+}
+
 grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, decisao dele)');
 {
   const ia = await lib('ia.js');

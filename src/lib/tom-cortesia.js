@@ -2,6 +2,22 @@ const normalizar = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u03
 export const normalizarLugar = (s) => normalizar(s).replace(/\b(?:nosso estado|rio grande do sul|rs|gauch[oa]s?)\b/g, 'estado');
 const TEMA = /\b(?:soluco\w*|clim\w*|estado|enchent\w*|governo|alagament\w*)\b/;
 
+/**
+ * **Quantas frases a resposta tem, sem contar a saudação** (17/11/2026, o Jandir: *"Boa tarde
+ * Capitão Martins tá tudo bem com você abençoe abraço"* parou a rodada com "a IA não conseguiu
+ * rascunhar (máximo de 3 frases)"). "Boa tarde!" contava como frase, e responder o "tudo bem?",
+ * retribuir a bênção, agradecer o carinho e mandar o abraço não cabia em três — a reescrita falhava
+ * igual e o rascunho saía vazio. Saudação e exclamação curta ("Amém!", "Graças a Deus!", até duas
+ * palavras) não são frase de conteúdo.
+ */
+const SO_SAUDACAO = /^\s*(?:ol[áa]|oi|bo[am]\s+(?:dia|tarde|noite))[\s!.,]*$/i;
+export function contarFrases(texto) {
+  return (String(texto || '').match(/[^.!?]+(?:[.!?]+|$)/g) || [])
+    .map((v) => v.trim())
+    .filter((v) => v && !SO_SAUDACAO.test(v) && (v.match(/\p{L}+/gu) || []).length > 2)
+    .length;
+}
+
 export function contextoCortesia(mensagens = []) {
   let inicio = 0;
   mensagens.forEach((m, i) => { if (m?.de === 'nos') inicio = i + 1; });
@@ -28,7 +44,7 @@ export function falhasTomCortesia(texto, contexto) {
   if (expressoes.some(e => TEMA.test(e) && t.includes(e))) falhas.push('paráfrase de expressão do contato');
   if (TEMA.test(t)) falhas.push('retomou tema incidental da cortesia');
   if (/\?/.test(t)) falhas.push('não faça pergunta na cortesia');
-  if ((texto.match(/[^.!?]+(?:[.!?]+|$)/g) || []).filter(v => v.trim()).length > 3) falhas.push('máximo de 3 frases');
+  if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
   if (!/\b(?:obrigado|agradeco)\b/.test(t) || !/\bcarinho\b/.test(t)) falhas.push('agradeça o carinho em primeira pessoa');
   if (contexto.bencao && !/\b(?:deus.{0,30}abencoe|abencoe.{0,30}deus)\b/.test(t)) falhas.push('retribua a bênção');
   if (!/\babraco\b/.test(t)) falhas.push('encerre com abraço');

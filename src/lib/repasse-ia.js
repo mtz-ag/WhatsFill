@@ -1,3 +1,4 @@
+import { contarFrases } from './tom-cortesia.js';
 const normalizar = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** Autoria para o rascunho; citar um comentarista não basta para atribuir a mensagem a ele. */
@@ -43,7 +44,7 @@ export function falhasDeAutoria(texto, contexto) {
   if (contexto.politico || contexto.soRepasse) {
     if (/\b(?:questoes como|precisam continuar sendo|devem ser acompanhad\w*|precisam ser acompanhad\w*|obrigado por compartilhar suas preocupacoes)\b/.test(t)) falhas.push('voz impessoal ou agradecimento genérico');
     if (/\?/.test(t)) falhas.push('não faça pergunta');
-    if ((texto.match(/[^.!?]+(?:[.!?]+|$)/g) || []).filter(v => v.trim()).length > 3) falhas.push('máximo de 3 frases');
+    if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
     if (!/\b(?:obrigado|agradeco)\b/.test(t) || !/\babraco\b/.test(t)) falhas.push('agradeça e encerre com abraço');
   }
   if (contexto.politico) {
