@@ -387,6 +387,16 @@ mudaram as maos, nao a cabeca.
   diz rota, status e o que fazer. **A extensao nunca usa o `refresh_token`:** ele e rotativo, e
   renovar daqui deslogaria a aba dele.
 
+- **RETRIBUIR O BOM DIA E O CARINHO E ENCERRAR, E RECONHECER ISSO E DE GRACA** (17/11/2026,
+  v3.312, *"a IA quer sempre ter a ultima palavra e esta gastando creditos de graca"*). Medido: de
+  21 respostas ao nosso "bom dia", 14 escapavam do `cortesiaDeFechamento` por vocabulario de carinho
+  e iam PAGAS para a conferencia de encerramento, que dizia "nao" e liberava o rascunho "obrigado
+  pelo carinho". Hoje o vocabulario cobre o carinho, o fecho gratuito vem ANTES da chamada paga em
+  `encerrouAConversa`, e o prompt do encerramento diz que retribuir encerra. **Ao alargar
+  `FECHO_DE_CORTESIA`, meca as frases com conteudo que NAO podem fechar** — fechar e concluir em
+  silencio, o lado caro. E o "sua" solto casa antes de "sua familia" (alternancia: o primeiro que
+  casa vence), entao substantivo novo entra tambem SOLTO.
+
 - **A PLATAFORMA TRANSCREVE VIDEO TAMBEM, e a fala de dentro dele chegava a IA como voz dela**
   (11/11/2026, *"a IA abriu os links?"* — nao abriu). Medido desde 04/11: video 686 de 806 com
   `transcricao`, audio 296 de 298, imagem 0. `mob.mensagemDoBanco` poe a transcricao no texto com

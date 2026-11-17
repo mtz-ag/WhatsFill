@@ -1039,6 +1039,11 @@ export function validarSimOuNao(bruto, minimo) {
 export const ENCERRAMENTO = {
   sim: [
     'ela agradece e não pede mais nada ("tudo certo obrigado", "valeu", "obrigado pela atenção");',
+    // 17/11/2026: "se a pessoa só correspondeu o bom dia e carinho de volta não tem necessidade de responder".
+    'ela só RETRIBUI o cumprimento, a bênção ou o carinho que nós mandamos ("bom dia", "Deus abençoe",',
+    '  "boa semana pra você também", "obrigada pelo carinho", um 🙏 ou ❤️). Quem só devolveu o carinho',
+    '  não está esperando resposta: a última palavra pode ser DELA, e responder "obrigado pelo carinho"',
+    '  ao carinho de volta é a máquina querendo ter a última palavra;',
     'ela se despede ("tchau", "até mais", "falou", "abraço", "fica com Deus", "amém", "é nós");',
     'ela diz que já resolveu, que está tudo certo ou que depois volta a falar;',
     'ela responde a nossa última mensagem só confirmando que leu ("ok", "entendi", "beleza",',

@@ -129,7 +129,9 @@ grupo('B1: "Chamar a IA" usa a chave do modelo do RASCUNHO, nao a das conferenci
   for (const [nome, re] of [
     ['cidade', /if \(!pode \|\| !state\.iaTemChave\) return false;/],
     ['etiqueta', /async function conferirEtiquetaComIA[\s\S]{0,120}if \(!\(state\.ia\?\.ligada && state\.iaTemChave\)\) return '';/],
-    ['encerramento', /async function encerrouAConversa[\s\S]{0,200}if \(!\(state\.ia\?\.ligada && state\.iaTemChave\)\) return false;/],
+    // A guarda vem ANTES da chamada paga; a distancia fixa (200) quebrou quando o fecho gratuito
+    // entrou na frente dela (17/11/2026) — o que importa e a ordem.
+    ['encerramento', /async function encerrouAConversa[\s\S]{0,1500}if \(!\(state\.ia\?\.ligada && state\.iaTemChave\)\) return false;[\s\S]*?iaCliente\.conferirEncerramento/],
   ]) check(re.test(painel), `conferencia de ${nome} degrada sem a chave dela`);
   const semChave = await cliente.atender({ modo: 'cidade', sistema: 's', contato: 'c', modelo: 'claude-opus-5' }, undefined);
   check(semChave.ok === false && /Anthropic/.test(semChave.motivo), 'e o worker diz qual chave falta, sem lancar');

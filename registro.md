@@ -1,4 +1,26 @@
-## 2026-11-13 - v3.311.0 - ESTADO DE AGORA - o log empurrava as teclas para fora da coluna
+## 2026-11-17 - v3.312.0 - ESTADO DE AGORA - retribuir o bom dia e o carinho fecha, sem a IA
+
+Relato dele: *"a IA quer sempre ter a ultima palavra e esta gastando creditos de graca; eu mando o
+bom dia, a pessoa responde bom dia de volta e a IA responde obrigado pelo carinho"*. **Medido em 21
+respostas ficticias ao nosso "bom dia": so 7 fechavam.** As outras 14 escapavam do fecho gratuito
+(`cortesiaDeFechamento`) porque sobrava vocabulario de carinho que ele nao conhecia (carinho,
+saudade, bencao, ilumine, "uma otima semana", "tenha um abencoado dia", querido, "tudo de bom",
+sucesso, "sua semana", "toda sua equipe", "Bom diaaa"). Dai a pergunta "ela encerrou?" ia PAGA para
+a IA, que nao tinha "retribuir" na lista do "sim", dizia "nao", e o rascunho de cortesia escrevia
+"obrigado pelo carinho".
+- **O vocabulario do fecho cresceu** e as 21 fecham. As guardas nao mudaram: pergunta, pedido,
+  link, midia e texto acima de 160 caracteres continuam fora. Medido o lado caro: **19 frases com
+  conteudo** (pedido, cadastro, doenca, queixa, ofensa, "sucesso nao tive no INSS") continuam sem
+  fechar. A cortesia LONGA, com conteudo, segue no rascunho (a da v3.305).
+- **O fecho gratuito vem antes da chamada paga** em `encerrouAConversa`: reconhecido, responde
+  "encerrou" sem perguntar a IA.
+- **O prompt do encerramento ganhou o "sim" de quem so retribui** o cumprimento, a bencao ou o
+  carinho.
+Prova: 41 assercoes novas em `fechamento-cortesia.test.mjs`; o vocabulario antigo derruba 14, o
+painel antigo 2, o prompt antigo 1. 59 suites, `checar-modulos` e `checar-referencias` passam.
+**Nao conferido ao vivo.**
+
+## 2026-11-13 - v3.311.0 - HISTORICO - o log empurrava as teclas para fora da coluna
 
 Relato dele: *"as opcoes de escrita sumiram ao botar o log"*. Causa: na v3.310 o log morava DENTRO
 do controle, que e a primeira caixa da coluna, com quase a tela inteira de altura

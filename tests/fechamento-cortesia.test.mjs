@@ -141,4 +141,44 @@ const decidir = (c) => arv.decidir(c, arv.fluxoPadrao(), {});
   check(/estado\.isPending[\s\S]*clickIniciar\(\)[\s\S]*processarRespondido\(alvo, ctx\)/.test(novo), 'processarNovo assume (se aguardando atendente) e depois decide');
 }
 
+grupo('retribuir o bom dia e o carinho fecha sem a IA ter a ultima palavra (17/11/2026)');
+{
+  const nossaAt = '2026-11-17T08:00:00';
+  const at = '2026-11-17T08:30:00';
+  const fecha = (t) => !!cortesia.cortesiaDeFechamento([{ texto: t, tipo: 'TEXT', at }], nossaAt);
+  // Respostas ficticias ao nosso "bom dia": antes, 14 das 21 iam para o rascunho pago da IA.
+  const retribuicoes = [
+    'Bom dia', 'Bom dia 🙏', 'Bom dia! Deus abençoe', 'Bom dia, um ótimo dia pra você também',
+    'Bom dia, obrigada pelo carinho', 'Bom dia meu querido, um abraço', 'Bom dia, Deus abençoe sua semana e sua família',
+    'Bom dia capitão, gratidão sempre ❤️', 'Boa tarde pra você também, fique com Deus', 'Bom diaaa', 'Bom dia, saudades',
+    'Bom dia!!! Tenha um abençoado dia', 'Igualmente, muito obrigada pelo carinho de sempre', 'Bom dia, bênçãos',
+    'Bom dia meu amigo, que Deus te ilumine sempre', 'Bom dia, uma ótima semana', 'Bom dia, tudo de bom pra ti',
+    'Muito obrigada 🙏❤️', 'Bom dia, Deus abençoe o senhor e toda sua equipe', 'Bom dia, sucesso',
+    'Bom dia, boa semana pra ti também',
+  ];
+  for (const t of retribuicoes) check(fecha(t), `fecha: "${t}"`);
+  // O lado caro: fechar aqui e concluir em silencio quem pediu, contou ou reclamou.
+  const naoPodem = [
+    'Bom dia, preciso de ajuda', 'Bom dia, meu nome é Maria de Canoas', 'Bom dia, o senhor vem a Canoas',
+    'Bom dia, minha mãe está doente', 'Bom dia, não recebi o material', 'Bom dia, quero o material',
+    'Bom dia, sou de Canoas', 'Bom dia, estou desempregada', 'Bom dia, saudades do tempo que o Bolsonaro era presidente',
+    'Bom dia, a equipe não me respondeu', 'Bom dia, toda a minha família vota no 22', 'Bom dia, sua equipe sumiu',
+    'Bom dia, o senhor é um mentiroso', 'Bom dia, meu dia foi péssimo', 'Bom dia, Deus abençoe, estou passando fome',
+    'Bom dia, sucesso não tive no INSS', 'Bom dia, minha semana foi difícil', 'Bom dia, o time do senhor me abandonou',
+    'Bom dia, tudo bem? Deus abençoe',
+  ];
+  for (const t of naoPodem) check(!fecha(t), `nao fecha: "${t}"`);
+
+  // Com o fecho reconhecido, a conferencia PAGA de encerramento nem sai.
+  const corpo = painel.slice(painel.indexOf('async function encerrouAConversa'), painel.indexOf('async function etiquetarEndereco'));
+  const iFecho = corpo.indexOf('cortesiaDeFechamento(state.entrantes');
+  const iIA = corpo.indexOf('iaCliente.conferirEncerramento');
+  check(iFecho > 0 && iIA > iFecho, 'o fecho gratuito vem ANTES da chamada paga da IA');
+  check(/\}\)\) return true;/.test(corpo.slice(iFecho, iIA)), 'e reconhecido, ele responde "encerrou" sem perguntar');
+
+  // E a IA, quando consultada, sabe que retribuir o carinho e encerrar.
+  const ia = await lib('ia.js');
+  check(/RETRIBUI o cumprimento, a bênção ou o carinho/.test(ia.montarSistemaEncerramento()), 'o prompt do encerramento diz que retribuir encerra');
+}
+
 fim();

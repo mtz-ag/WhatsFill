@@ -3775,6 +3775,16 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   async function encerrouAConversa(jaRespondemosAntes) {
     const peloVocabulario = ultimaEhDespedida(state.entrantes);
     if (peloVocabulario) return true;
+    /**
+     * **Retribuir o cumprimento ou o carinho É encerrar, e reconhecer isso não custa nada**
+     * (17/11/2026, *"a IA quer sempre ter a última palavra e está gastando créditos de graça"*). O
+     * fecho por cortesia é a mesma conta que `fecharPorCortesia` usa, sem chamada paga: com ele
+     * verdadeiro, perguntar à IA era pagar para ouvir o que o código já sabia — e quando ela dizia
+     * "não", o rascunho de cortesia respondia "obrigado pelo carinho" a quem só devolveu o bom dia.
+     */
+    if (cortesiaDeFechamento(state.entrantes, state.nossaUltimaAt, {
+      janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,
+    })) return true;
     if (!(state.ia?.ligada && state.iaTemChave)) return false;
     if (!jaRespondemosAntes) return false;
 

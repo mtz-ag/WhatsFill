@@ -679,13 +679,32 @@ export function desdeNossaUltima(entrantes, nossaUltimaAt) {
  */
 const FECHO_DE_CORTESIA = new RegExp(
   '(?<![\\p{L}\\p{N}])(?:' + [
-    String.raw`bo[am]\s*(dia|tarde|noite|madrugada)s?`,
+    // "Bom diaaa": a letra esticada é carinho, não palavra nova (17/11/2026).
+    String.raw`bo[am]\s*(dia+|tarde+|noite+|madrugada)s?`,
+    /**
+     * **RETRIBUIR O CARINHO TAMBÉM FECHA** (17/11/2026, pedido dele: *"eu mando o bom dia, a pessoa
+     * responde bom dia de volta e a IA responde obrigado pelo carinho; se a pessoa só correspondeu o
+     * bom dia e carinho de volta não tem necessidade de responder"*). Medido em 21 respostas comuns
+     * ao nosso "bom dia": só 7 fechavam, e as outras 14 iam para o rascunho PAGO da IA, que
+     * escrevia "obrigado pelo carinho" — a IA querendo a última palavra. O que sobrava em cada uma
+     * era isto: carinho, saudade, bênção, ilumine, "uma ótima semana", "tenha um abençoado dia",
+     * "querido", "tudo de bom", "sucesso", "sua semana", "toda sua equipe".
+     * **As guardas não mudaram:** pergunta, pedido, link, mídia que pede você e texto acima de 160
+     * caracteres continuam fora — a cortesia LONGA (com conteúdo) segue para o rascunho.
+     */
+    String.raw`carinhos?|saudades?|aten(ç|c)(ã|a)o|lembran(ç|c)a|mensagem`,
+    String.raw`b(ê|e)n(ç|c)(ã|a)os?`,
+    String.raw`(bom|boa|[óo]tim[oa]|feliz|aben(ç|c)oad[oa]|maravilhos[oa]|excelente|lind[oa]|santo|santa)\s+(s(á|a)bado|domingo|fim\s+de\s+semana|final\s+de\s+semana|fds|semana|dia|tarde|noite|feriado|descanso)`,
+    String.raw`(tenha|tenham|tenhas|desejo)`,
+    String.raw`(sua|seu|tua|teu|meu|minha|nossa|nosso|o|os|as|ao|aos|com|no|na|pelo|pela|toda|todo|te|ti)`,
+    String.raw`(querid[oa]s?|amad[oa]s?|equipe|time|senhor|sucessos?|tudo\s+de\s+bom)`,
+    String.raw`(semana|vida|caminhada|dias?|fam(í|i)lias?)`,
     String.raw`(muito\s+)?(obrigad[oa]s?|obg|brigad[oa]|grat[oa]s?|gratid(ã|a)o|agrade(ç|c)o|agradecid[oa])`,
     String.raw`(igualmente|idem|tamb(é|e)m|tb|tbm)`,
     String.raw`(pra|para|p\/|a|pro)\s+(voc(ê|e)|vc|o\s+senhor|senhor|tu|ti)`,
     String.raw`(voc(ê|e)|vc|o\s+senhor)`,
     String.raw`am(é|e)m`,
-    String.raw`(que\s+)?deus\s+(te\s+|lhe\s+|o\s+|nos\s+)?(aben(ç|c)o(e|a)|proteja|guarde|ilumine|abencoe)`,
+    String.raw`(que\s+)?deus\s+(te\s+|lhe\s+|o\s+|nos\s+)?(aben(ç|c)o(e|a)|proteja|guarde|ilumine|ilumina|abencoe|acompanhe|fortale(ç|c)a|conceda|derrame)`,
     String.raw`(fica|fique)\s+com\s+deus`,
     String.raw`deus\s+(no\s+comando|(é|e)\s+fiel)`,
     String.raw`(valeu|vlw|tmj|tamo\s+junto|tamos\s+juntos|estamos\s+juntos|(é|e)\s+n(ó|o)is|(é|e)\s+n(ó|o)s)`,
