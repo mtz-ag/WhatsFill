@@ -84,6 +84,15 @@ grupo('a saudacao nao conta como frase na cortesia (o Jandir)');
   }
 }
 
+grupo('boato do adversario: sem aula e sem inventar a vida do candidato (a Evani)');
+{
+  const ia = await lib('ia.js');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/BOATO OU TEORIA SOBRE O ADVERSÁRIO/.test(sis), 'o boato perguntado por apoiador tem regra propria');
+  check(/nunca dê aula/.test(sis) && /confira fontes oficiais/.test(sis), 'e a aula de "fontes oficiais" esta proibida pelo nome');
+  check(/NUNCA AFIRME o que o candidato viu, onde esteve, com quem tem contato/.test(sis), 'e nao se inventa o que o candidato viu ou com quem tem contato');
+}
+
 grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, decisao dele)');
 {
   const ia = await lib('ia.js');

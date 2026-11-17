@@ -1,4 +1,17 @@
-## 2026-11-17 - v3.317.0 - ESTADO DE AGORA - dois defeitos da rodada de verdade (Ivo e Jandir)
+## 2026-11-17 - v3.318.0 - ESTADO DE AGORA - boato do adversario sem aula e sem inventar o candidato
+
+Rodada de verdade em Minhas na v3.317, primeiro contato a Evani: *"qual a tua opiniao sobre que o
+Lula ja tenha morrido em 2022? Voce ja viu ele?"*. O rascunho veio com tom de nota (*"nao tenho
+informacao confiavel que confirme"*), licao em apoiadora (*"importante conferir fontes oficiais e
+veiculos confiaveis"*) e invencao sobre o candidato (*"eu nao tenho contato pessoal com ele para
+dizer que o vi"*). Eu apresentei sem avaliar e ele corrigiu: *"avalie da proxima vez, estamos
+refinando a extensao para que as respostas sejam boas"* (virou memoria). Hoje a regra 17 tem o
+paragrafo do BOATO: leve e curto, nem confirma, nem da aula, nem tom de nota; e a IA nunca afirma o
+que o candidato viu, onde esteve ou com quem tem contato ("o candidato", e nao o nome, porque o
+prompt e dos dois perfis). Prova: 3 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao
+vivo.** A rodada ficou parada na Evani, sem nada enviado.
+
+## 2026-11-17 - v3.317.0 - HISTORICO - dois defeitos da rodada de verdade (Ivo e Jandir)
 
 Rodei o automatizado na fila Minhas com a v3.316, a pedido dele (*"mande executar o automatizado"*).
 A Lia saiu com o BPC primeiro, como ele queria, e ele mandou pular; nada enviado por mim. Dois
