@@ -140,4 +140,23 @@ grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, 
   check(/perder benefício, renda, salário ou moradia/.test(bloco), 'com os exemplos que a tornam reconhecivel');
 }
 
+grupo('legenda de foto nao troca a cidade do cadastro (o Gilberto)');
+{
+  const ex = await lib('extract.js');
+  check(JSON.stringify(ex.semAsLegendas(['Estamos aqui no Gabinete pra fazer uma visita.', 'Santa Maria'], ['Santa Maria']))
+    === JSON.stringify(['Estamos aqui no Gabinete pra fazer uma visita.']), 'a legenda sai da passada que substitui o cadastro');
+  check(ex.semAsLegendas(['Santa Maria', 'Santa Maria'], ['Santa Maria']).length === 1, 'tira so uma ocorrencia: a mesma frase escrita a parte continua');
+  const rebaixada = ex.rebaixarParaPalpite(await ex.extract(['Santa Maria']), 'legenda de foto ou vídeo');
+  check(rebaixada.cidade?.informada === false && rebaixada.cidade?.confidence === 'aproximada', 'a legenda volta rebaixada: nao substitui o CRM nem grava sozinha');
+  check(/legenda de foto ou vídeo/.test(rebaixada.cidade?.source || ''), 'e a origem diz que veio da legenda');
+  check(/ouvido no áudio/.test(ex.rebaixarParaPalpite({ cidade: { value: 'Canoas' } }).cidade.source), 'o audio continua com a origem de sempre');
+  check(/extract\(semAsLegendas\(state\.incoming, legendas\)/.test(painel), 'o painel tira as legendas da primeira passada');
+  check(/legenda de uma foto ou vídeo que ela mandou/.test(painel), 'e a conferencia de cidade da IA sabe que era legenda');
+  const ia = await lib('ia.js');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '', formularios: { agenda: 'https://exemplo.test/formulario/agenda' } });
+  const contato = ia.montarContatoRascunho({ mensagens: [{ de: 'ela', texto: 'quero agendar', at: '2026-11-18T09:00:00-03:00' }],
+    formularios: { agenda: 'https://exemplo.test/formulario/agenda' }, agora: new Date('2026-11-18T10:00:00-03:00') });
+  check(/VISITA QUE JÁ ACONTECEU OU ESTÁ ACONTECENDO/.test(sis + contato), 'visita que ja esta acontecendo nao recebe o formulario da agenda');
+}
+
 fim();

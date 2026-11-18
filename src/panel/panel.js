@@ -30,7 +30,11 @@ import * as observacoesLib from '../lib/observacoes.js';
 import * as imagemLib from '../lib/imagem.js';
 import * as facebook from '../lib/facebook.js';
 import * as fbCliente from '../lib/facebook-cliente.js';
-import { extract, rebaixarParaPalpite } from '../lib/extract.js';
+import { extract, rebaixarParaPalpite, semAsLegendas } from '../lib/extract.js';
+
+/** Texto que veio junto de uma foto ou vídeo (não transcrição): é legenda, não fala escrita à parte. */
+const ehLegendaDeMidia = (m) =>
+  !!String(m?.texto || '').trim() && !m?.transcrito && !!m?.tipo && !['TEXT', 'CHAT'].includes(String(m.tipo).toUpperCase());
 import { soCortesia, cortesiaParaRascunho, linkComOpiniao, postEncaminhado, respostaAoFormulario, falaPessoalDela } from '../lib/cortesia.js';
 import { sugerirAcao } from '../lib/sugestao.js';
 import * as sugestaoLib from '../lib/sugestao.js';
@@ -876,7 +880,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       const respostaAoPedido = pediuNomeECidade(state.nossas[state.nossas.length - 1]?.texto);
 
-      const palpites = await extract(state.incoming, { respostaAoPedido });
+      // Legenda de foto ou vídeo diz onde a FOTO foi tirada, não onde ela mora (o Gilberto,
+      // 18/11/2026): fica fora da passada que pode substituir o cadastro e volta rebaixada abaixo.
+      const legendas = state.entrantes.filter(ehLegendaDeMidia).map((m) => m.texto);
+      const palpites = await extract(semAsLegendas(state.incoming, legendas), { respostaAoPedido });
       /**
        * O nome que a PESSOA escreveu, guardado à parte do rascunho.
        *
@@ -909,6 +916,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       const transcricoes = state.entrantes.filter((m) => m.transcrito && m.texto).map((m) => m.texto);
       if (transcricoes.length) {
         applyGuesses(rebaixarParaPalpite(await extract(transcricoes)), classify);
+      }
+      if (legendas.length) {
+        applyGuesses(rebaixarParaPalpite(await extract(legendas), 'legenda de foto ou vídeo'), classify);
       }
 
       /**
@@ -1334,7 +1344,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * o IBGE, então transcrição errada vira `incerto`, não cidade errada.
      */
     const conversa = [
-      ...state.entrantes.map((m) => ({ de: 'contato', texto: m.texto, at: m.at })),
+      ...state.entrantes.map((m) => ({
+        de: 'contato',
+        texto: ehLegendaDeMidia(m) ? `(legenda de uma foto ou vídeo que ela mandou — diz onde a foto foi tirada, não onde ela mora) ${m.texto}` : m.texto,
+        at: m.at,
+      })),
       ...(state.nossas || []).map((m) => ({ de: 'nos', texto: m.texto, at: m.at })),
     ]
       .filter((m) => String(m.texto || '').trim())

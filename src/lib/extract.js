@@ -503,7 +503,26 @@ function titleCase(s) {
  * @param {object} guesses o que `extract` devolveu
  * @returns {object} os mesmos palpites, rebaixados
  */
-export function rebaixarParaPalpite(guesses) {
+/**
+ * Tira da lista do parser as LEGENDAS de foto e vídeo (18/11/2026, o Gilberto).
+ *
+ * Ele mandou a foto de uma visita com a legenda "Santa Maria" e o parser leu a legenda como uma
+ * mensagem que É a cidade dele — `informada: true`, que substitui o cadastro. Porto Alegre virou
+ * Santa Maria no CRM. Legenda diz onde a FOTO foi tirada, não onde ela mora: ela vai numa passada
+ * à parte, rebaixada (`rebaixarParaPalpite(..., 'legenda de foto ou vídeo')`).
+ *
+ * Tira UMA ocorrência por legenda: a mesma frase escrita à parte, como texto, continua valendo.
+ */
+export function semAsLegendas(textos = [], legendas = []) {
+  const resto = [...(textos || [])];
+  for (const l of legendas || []) {
+    const i = resto.indexOf(l);
+    if (i >= 0) resto.splice(i, 1);
+  }
+  return resto;
+}
+
+export function rebaixarParaPalpite(guesses, origem = 'ouvido no áudio') {
   const saida = {};
   for (const [chave, guess] of Object.entries(guesses || {})) {
     if (!guess || typeof guess !== 'object' || !guess.value) {
@@ -514,7 +533,7 @@ export function rebaixarParaPalpite(guesses) {
       ...guess,
       confidence: 'aproximada',
       informada: false,
-      source: `${guess.source || guess.value} — ouvido no áudio`,
+      source: `${guess.source || guess.value} — ${origem}`,
     };
   }
   return saida;

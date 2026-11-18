@@ -1,4 +1,19 @@
-## 2026-11-17 - v3.320.0 - ESTADO DE AGORA - nao repetir o que dissemos nos ultimos dias
+## 2026-11-18 - v3.321.0 - ESTADO DE AGORA - legenda de foto nao troca a cidade; visita em curso sem formulario
+
+Rodada de verdade em Minhas na v3.320. O Gilberto (cadastro em Porto Alegre) mandou a foto de uma
+visita com a legenda "Santa Maria" e *"Estamos aqui no Gabinete pra fazer uma visita"*. **A extensao
+gravou SANTA MARIA no cadastro dele** (medido no banco: `updated_at` 09:37, durante a rodada), e o
+rascunho mandou *"Para solicitar a visita, preencha este formulario da agenda"* para uma visita que
+ja estava acontecendo. **Causa da cidade:** `mob.conversa` poe a legenda da imagem em `incoming`, e o
+parser a leu como mensagem que E a cidade (`informada: true`, que substitui o CRM); a conferencia da
+IA via so o texto e aceitou. Hoje a legenda sai da primeira passada (`extract.semAsLegendas`), volta
+rebaixada (`rebaixarParaPalpite(..., 'legenda de foto ou video')`: nao substitui nem grava sozinha), e
+a conferencia da IA recebe a marca de legenda. **Causa do rascunho:** a regra do formulario da agenda
+nao separava pedir visita de estar visitando; hoje separa. Pulei o Gilberto sem enviar e parei a
+rodada. **PENDENTE, decisao dele:** devolver PORTO ALEGRE ao cadastro do Gilberto (escrita em
+producao). Prova: 8 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-17 - v3.320.0 - HISTORICO - nao repetir o que dissemos nos ultimos dias
 
 Rodada de verdade, o Jandir (*"Boa tarde Capitao, ta tudo bem com voce, abencoe"*): o rascunho
 *"Estou bem, gracas a Deus, na correria do mandato"* repetia a nossa resposta de dias antes (*"O

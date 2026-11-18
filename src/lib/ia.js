@@ -3142,7 +3142,12 @@ export function blocoDosFormularios(formularios = {}) {
         'O link é para quem quer MARCAR (dá data, evento, reunião, ou pergunta como agendar). ' +
         'CONVITE DE CARINHO, sem data ("se um dia passar por aqui, venha me visitar", "quando vier ' +
         'a Venâncio, passe aqui") NÃO é pedido de agenda: agradeça o convite com carinho, sem o ' +
-        'link e sem prometer ir.'
+        'link e sem prometer ir. ' +
+        // 18/11/2026: "Estamos aqui no Gabinete pra fazer uma visita" + a foto da visita recebeu
+        // "Para solicitar a visita, preencha este formulário" — a visita JÁ estava acontecendo.
+        'VISITA QUE JÁ ACONTECEU OU ESTÁ ACONTECENDO ("estamos aqui no gabinete", "viemos fazer ' +
+        'uma visita", "estivemos aí", foto do encontro) NÃO é pedido de agenda: agradeça a visita ' +
+        'e o carinho, sem o link, sem pedir o cadastro e sem dizer de que cidade ela veio.'
     );
   }
   /**
