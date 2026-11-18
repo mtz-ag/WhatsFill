@@ -1,4 +1,19 @@
-## 2026-11-18 - v3.328.0 - ESTADO DE AGORA - concluir marca o que ja foi tratado
+## 2026-11-18 - v3.329.0 - ESTADO DE AGORA - fale com ela, nao sobre o texto dela
+
+Setima rodada em Minhas na v3.328 (2 enviados, 1 pulado, 5 concluidos sem enviar; parada por mim
+para corrigir). **A Lia** mandou reflexoes longas ("as escolas civico militares sao o ALICERCE...
+desde que alicercadas na educacao espiritual") e o rascunho saiu *"A reflexao interior... pode
+trazer mais serenidade. E uma mensagem de fe e de esperanca que merece ser acolhida com respeito"* —
+parecer sobre o texto, sem ninguem falando com ela. Mandei o texto que ele aprovou (*"Que bonita
+reflexao! Concordo que as Escolas Civico-Militares ganham muito com valores, disciplina e fe. Um
+grande abraco!"*). Hoje ha regra no prompt (FALE COM ELA, NAO SOBRE O TEXTO DELA) e
+`ia.falhasDeImpessoal` pede UMA reescrita quando o rascunho e parecer sobre "a mensagem/a reflexao"
+sem nenhuma marca de conversa; resposta objetiva a pergunta continua valendo (os testes do tom
+publico e da cortesia pegaram a primeira versao, larga demais). A Dino Cattani (repasse + palmas
+recebeu a mensagem do momento) esta certa pela regra de 28/10. Prova: 6 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: a trava de autoria da Dirce.
+
+## 2026-11-18 - v3.328.0 - HISTORICO - concluir marca o que ja foi tratado
 
 O pendente do odone (v3.326): ele escolheu resolver sem enviar o texto espirita da manha; a tarde
 ele mandou dois links, e a rodada releu o texto da manha como se fosse novo — a IA escreveu sobre

@@ -252,7 +252,7 @@ grupo('"seguimos firmes" e bordao, e xingar eleitor nao e deboche do adversario 
   check(/XINGAMENTO AO POVO OU A ELEITORES NÃO É DEBOCHE DO ADVERSÁRIO/.test(regra), 'insulto a eleitor tem regra propria');
   check(/"SEGUIMOS FIRMES" VIROU BORDÃO — NÃO USE/.test(sis), 'e o bordao esta proibido pelo nome');
   const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
-  check(/\.\.\.falhasDeBordao\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
+  check(/\.\.\.falhasDeBordao\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
 grupo('concluir marca o que ja foi tratado (o odone)');
@@ -266,6 +266,22 @@ grupo('concluir marca o que ja foi tratado (o odone)');
   await templates.markSent('conv:teste-odone', 'tratado-ate');
   const marca = await templates.wasSent('conv:teste-odone', 'tratado-ate');
   check(marca?.at > 0, 'a marca e lida de volta com a hora');
+}
+
+grupo('fale com ela, nao sobre o texto dela (a Lia)');
+{
+  const ia = await lib('ia.js');
+  check(ia.falhasDeImpessoal('A reflexão interior pode trazer mais serenidade. É uma mensagem de fé que merece ser acolhida com respeito.').length === 1,
+    'comentario em terceira pessoa pede reescrita');
+  for (const t of ['Que bonita reflexão! Concordo que as Escolas Cívico-Militares ganham muito com valores. Um grande abraço!',
+    'Pois é, a conta de luz pesa no bolso de todo mundo. Seguimos trabalhando para recuperar nosso estado! Um abraço',
+    'Que essa confiança em Deus traga serenidade e força para o seu dia. Um abraço.']) {
+    check(ia.falhasDeImpessoal(t).length === 0, `resposta que fala com ela passa: "${t.slice(0, 30)}"`);
+  }
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/FALE COM ELA, NÃO SOBRE O TEXTO DELA/.test(sis), 'e a regra esta no prompt');
+  const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(/\.\.\.falhasDeImpessoal\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');

@@ -2139,6 +2139,10 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **"SEGUIMOS FIRMES" VIROU BORDÃO — NÃO USE** (18/11/2026, ele: "quase toda mensagem agora tem',
     '    esse seguimos firmes"). Feche variando — um abraço, ou uma frase sobre o assunto dela; a',
     '    frase dele acima é exemplo, não fecho fixo para toda mensagem.',
+    '    **FALE COM ELA, NÃO SOBRE O TEXTO DELA** (18/11/2026, a Lia: a reflexão dela recebeu "A',
+    '    reflexão interior... pode trazer mais serenidade. É uma mensagem de fé que merece ser acolhida',
+    '    com respeito" — comentário de terceiro, sem ninguém do outro lado). Responda a ela, na primeira',
+    '    pessoa ("Que bonita reflexão! Concordo que..."), e feche com um abraço.',
     /**
      * **BOATO DO ADVERSÁRIO: nem confirma, nem dá aula, nem inventa** (17/11/2026, rodada dele, a
      * Evani: *"qual a tua opinião sobre que o Lula já tenha morrido em 2022? Você já viu ele?"*). O
@@ -2964,6 +2968,21 @@ export function falhasTomJuridico(texto) {
  * firmes"*). Saía do exemplo de deboche da regra 17 (ímã, de novo). A regra proíbe; esta conferência
  * pede UMA reescrita quando ele aparece mesmo assim.
  */
+/**
+ * **Rascunho que só comenta o texto dela, sem falar com ela** (18/11/2026, a Lia). Sem nenhuma marca
+ * de conversa — você/te/seu, eu/concordo/agradeço/obrigado, abraço — o texto é um parecer sobre a
+ * mensagem, e quem lê sente que ninguém respondeu. Pede UMA reescrita.
+ */
+export function falhasDeImpessoal(texto) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  if (!t.trim()) return [];
+  const conversa = /(^|[^a-z])(voce|vc|te|ti|contigo|seu|sua|seus|suas|eu|me|meu|minha|concordo|agradeco|obrigad[oa]|abraco|abracos|bom dia|boa tarde|boa noite|ola|oi)([^a-z]|$)/;
+  // Só o PARECER sobre o que ela mandou: resposta objetiva a uma pergunta ("a manutenção cabe à
+  // concessionária") não fala de "mensagem" nem de "reflexão" e continua valendo.
+  const parecer = /(^|[^a-z])(e uma (mensagem|reflexao)|(mensagem|reflexao|texto|palavras|video|post)[^.!?]{0,80}(merece|trazem?|podem?|mostram?|lembram?))([^a-z]|$)/;
+  return conversa.test(t) || !parecer.test(t) ? [] : ['fale com ela na primeira pessoa (não comente o texto dela em terceira pessoa) e feche com um abraço'];
+}
+
 export function falhasDeBordao(texto) {
   return /\bseguimos\s+firmes\b/i.test(semAcentoIA(String(texto || '')))
     ? ['não use "seguimos firmes" (virou bordão): feche com um abraço ou uma frase sobre o assunto dela']
