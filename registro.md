@@ -1,4 +1,25 @@
-## 2026-11-18 - v3.322.0 - ESTADO DE AGORA - "o que e isso?" com link, e a tecla que troca o rascunho
+## 2026-11-18 - v3.323.0 - ESTADO DE AGORA - encerrou hoje, envio com o id da rodada, tom juridico reescreve
+
+Segunda rodada de verdade em Minhas na v3.322 (27 enviados, 6 pulados, 19 concluidos sem enviar;
+cada rascunho avaliado e perguntado a ele). Conferido ao vivo: o Taura recebeu a resposta pronta de
+link e o Gilberto ficou com PORTO ALEGRE. Tres consertos:
+1. **O odone:** mensagem do momento as 10:07, texto espirita copiado as 10:24, a conferencia de
+   encerramento disse "encerrou" e mesmo assim saiu um rascunho pago (a caixa da tecla 6 por
+   TAMANHO fica acima da despedida). Ele escolheu resolver sem enviar. Hoje
+   `sugestao.encerrouDepoisDeHoje` troca essa tecla 6 por concluir quando ja respondemos hoje e ela
+   encerrou, sem pergunta, desabafo, queixa ou pedido. Ajuste depois da decisao (tabela e quadro).
+2. **A Claudete e um contato de emojis** foram pulados com "os dois sinais nao concordaram a tempo"
+   ao mandar a mensagem do momento. `page-mob.sendText` agora aceita o `id` que a rodada abriu (como
+   o Resolver desde 17/11): o texto sai pela API para a conversa do painel, entao a lista atrasada
+   nao muda o destino. Mostrando outra conversa, recusa; sem id, continua exigindo os dois sinais.
+3. **A Evani** recebeu de novo um rascunho de nota (*"nao tenho nada que confirme... nao tenho como
+   afirmar experiencias pessoais"*). O tom juridico so avisava; hoje entra na conferencia que pede
+   UMA reescrita (`ia.falhasTomJuridico`), e "nao tenho nada que confirme" entrou na lista.
+Observado e nao mexido: a Edileusa e marcada "sem interesse" pelo fluxo a cada passada e a IA
+recusa (pergunta sobre terceiros), pagando a conferencia toda vez.
+Prova: 14 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.322.0 - HISTORICO - "o que e isso?" com link, e a tecla que troca o rascunho
 
 Rodada de verdade em Minhas na v3.321 (18 enviados, 5 pulados, 2 concluidos sem enviar; ele
 aprovou ou trocou cada rascunho). Tres defeitos:

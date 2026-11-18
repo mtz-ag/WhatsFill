@@ -35,7 +35,7 @@
  * Puro e sem dependência de navegador, como tudo que decide sobre gente real neste projeto.
  */
 
-import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao, decisaoDoPostEncaminhado, decisaoDaRespostaAoFormulario } from './sugestao.js';
+import { REGRAS, SOBRE, TECLAS, rascunhoDeCortesia, respostaLinkComOpiniao, decisaoDoPostEncaminhado, decisaoDaRespostaAoFormulario, encerrouDepoisDeHoje } from './sugestao.js';
 
 /**
  * Os SINAIS que um ramo pode usar como condição — o menu que ele vê ao criar um nó.
@@ -436,6 +436,9 @@ export function decidir(ctx, arvore, fluxo) {
   };
 
   const escolhida = andar(arvore, []);
+  // Ela encerrou e ja respondemos hoje (18/11/2026, o odone): a tecla 6 por tamanho vira concluir.
+  const encerrou = encerrouDepoisDeHoje(c, escolhida);
+  if (encerrou) return { ...encerrou, caminho: [...(escolhida.caminho || []), 'encerrou-depois-de-hoje'] };
   // Post encaminhado (12/11/2026, a Suely): político vira rascunho, comercial conclui. Sem reimportar.
   const doPost = decisaoDoPostEncaminhado(c, escolhida);
   if (doPost) return { ...doPost, caminho: ['post encaminhado'] };

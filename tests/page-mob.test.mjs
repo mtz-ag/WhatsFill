@@ -2189,7 +2189,7 @@ grupo('popup das teclas enquanto ele confere o texto');
   check(popup.includes('ehCampoDeMensagem'), 'numero dentro do cadastro nao dispara a tecla');
   check(popup.includes('atalhosDaConferencia'), 'a tecla nova fica gravada');
   const espera = painel.slice(fimPopup, painel.indexOf('async function esperarTelaLivre'));
-  check(espera.includes('await page.sendText(rendido.text)'), 'a tecla envia de verdade, nao so troca o texto');
+  check(espera.includes('await page.sendText(rendido.text, idDoEnvio())'), 'a tecla envia de verdade, nao so troca o texto');
   check(espera.includes("if (!/Enter/.test(String(ato.como || '')))"),
     'clique que nao esvaziou o campo nao pula nem conclui');
 

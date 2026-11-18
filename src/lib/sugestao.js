@@ -1453,7 +1453,7 @@ export function sugerirAcao(ctx, fluxo) {
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
-    return decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || decisaoDaRespostaAoFormulario(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
+    return encerrouDepoisDeHoje(c, decisao) || decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || decisaoDaRespostaAoFormulario(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
   }
   return decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || decisaoDaRespostaAoFormulario(c, null) || rascunhoDeCortesia(c, null);
 }
@@ -1535,6 +1535,29 @@ export function decisaoDaRespostaAoFormulario(c, decisao) {
  * sobrescreve, então a IA dizia "encerrou" e o rascunho de cortesia mandava escrever "obrigado
  * pelo carinho" assim mesmo. Medido na frase da print: override verdadeiro sobre a tecla 3.
  */
+/**
+ * **Ela encerrou, e já respondemos hoje: conclui sem pagar um rascunho** (18/11/2026, o odone).
+ * A mensagem do momento saiu às 10:07; às 10:24 ela mandou um texto espírita copiado, e a
+ * conferência de encerramento disse "encerrou". Mesmo assim o texto LONGO levou a caixa da tecla 6
+ * (`ultima-pede-resposta-pessoal`, que mede tamanho e fica acima da despedida) e a IA escreveu um
+ * rascunho pago para ele apagar. Ajuste DEPOIS da decisão, como os outros: vale no quadro salvo e
+ * só troca a tecla 6 por tamanho — pergunta, desabafo, saúde, queixa e pedido continuam com ela.
+ */
+export function encerrouDepoisDeHoje(c, decisao) {
+  if (!decisao || !c?.ultimaEhDespedida || !c.respondidoHoje || c.ultimaEhNossa) return null;
+  if (!/ultima-pede-resposta-pessoal/.test(decisao.id || '') || !(decisao.tecla === '6' || decisao.ia)) return null;
+  if (c.perguntaPendente || c.perguntaAberta || c.desabafoPessoal || c.reclamaSemResposta || c.naoPodeFalarAgora ||
+      c.pedeAjudaFinanceira || c.pedeEmprego || c.pedeLigacao || c.pedeFalarComDeputado || c.materialPendente ||
+      c.falaPessoalDela || c.reacaoDeTristeza || c.denunciaOuCorrente || c.semInteresse) return null;
+  return {
+    id: 'encerrou-depois-de-hoje',
+    tecla: '3',
+    resposta: null,
+    ia: false,
+    motivo: 'já respondemos hoje e ela encerrou (agradeceu, abençoou ou repassou um texto, sem pedir nada) — concluo sem enviar',
+  };
+}
+
 export function rascunhoDeCortesia(c, decisao) {
   if (!c?.cortesiaParaRascunho || c.ultimaEhDespedida || c.ultimaEhNossa || c.pedeRespostaPessoal || c.perguntaAberta ||
       c.perguntaPendente || c.reclamaSemResposta || c.desabafoPessoal || c.denunciaOuCorrente ||

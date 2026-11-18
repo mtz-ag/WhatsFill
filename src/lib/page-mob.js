@@ -822,11 +822,22 @@ export async function diagnosticarAbas() {
  * tela: e **mandar a mensagem de uma pessoa para outra**, e isso nao tem volta. Por isso o
  * `so-um-sinal` tambem nao serve para enviar — ele basta para o painel LER, nunca para escrever.
  */
-export async function sendText(texto, { exigirDoisSinais = true, ...opcoes } = {}) {
+export async function sendText(texto, { exigirDoisSinais = true, id = '', ...opcoes } = {}) {
   const st = await getState(opcoes);
   if (!st.ganchoRespondeu) throw new Error('Nao consegui ler qual conversa esta aberta (o gancho da pagina nao respondeu) — recuso mandar as cegas.');
   if (!st.sessionId) throw new Error('Nenhuma conversa aberta na tela — abra a conversa antes de enviar.');
-  if (exigirDoisSinais && st.porQuantosSinais !== 'os-dois') {
+  /**
+   * **COM o `id` que a rodada abriu, o painel certo basta** (18/11/2026: a Claudete e outra contato
+   * pulados com "os dois sinais não concordaram a tempo"). É a regra do `conversaDaTela` (17/11)
+   * levada ao envio: o texto sai pela API para `st.sessionId`, então o que importa é ele ser a
+   * conversa que a rodada abriu; a linha da fila atrasada não muda para quem a mensagem vai.
+   * Mostrando OUTRA conversa, recusa. **Sem `id` (o clique a mão) os dois sinais continuam exigidos.**
+   */
+  const alvo = String(id || '');
+  if (alvo && st.sessionId !== alvo) {
+    throw new Error(`A tela mostra outra conversa — recuso enviar, porque errar aqui e mandar a mensagem de uma pessoa para outra (${MARCA_SINAL_FRACO}).`);
+  }
+  if (exigirDoisSinais && !alvo && st.porQuantosSinais !== 'os-dois') {
     throw new Error(`Sei qual conversa esta aberta por UM sinal so (${st.porQuantosSinais}) — recuso enviar, porque errar aqui e mandar a mensagem de uma pessoa para outra.`);
   }
   return mandarTexto({ conversaId: st.sessionId, texto });

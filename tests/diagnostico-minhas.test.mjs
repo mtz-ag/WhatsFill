@@ -164,6 +164,40 @@ grupo('trocar o rascunho pela tecla do popup nao registra o rascunho como enviad
   check(/Você trocou pela \$\{mandou\.como\}/.test(painel), 'a resposta pronta trocada pela tecla tambem nao se marca como enviada');
 }
 
+grupo('ela encerrou e ja respondemos hoje: conclui em vez de pagar um rascunho (o odone)');
+{
+  const dec = { id: 'r:ultima-pede-resposta-pessoal:sem-cidade', tecla: '6', motivo: 'texto longo' };
+  const c = { ultimaEhDespedida: true, respondidoHoje: true };
+  check(sug.encerrouDepoisDeHoje(c, dec)?.tecla === '3', 'texto longo que encerra, depois da nossa de hoje, conclui');
+  check(!sug.encerrouDepoisDeHoje({ ...c, respondidoHoje: false }, dec), 'sem resposta nossa hoje, a IA continua escrevendo');
+  check(!sug.encerrouDepoisDeHoje({ ...c, perguntaPendente: true }, dec), 'com pergunta, continua com a IA');
+  check(!sug.encerrouDepoisDeHoje({ ...c, desabafoPessoal: { motivo: 'x' } }, dec), 'desabafo continua com a IA');
+  check(!sug.encerrouDepoisDeHoje(c, { id: 'r:pergunta-aberta', tecla: '6' }), 'so troca a tecla 6 do TAMANHO');
+  const fonteSug = readFileSync(new URL('../src/lib/sugestao.js', import.meta.url), 'utf8');
+  check(/return encerrouDepoisDeHoje\(c, decisao\) \|\|/.test(fonteSug), 'a tabela aplica o ajuste');
+  const fonteArv = readFileSync(new URL('../src/lib/arvore.js', import.meta.url), 'utf8');
+  check(/encerrouDepoisDeHoje\(c, escolhida\)/.test(fonteArv), 'e o quadro tambem');
+}
+
+grupo('tom juridico pede reescrita, nao so aviso (a Evani)');
+{
+  const ia = await lib('ia.js');
+  check(ia.falhasTomJuridico('Esse assunto circula bastante, mas não tenho nada que confirme isso.').length === 1, '"nao tenho nada que confirme" e tom de nota');
+  check(ia.falhasTomJuridico('Sobre ter visto o Lula, não tenho como afirmar experiências pessoais.').length === 1, '"nao tenho como afirmar" tambem');
+  check(ia.falhasTomJuridico('Vou verificar isso e te retorno.').length === 0, '"vou verificar" continua livre');
+  check(ia.falhasTomJuridico('Esse boato circula bastante por aí. Um abraço!').length === 0, 'a resposta leve passa');
+  const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(/\.\.\.falhasTomJuridico\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
+}
+
+grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');
+{
+  const pm = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');
+  check(/if \(alvo && st\.sessionId !== alvo\)/.test(pm) && /exigirDoisSinais && !alvo && st\.porQuantosSinais !== 'os-dois'/.test(pm),
+    'com id, basta o painel mostrar a conversa da rodada; sem id, os dois sinais');
+  check((painel.match(/page\.sendText\([^)]*, idDoEnvio\(\)\)/g) || []).length === 3, 'os tres envios da rodada levam o id');
+}
+
 grupo('legenda de foto nao troca a cidade do cadastro (o Gilberto)');
 {
   const ex = await lib('extract.js');

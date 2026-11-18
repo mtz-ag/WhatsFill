@@ -2935,7 +2935,18 @@ export const AGRADECEU_A_DENUNCIA =
  * se PODE dizer com verdade) nem encaminhar para fora.
  */
 const TOM_JURIDICO =
-  /n[ãa]o\s+(tenho|temos|da|d[áa])\s+(como\s+)?(confirmar|verificar|atestar|comprovar|afirmar)|prefiro\s+n[ãa]o\s+(afirmar|comentar|opinar|me\s+manifestar)|n[ãa]o\s+(posso|poderia|vou)\s+(confirmar|afirmar|atestar|comprovar)|sem\s+(como\s+)?confirmar|n[ãa]o\s+(me\s+)?cabe\s+(afirmar|confirmar|opinar)/i;
+  /n[ãa]o\s+(tenho|temos|h[áa])\s+nada\s+que\s+(confirme|comprove|ateste)|n[ãa]o\s+(tenho|temos|da|d[áa])\s+(como\s+)?(confirmar|verificar|atestar|comprovar|afirmar)|prefiro\s+n[ãa]o\s+(afirmar|comentar|opinar|me\s+manifestar)|n[ãa]o\s+(posso|poderia|vou)\s+(confirmar|afirmar|atestar|comprovar)|sem\s+(como\s+)?confirmar|n[ãa]o\s+(me\s+)?cabe\s+(afirmar|confirmar|opinar)/i;
+
+/**
+ * **O tom jurídico pede REESCRITA, não só aviso** (18/11/2026, a Evani: *"não tenho nada que
+ * confirme isso... não tenho como afirmar experiências pessoais"*). O aviso parava o rascunho na
+ * frente dele; a reescrita que já existe para os tons (`ia-cliente.rascunhar`) tenta uma vez.
+ */
+export function falhasTomJuridico(texto) {
+  return TOM_JURIDICO.test(semAcentoIA(String(texto || '')))
+    ? ['não anuncie que não pode confirmar, verificar ou afirmar (soa nota jurídica): responda leve e curto, sem esse anúncio']
+    : [];
+}
 
 /** **O agradecimento do apoio** — ver `AVISOS_QUE_IMPEDEM_ENVIO.agradeceuApoioQueNaoHouve`. */
 const AGRADECEU_O_APOIO = /(obrigad[oa]|agrade[cç]\p{L}*|gratid[ãa]o)[^.!?]{0,20}\bapoio\b/iu;

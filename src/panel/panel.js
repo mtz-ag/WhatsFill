@@ -3507,7 +3507,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * imagem muda.
      */
     const comImagem = await mandarImagemSeLigada(template, text);
-    if (!comImagem.legendaFoi) await page.sendText(text);
+    if (!comImagem.legendaFoi) await page.sendText(text, idDoEnvio());
     state.lastSendAt = Date.now();
     await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
     await templatesLib.avancarVariante(template);
@@ -6650,6 +6650,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * então é ESSA que tem de ser resolvida; a tela mostrando outra continua recusando (é a mesma
    * comparação que protege a rodada). Só na plataforma nova: na velha o concluir é DOM e não usa id.
    */
+  /** O id que a rodada abriu vai junto do envio: com ele a lista atrasada nao pula o contato (18/11/2026). */
+  function idDoEnvio() {
+    return idQueARodadaAbriu ? { id: idQueARodadaAbriu } : {};
+  }
+
   function idDaConversaParaConcluir() {
     return idQueARodadaAbriu || (naPlataformaNova() ? String(state.session?.id || '') : '');
   }
@@ -7653,7 +7658,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         }
       }
       await page.setComposerText(rendido.text);
-      await page.sendText(rendido.text);
+      await page.sendText(rendido.text, idDoEnvio());
       try { await page.setComposerText(''); } catch (_) { /* a mensagem ja saiu; o campo e o que sobrou na tela */ }
       if (templateMomento) {
         await templatesLib.avancarVariante(templateMomento);
@@ -12159,7 +12164,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           if (!euMando) {
             await throttle();
             try {
-              await page.sendText(rascunho.texto);
+              await page.sendText(rascunho.texto, idDoEnvio());
             } catch (err) {
               const fraco = pularPorSinalFraco(nome, err, 'mandar a mensagem de uma pessoa para outra');
               if (fraco) return fraco;
