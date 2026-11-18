@@ -198,7 +198,21 @@ grupo('a regra do boato nao manda dizer a frase que a trava barra (a Evani, terc
   const regra = sis.slice(i, i + 1500);
   check(!/diga que[^.]*não tem nada que confirme/.test(regra), 'a regra nao manda dizer "nao tenho nada que confirme"');
   check(/"você já viu ele\?"\) NÃO se/.test(regra.replace(/\s+/g, ' ')), 'o "voce ja viu ele?" nao se responde');
-  check(/esse boato circula bastante por aí!/.test(regra), 'e da o exemplo leve');
+  check(/Pois é, esse boato circula/.test(regra.replace(/',\s*'\s*/g, ' ')) || /Pois é, esse boato circula/.test(regra), 'e da o exemplo no jeito dele');
+  check(ia.falhasTomJuridico('Bom dia! Pois é, esse boato circula bastante por aí, mas não tenho como confirmar nada. Um abraço!').length === 0,
+    'o "nao tenho como confirmar nada" casual dele passa na trava');
+  check(ia.falhasTomJuridico('Não tenho como confirmar essa informação.').length === 1, 'a forma de nota continua barrada');
+}
+
+grupo('sem fala dela dentro do limite de horas, a IA nao e chamada (seis conferencias "conversa vazia")');
+{
+  check(/function sobrouFalaDelaParaAIA\(\)/.test(painel), 'existe a conta do que a IA vai ler');
+  const enc = painel.slice(painel.indexOf('async function encerrouAConversa'), painel.indexOf('async function etiquetarEndereco'));
+  check(/if \(!sobrouFalaDelaParaAIA\(\)\) return false;/.test(enc) && enc.indexOf('sobrouFalaDelaParaAIA') < enc.indexOf('conferirEncerramento'),
+    'o encerramento nao paga quando nao sobrou nada dela');
+  const ras = painel.slice(painel.indexOf('async function rascunharParaEle'));
+  check(ras.indexOf('sobrouFalaDelaParaAIA()') > 0 && ras.indexOf('sobrouFalaDelaParaAIA()') < ras.indexOf('iaCliente.rascunhar('),
+    'e o rascunho tambem nao, antes da chamada');
 }
 
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');

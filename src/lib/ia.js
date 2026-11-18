@@ -2141,9 +2141,10 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      */
     '    **BOATO OU TEORIA SOBRE O ADVERSÁRIO, perguntado por quem é do nosso lado** ("o Lula já',
     '    morreu?", "é sósia?", "vi um vídeo que…"): ela quer conversar, não ser corrigida. Responda',
-    '    leve e curto, como num papo: "esse boato circula bastante por aí!" e volte para o que importa',
-    '    (seguimos firmes, um abraço). Nada de "não tenho nada que confirme" nem "não tenho como',
-    '    afirmar": isso é tom de nota. **Nunca confirme o boato, nunca dê aula**',
+    '    leve e curto, como num papo — o jeito DELE (18/11/2026): "Bom dia! Pois é, esse boato circula',
+    '    bastante por aí, mas não tenho como confirmar nada. Um abraço!". O "não tenho como confirmar',
+    '    nada" casual cabe; "não tenho informação confiável", "não tenho uma experiência pessoal" e',
+    '    "seguir atentos aos fatos" não. **Nunca confirme o boato, nunca dê aula**',
     '    ("confira fontes oficiais", "cuidado com fake news", "vídeos espalham boatos") e nunca use',
     '    tom de nota ("não tenho informação confiável que confirme").',
     '    **E NUNCA AFIRME o que o candidato viu, onde esteve, com quem tem contato ou quem conhece**',
@@ -2937,7 +2938,7 @@ export const AGRADECEU_A_DENUNCIA =
  * se PODE dizer com verdade) nem encaminhar para fora.
  */
 const TOM_JURIDICO =
-  /n[ãa]o\s+(tenho|temos|h[áa])\s+nada\s+que\s+(confirme|comprove|ateste)|n[ãa]o\s+(tenho|temos|da|d[áa])\s+(como\s+)?(confirmar|verificar|atestar|comprovar|afirmar)|prefiro\s+n[ãa]o\s+(afirmar|comentar|opinar|me\s+manifestar)|n[ãa]o\s+(posso|poderia|vou)\s+(confirmar|afirmar|atestar|comprovar)|sem\s+(como\s+)?confirmar|n[ãa]o\s+(me\s+)?cabe\s+(afirmar|confirmar|opinar)/i;
+  /n[ãa]o\s+(tenho|temos|h[áa])\s+nada\s+que\s+(confirme|comprove|ateste)|n[ãa]o\s+(tenho|temos|da|d[áa])\s+(como\s+)?(confirmar|verificar|atestar|comprovar|afirmar)(?!\s+nada\b)|prefiro\s+n[ãa]o\s+(afirmar|comentar|opinar|me\s+manifestar)|n[ãa]o\s+(posso|poderia|vou)\s+(confirmar|afirmar|atestar|comprovar)|sem\s+(como\s+)?confirmar|n[ãa]o\s+(me\s+)?cabe\s+(afirmar|confirmar|opinar)/i;
 
 /**
  * **O tom jurídico pede REESCRITA, não só aviso** (18/11/2026, a Evani: *"não tenho nada que

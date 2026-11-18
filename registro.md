@@ -1,4 +1,25 @@
-## 2026-11-18 - v3.324.0 - ESTADO DE AGORA - a regra do boato mandava dizer a frase barrada
+## 2026-11-18 - v3.325.0 - ESTADO DE AGORA - o boato no jeito dele, e a IA nao paga para ler o vazio
+
+Quarta rodada em Minhas na v3.324 (17 enviados, 2 pulados, 11 concluidos sem enviar; a fila
+acabou). Dois consertos:
+1. **O boato no jeito DELE.** O rascunho da regra nova (*"Esse boato circula bastante por ai.
+   Seguimos firmes."*) ele nao gostou: *"podia ser — bom dia, pois e, esse boato circula bastante
+   por ai mas nao tenho como confirmar nada, abraco"*. Mandei o texto dele para a Evani. A regra 17
+   agora traz essa frase como modelo, e a trava do tom juridico deixa passar o "nao tenho como
+   confirmar NADA" casual; "nao tenho como confirmar essa informacao", "nao tenho nada que confirme"
+   e "nao tenho como afirmar" continuam barrados. **Corrige a minha leitura da v3.323/3.324**, em que
+   eu tratei qualquer "nao tenho como confirmar" como nota.
+2. **Seis conferencias de encerramento pagas diziam "nao ha mensagem da pessoa (conversa vazia)"**,
+   e um rascunho pago saiu "nao ha o que responder": a IA le a conversa cortada pelo limite de horas
+   (16h) e a rodada decide pela conversa inteira. Hoje `sobrouFalaDelaParaAIA` confere o que a IA
+   vai ler: sem fala dela depois da nossa ultima, o encerramento nao e chamado e o rascunho devolve
+   direto o desfecho de "nao ha o que responder" (mensagem do momento ou concluir), sem pagar.
+Observado e nao mexido: o Gilberto voltou pela quarta vez (pulado de novo; ele fica na fila ate
+alguem responder); a conferencia de cidade paga palavras comuns que sao municipios ("Feliz",
+"Saude", "Carmo", "Cerrito") a cada passada.
+Prova: 6 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.324.0 - HISTORICO - a regra do boato mandava dizer a frase barrada
 
 Terceira rodada em Minhas na v3.323 (4 enviados, 3 pulados, 5 concluidos sem enviar). Conferido ao
 vivo: o contato de emojis que ontem foi pulado pela lista atrasada recebeu a mensagem do momento

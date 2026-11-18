@@ -3844,6 +3844,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
      * texto dela continua passando — `ehRepasse` só vale quando, tirando o link, não sobra nada.
      */
     if (escreveu.every((m) => ehRepasse(m))) return false;
+    // O que a IA lê é cortado pelo limite de horas: sem fala dela ali, a resposta é sempre "vazia".
+    if (!sobrouFalaDelaParaAIA()) return false;
 
     const alvo = state.contact?.id;
     const chave = `${alvo}|${escreveu.map((m) => m?.at || '').join(',')}`;
@@ -16928,6 +16930,40 @@ const CONTATOS_POR_PAGINA = 200;
    *   rodada segue para a caixa de pergunta, que é onde ele escolhe. `ok` diz se o texto chegou ao
    *   campo — quem chama usa isso para não repetir no log a linha que esta função já escreveu.
    */
+  /**
+   * O desfecho de "não há o que responder", num lugar só (o conselho depende de já termos falado
+   * hoje — 17/11/2026, o André). `state.sinais` só existe depois de a rodada ou a prévia montar o
+   * contexto; sem ele vale a conversa — alguma fala nossa de hoje.
+   */
+  function resultadoSemOQueResponder() {
+    const hoje = new Date().toDateString();
+    const falamosHoje = state.sinais
+      ? !!(state.sinais.respondidoHoje || state.sinais.momentoHoje)
+      : !!(state.nossaUltimaAt && new Date(state.nossaUltimaAt).toDateString() === hoje);
+    return {
+      ok: false,
+      enviado: false,
+      naoHaOQueResponder: true,
+      motivo: falamosHoje
+        ? 'a IA não achou o que responder e já falamos com ela hoje — conclua sem enviar (tecla 3)'
+        : 'a IA não achou o que responder — mande a mensagem do momento (tecla 5)',
+    };
+  }
+
+  /**
+   * **Depois do corte de horas, sobrou alguma fala DELA esperando resposta?** (18/11/2026: em
+   * Minhas, seis conferências pagas diziam "não há mensagem da pessoa (conversa vazia)" e um
+   * rascunho pago saiu "não há o que responder"). A IA lê `conversaParaIA`, que corta pelo limite de
+   * horas; a rodada decide pela conversa inteira. Sem nada dela depois da nossa última fala NO QUE A
+   * IA LÊ, perguntar é pagar para ouvir "vazio".
+   */
+  function sobrouFalaDelaParaAIA() {
+    const lida = conversaParaIA();
+    let ultimaNossa = -1;
+    lida.forEach((m, i) => { if (m.de === 'nos') ultimaNossa = i; });
+    return lida.slice(ultimaNossa + 1).some((m) => m.de !== 'nos');
+  }
+
   async function rascunharParaEle() {
     // `iaTemChave` e não `ia.ligada`: a caixa da rodada governa o gasto AUTOMÁTICO; um rascunho
     // pedido na tecla `i` é escolha dele, contato a contato. Sem chave não há o que chamar.
@@ -16948,6 +16984,11 @@ const CONTATOS_POR_PAGINA = 200;
     // Dossie e orgaos leem so o texto dela. O mesmo prazo, senao o pedido antigo volta no rascunho.
     const dela = limitarContextoIA(delaToda, state.auto.cfg.horasContextoPerdido);
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
+    if (!sobrouFalaDelaParaAIA() && !perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio)) {
+      registrarNaRodada(state.contact?.name || 'contato', 'aviso',
+        'nada dela dentro do limite de horas para a IA ler — não chamei a IA (não paga)');
+      return resultadoSemOQueResponder();
+    }
 
     /**
      * **O que FALTA tem que ser pedido** — print dele (05/09/2026): o rascunho respondeu bem o
@@ -17235,18 +17276,7 @@ const CONTATOS_POR_PAGINA = 200;
          * com a mensagem do momento enviada às 10:44). `state.sinais` só existe depois de a rodada
          * ou a prévia montar o contexto; sem ele vale a conversa — alguma fala nossa de hoje.
          */
-        const hoje = new Date().toDateString();
-        const falamosHoje = state.sinais
-          ? !!(state.sinais.respondidoHoje || state.sinais.momentoHoje)
-          : !!(state.nossaUltimaAt && new Date(state.nossaUltimaAt).toDateString() === hoje);
-        return {
-          ok: false,
-          enviado: false,
-          naoHaOQueResponder: true,
-          motivo: falamosHoje
-            ? 'a IA não achou o que responder e já falamos com ela hoje — conclua sem enviar (tecla 3)'
-            : 'a IA não achou o que responder — mande a mensagem do momento (tecla 5)',
-        };
+        return resultadoSemOQueResponder();
       }
       registrarNaRodada(
         state.contact?.name || 'contato',
