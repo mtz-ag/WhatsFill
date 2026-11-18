@@ -190,6 +190,17 @@ grupo('tom juridico pede reescrita, nao so aviso (a Evani)');
   check(/\.\.\.falhasTomJuridico\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
+grupo('a regra do boato nao manda dizer a frase que a trava barra (a Evani, terceira vez)');
+{
+  const ia = await lib('ia.js');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const i = sis.indexOf('BOATO OU TEORIA SOBRE O ADVERSÁRIO');
+  const regra = sis.slice(i, i + 1500);
+  check(!/diga que[^.]*não tem nada que confirme/.test(regra), 'a regra nao manda dizer "nao tenho nada que confirme"');
+  check(/"você já viu ele\?"\) NÃO se/.test(regra.replace(/\s+/g, ' ')), 'o "voce ja viu ele?" nao se responde');
+  check(/esse boato circula bastante por aí!/.test(regra), 'e da o exemplo leve');
+}
+
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');
 {
   const pm = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');

@@ -1,4 +1,16 @@
-## 2026-11-18 - v3.323.0 - ESTADO DE AGORA - encerrou hoje, envio com o id da rodada, tom juridico reescreve
+## 2026-11-18 - v3.324.0 - ESTADO DE AGORA - a regra do boato mandava dizer a frase barrada
+
+Terceira rodada em Minhas na v3.323 (4 enviados, 3 pulados, 5 concluidos sem enviar). Conferido ao
+vivo: o contato de emojis que ontem foi pulado pela lista atrasada recebeu a mensagem do momento
+(o envio com o id da rodada funciona). A Evani voltou pela terceira vez com o rascunho robo
+(*"Sobre ter visto o Lula, nao tenho uma experiencia pessoal para relatar"*). **A causa era o texto
+da propria regra 17:** ela mandava dizer *"que voce nao tem nada que confirme"*, a frase que a
+trava do tom juridico barra desde a v3.323, e mandava responder o *"voce ja viu ele?"*. Hoje a
+regra da o exemplo leve (*"esse boato circula bastante por ai!"*) e diz que aquela pergunta NAO se
+responde. Ele mandou pular a Evani e mudar a regra. O Gilberto foi pulado pela terceira vez.
+Prova: 3 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.323.0 - HISTORICO - encerrou hoje, envio com o id da rodada, tom juridico reescreve
 
 Segunda rodada de verdade em Minhas na v3.322 (27 enviados, 6 pulados, 19 concluidos sem enviar;
 cada rascunho avaliado e perguntado a ele). Conferido ao vivo: o Taura recebeu a resposta pronta de
