@@ -10,8 +10,10 @@ IA via so o texto e aceitou. Hoje a legenda sai da primeira passada (`extract.se
 rebaixada (`rebaixarParaPalpite(..., 'legenda de foto ou video')`: nao substitui nem grava sozinha), e
 a conferencia da IA recebe a marca de legenda. **Causa do rascunho:** a regra do formulario da agenda
 nao separava pedir visita de estar visitando; hoje separa. Pulei o Gilberto sem enviar e parei a
-rodada. **PENDENTE, decisao dele:** devolver PORTO ALEGRE ao cadastro do Gilberto (escrita em
-producao). Prova: 8 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+rodada. **Devolvido a pedido dele** (18/11, 09:52): cidade/city PORTO ALEGRE e as etiquetas de antes
+(as duas grafias do COREDE Metropolitano, que a troca tinha tirado; saiu o "central" que ela pos),
+conferido relendo o banco. As grafias do Metropolitano foram reconstruidas pelas que existem na base
+e pelo comeco que a tela mostrava, nao por um registro do valor antigo. Prova: 8 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
 
 ## 2026-11-17 - v3.320.0 - HISTORICO - nao repetir o que dissemos nos ultimos dias
 
