@@ -1,4 +1,22 @@
-## 2026-11-18 - v3.325.0 - ESTADO DE AGORA - o boato no jeito dele, e a IA nao paga para ler o vazio
+## 2026-11-18 - v3.326.0 - ESTADO DE AGORA - sugestao de lei vai ao formulario; "nao e cidade" nao se paga duas vezes
+
+Quinta rodada em Minhas na v3.325 (1 enviado, 2 pulados, 9 concluidos sem enviar; parada por mim).
+Conferido ao vivo: `encerrouDepoisDeHoje` concluiu a Vanda sem rascunho pago. Dois consertos:
+1. **A Dirce** pediu que o Capitao crie uma lei como a de Gramado ("se fizerem um PL me informem");
+   a IA tentou duas vezes e a trava de autoria descartou. Regra dele: *"temos o formulario para
+   demandas"* — mandei o texto com o link, aprovado por ele, e concluí. O bloco DEMANDA agora cobre
+   SUGESTAO de lei, projeto ou ideia (agradecer em uma frase, sem resumir o video nem prometer).
+2. A conferencia de cidade pagava a cada rodada palavras comuns que sao municipios ("Feliz",
+   "Saude", "Cerrito", "Carmo"). Hoje o `semcidade` fica em memoria por contato e palpite
+   (`cidadesSemCidade`) e nao chama a IA de novo na mesma sessao do painel. Nao vira recusa gravada.
+Observado e nao mexido: (a) o odone — concluir sem enviar nao zera a rajada, e na passada seguinte
+o texto antigo voltou como novo; (b) a espera de 10 min do Jaime venceu enquanto eu perguntava, e
+a tela ficou no Jaime com a rodada na Maria Teresa — parei a rodada; nada saiu para nenhum dos dois
+(conferido no banco e na tela); (c) a trava de autoria pode estar barrando assunto que ela tambem
+escreveu (a Dirce), sem como medir sem o rascunho descartado.
+Prova: 4 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.325.0 - HISTORICO - o boato no jeito dele, e a IA nao paga para ler o vazio
 
 Quarta rodada em Minhas na v3.324 (17 enviados, 2 pulados, 11 concluidos sem enviar; a fila
 acabou). Dois consertos:

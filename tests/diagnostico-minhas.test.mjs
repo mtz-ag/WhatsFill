@@ -215,6 +215,21 @@ grupo('sem fala dela dentro do limite de horas, a IA nao e chamada (seis confere
     'e o rascunho tambem nao, antes da chamada');
 }
 
+grupo('sugestao de lei vai para o formulario de demandas (a Dirce)');
+{
+  const ia = await lib('ia.js');
+  const bloco = ia.blocoDosFormularios({ demanda: 'https://exemplo.test/formulario/demanda-cidada' });
+  check(/SUGESTÃO de lei, projeto ou ideia para o mandato/.test(bloco), 'o formulario de demandas cobre sugestao de lei');
+  check(!/Capitão|Martim/.test(bloco), 'sem nome de candidato no bloco (vale para os dois perfis)');
+}
+
+grupo('a conferencia de cidade nao paga de novo o "nao e cidade" (Feliz, Saude, Cerrito)');
+{
+  check(/const jaOuvido = cidadesSemCidade\.get\(chaveCidade\);/.test(painel) && /const r = jaOuvido \|\| await iaCliente\.conferirCidade/.test(painel),
+    'o semcidade ja ouvido nesta sessao nao chama a IA');
+  check(/if \(r\?\.acao === 'semcidade' && !jaOuvido\) cidadesSemCidade\.set/.test(painel), 'e so o semcidade e guardado, em memoria');
+}
+
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');
 {
   const pm = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');

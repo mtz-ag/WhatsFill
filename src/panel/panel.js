@@ -1355,7 +1355,15 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0))
       .slice(-30);
 
-    const r = await iaCliente.conferirCidade({
+    /**
+     * **O "não é cidade" já ouvido não se paga de novo** (18/11/2026: "Feliz", "Saúde", "Cerrito" e
+     * "Carmo" — palavras comuns que são municípios — pagavam a conferência a cada rodada, e a
+     * resposta era sempre a mesma). Só em MEMÓRIA, por contato e palpite, e só o `semcidade`: não
+     * vira recusa guardada (a razão está no cabeçalho), e a próxima sessão do painel pergunta de novo.
+     */
+    const chaveCidade = `${state.contact?.id || ''}|${cities.semAcentoNemCaixa(entry.value || '')}`;
+    const jaOuvido = cidadesSemCidade.get(chaveCidade);
+    const r = jaOuvido || await iaCliente.conferirCidade({
       regras: state.ia.regras,
       mensagens: conversa,
       candidato: entry.value,
@@ -1368,9 +1376,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       modelo: state.ia.modelo,
     });
 
-    if (r?.custoUsd) {
+    if (r?.custoUsd && !jaOuvido) {
       registrarNaRodada('IA', 'pulado', `cidade · ${r.acao} · US$ ${r.custoUsd.toFixed(4)}`);
     }
+    if (r?.acao === 'semcidade' && !jaOuvido) cidadesSemCidade.set(chaveCidade, r);
 
     const nome = state.contact?.name || 'contato';
     if (r.acao === 'aceitar') {
@@ -3784,6 +3793,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   }
 
   const conferenciasDeEncerramento = new Map();
+  /** Palpites de cidade que a IA já disse não serem cidade, nesta sessão do painel (18/11/2026). */
+  const cidadesSemCidade = new Map();
 
   /**
    * **ELA ESTÁ ENCERRANDO A CONVERSA?** — decisão dele (15/10/2026): *"determinístico para encerrar

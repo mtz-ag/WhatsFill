@@ -3128,7 +3128,10 @@ export function blocoDosFormularios(formularios = {}) {
     linhas.push(
       `- DEMANDA — ${demanda}\n` +
         '  Para problema da comunidade (rua, água, luz, saúde, escola, segurança, transporte, ' +
-        'saneamento, Defesa Civil) e para pedir que o mandato cobre o órgão responsável. O ' +
+        'saneamento, Defesa Civil), para pedir que o mandato cobre o órgão responsável, e para ' +
+        'SUGESTÃO de lei, projeto ou ideia para o mandato ("peça para ele criar uma lei igual ' +
+        'à de Gramado", 18/11/2026 — regra dele: "temos o formulário para demandas"): agradeça a ' +
+        'sugestão em uma frase, sem resumir o vídeo nem prometer o projeto, e mande o link. O ' +
         'formulário pergunta o endereço do problema e se ela já procurou algum órgão, e o registro ' +
         'entra com protocolo. Numa reclamação de serviço público (regra 20) o contato do órgão vem ' +
         'PRIMEIRO; o formulário é o passo seguinte, para o mandato cobrar — nunca o substituto.'
