@@ -233,6 +233,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     entrantes: [],
     /** Quando saiu a NOSSA última mensagem — o sinal de "este contato já foi respondido". */
     nossaUltimaAt: null,
+    nossaUltimaEnviadaAt: null,
     /** O nome que a pessoa escreveu nesta conversa (palpite do parser), não o do cadastro. */
     nomeInformado: '',
     /** A cidade que o parser achou no que ELA escreveu: o palpite inteiro, ou `null`. */
@@ -635,7 +636,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
       });
-      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossaUltimaEnviadaAt = conversa.nossaUltimaAt || null;
+      state.nossaUltimaAt = await nossaUltimaComConclusao(state.pageState.sessionId, conversa.nossaUltimaAt);
       state.nossas = conversa.nossas || [];
       // De onde a plataforma manda neste atendimento — o envio de imagem exige (ver `imagem.js`).
       state.senderId = conversa.senderId || '';
@@ -849,7 +851,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
       });
-      state.nossaUltimaAt = conversa.nossaUltimaAt || null;
+      state.nossaUltimaEnviadaAt = conversa.nossaUltimaAt || null;
+      state.nossaUltimaAt = await nossaUltimaComConclusao(sessionId, conversa.nossaUltimaAt);
       state.nossas = conversa.nossas || [];
       // De onde a plataforma manda neste atendimento — o envio de imagem exige (ver `imagem.js`).
       state.senderId = conversa.senderId || '';
@@ -6672,10 +6675,29 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     return idQueARodadaAbriu || (naPlataformaNova() ? String(state.session?.id || '') : '');
   }
 
+  /**
+   * **Concluir marca o que já foi TRATADO, com ou sem envio** (18/11/2026, o odone: resolvido sem
+   * enviar de manhã, ele mandou dois links à tarde, e a rodada releu o texto da manhã como novo e a
+   * IA escreveu sobre ele de novo). A marca é local e por CONVERSA; na releitura,
+   * `nossaUltimaComConclusao` a usa como "nossa última fala", então só o que chegou DEPOIS conta.
+   * `respondidoHoje` continua pela fala enviada (`nossaUltimaEnviadaAt`).
+   */
+  async function nossaUltimaComConclusao(sessionId, nossaUltimaAt) {
+    try {
+      const marca = await templatesLib.wasSent('conv:' + String(sessionId || ''), 'tratado-ate');
+      const enviada = nossaUltimaAt ? new Date(nossaUltimaAt).getTime() : 0;
+      if (marca?.at && marca.at > enviada) return new Date(marca.at).toISOString();
+    } catch (_) { /* sem a marca, vale a fala enviada */ }
+    return nossaUltimaAt || null;
+  }
+
   async function concluirPeloPainel() {
     const id = idDaConversaParaConcluir();
     const r = (await page.clickConcluir(id ? { id } : {})) || {};
     if (r.ok) agendarContagem();
+    if (r.ok && id) {
+      try { await templatesLib.markSent('conv:' + id, 'tratado-ate'); } catch (_) { /* marca é conveniência */ }
+    }
     // O painel lê `reason`; o resolver da plataforma nova devolvia só `estado`, e a tela dizia
     // "undefined". Sem motivo nenhum, diz que não houve motivo — nunca a palavra undefined.
     if (!r.ok && !r.dialogOpen && !String(r.reason || '').trim()) {
@@ -11500,7 +11522,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimaEhDespedida: encerrou,
         // "Já foi respondida": nossa última mensagem saiu hoje. Serve para a reação (figura,
         // emoji, link) virar "concluir" em vez de "mais uma mensagem".
-        respondidoHoje: !!state.nossaUltimaAt && ehHoje(state.nossaUltimaAt),
+        // Pela fala ENVIADA: concluir sem enviar marca o que foi tratado, não que respondemos.
+        respondidoHoje: !!state.nossaUltimaEnviadaAt && ehHoje(state.nossaUltimaEnviadaAt),
         voltouPorOutroAnuncio,
         momentoHoje,
         momentoJaEnviado,
@@ -16950,7 +16973,7 @@ const CONTATOS_POR_PAGINA = 200;
     const hoje = new Date().toDateString();
     const falamosHoje = state.sinais
       ? !!(state.sinais.respondidoHoje || state.sinais.momentoHoje)
-      : !!(state.nossaUltimaAt && new Date(state.nossaUltimaAt).toDateString() === hoje);
+      : !!(state.nossaUltimaEnviadaAt && new Date(state.nossaUltimaEnviadaAt).toDateString() === hoje);
     return {
       ok: false,
       enviado: false,

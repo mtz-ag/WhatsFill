@@ -255,6 +255,19 @@ grupo('"seguimos firmes" e bordao, e xingar eleitor nao e deboche do adversario 
   check(/\.\.\.falhasDeBordao\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
+grupo('concluir marca o que ja foi tratado (o odone)');
+{
+  const concl = painel.slice(painel.indexOf('async function concluirPeloPainel'), painel.indexOf('function agendarContagem'));
+  check(/markSent\('conv:' \+ id, 'tratado-ate'\)/.test(concl), 'concluir grava a marca por conversa');
+  check((painel.match(/state\.nossaUltimaAt = await nossaUltimaComConclusao\(/g) || []).length === 2, 'as duas leituras da conversa usam a marca');
+  check(/respondidoHoje: !!state\.nossaUltimaEnviadaAt && ehHoje\(state\.nossaUltimaEnviadaAt\)/.test(painel),
+    'e "respondido hoje" continua pela fala enviada');
+  const templates = await lib('templates.js');
+  await templates.markSent('conv:teste-odone', 'tratado-ate');
+  const marca = await templates.wasSent('conv:teste-odone', 'tratado-ate');
+  check(marca?.at > 0, 'a marca e lida de volta com a hora');
+}
+
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');
 {
   const pm = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');

@@ -1,4 +1,18 @@
-## 2026-11-18 - v3.327.0 - ESTADO DE AGORA - "seguimos firmes" era bordao; opiniao nao e cortesia; xingar eleitor nao e deboche
+## 2026-11-18 - v3.328.0 - ESTADO DE AGORA - concluir marca o que ja foi tratado
+
+O pendente do odone (v3.326): ele escolheu resolver sem enviar o texto espirita da manha; a tarde
+ele mandou dois links, e a rodada releu o texto da manha como se fosse novo — a IA escreveu sobre
+ele de novo. Concluir sem enviar nao mexia em `nossaUltimaAt`, e e por ela que todo detector corta
+"o que chegou desde a nossa ultima". Hoje `concluirPeloPainel` grava uma marca local por conversa
+(`conv:<id>` / `tratado-ate`, no `sentLog`) e as duas leituras da conversa usam
+`nossaUltimaComConclusao`: concluida depois da nossa ultima fala, so o que chegou DEPOIS conta.
+**`respondidoHoje` continua pela fala ENVIADA** (`nossaUltimaEnviadaAt`): concluir sem enviar nao
+vira "ja respondemos hoje", entao a figura de outro dia continua recebendo a mensagem do momento.
+Limite: a marca e desta maquina e so vale para conclusoes feitas pelo painel (o Resolver clicado a
+mao na plataforma nao marca). Prova: 4 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido
+ao vivo.** Continua pendente: a trava de autoria da Dirce.
+
+## 2026-11-18 - v3.327.0 - HISTORICO - "seguimos firmes" era bordao; opiniao nao e cortesia; xingar eleitor nao e deboche
 
 Sexta rodada em Minhas na v3.326 (5 enviados, 1 pulado, 11 concluidos sem enviar). Conferido ao
 vivo: a troca pela tecla 1 registra "voce trocou pela tecla 1" (Jaime). Ele, no meio da rodada:
