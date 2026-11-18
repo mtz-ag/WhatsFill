@@ -1,4 +1,26 @@
-## 2026-11-18 - v3.326.0 - ESTADO DE AGORA - sugestao de lei vai ao formulario; "nao e cidade" nao se paga duas vezes
+## 2026-11-18 - v3.327.0 - ESTADO DE AGORA - "seguimos firmes" era bordao; opiniao nao e cortesia; xingar eleitor nao e deboche
+
+Sexta rodada em Minhas na v3.326 (5 enviados, 1 pulado, 11 concluidos sem enviar). Conferido ao
+vivo: a troca pela tecla 1 registra "voce trocou pela tecla 1" (Jaime). Ele, no meio da rodada:
+*"nao adianta responder e nao arrumar pro caso de algo assim aparecer novamente"*. Os tres:
+1. **A Maria Teresa** ("pessoas burras e analfabetas que votam no Lula... a luz vai aumentar")
+   recebeu o rascunho *"E isso ai! Obrigado pelo apoio... Seguimos firmes!"* — **copiado do exemplo
+   de deboche da regra 17, escrito por mim** (o ima pela setima vez). Ele mandou o dele: *"Pois e, a
+   conta de luz pesa no bolso de todo mundo. Seguimos trabalhando para recuperar nosso estado! Um
+   abraco"*. Hoje o exemplo nao tem mais "e isso ai" nem "seguimos firmes", e ha paragrafo proprio:
+   insulto a ELEITOR nao e deboche do adversario (nao concordar, nao agradecer apoio nao declarado,
+   responder ao ponto concreto).
+2. **"Seguimos firmes" virou bordao** (*"quase toda mensagem agora tem esse seguimos firmes"*): a
+   regra o proibe pelo nome e `ia.falhasDeBordao` pede UMA reescrita quando ele aparece.
+3. **A Gabriela** ("Boa tarde Capitao, lamentavel... Por mais Escolas Civico Militares") recebeu
+   *"Agradeco o carinho e a mensagem"*: o "Boa tarde" acendia a cortesia, cujo tom obriga a agradecer
+   o carinho. Hoje `cortesiaParaRascunho` se cala com opiniao, comentario politico ou bandeira
+   ("por mais", escolas civico-militares) e o caso vai ao rascunho comum. Mandei o texto que ele
+   aprovou.
+Prova: 8 assercoes em `diagnostico-minhas.test.mjs`; `ia.test.mjs` ajustado ao exemplo novo.
+**Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.326.0 - HISTORICO - sugestao de lei vai ao formulario; "nao e cidade" nao se paga duas vezes
 
 Quinta rodada em Minhas na v3.325 (1 enviado, 2 pulados, 9 concluidos sem enviar; parada por mim).
 Conferido ao vivo: `encerrouDepoisDeHoje` concluiu a Vanda sem rascunho pago. Dois consertos:

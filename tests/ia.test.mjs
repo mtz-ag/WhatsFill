@@ -3961,7 +3961,7 @@ grupo('deboche do adversario pede o tom dela, e o modelo da esperanca nao vaza (
   const sis = montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   check(/Esse modelo é SÓ para quem mandou esperança, fé ou bênção/.test(sis), 'o modelo da esperanca diz onde para');
   check(/DEBOCHE E IRONIA CONTRA O ADVERSÁRIO TAMBÉM SÃO APOIO/.test(sis), 'o deboche tem regra propria');
-  check(/Obrigado por compartilhar/.test(sis) && /Nada de solenidade/.test(sis), 'com o tom e o exemplo');
+  check(/Quem sabe na próxima eleição eles abram mesmo os olhos/.test(sis) && /Nada de solenidade/.test(sis), 'com o tom e o exemplo');
   const i17 = sis.indexOf('17. XINGAR O ADVERSÁRIO');
   const i18 = sis.indexOf('\n18. ', i17); // o padrao dele tem um "18." antes
   const iDeb = sis.indexOf('DEBOCHE E IRONIA');

@@ -187,7 +187,7 @@ grupo('tom juridico pede reescrita, nao so aviso (a Evani)');
   check(ia.falhasTomJuridico('Vou verificar isso e te retorno.').length === 0, '"vou verificar" continua livre');
   check(ia.falhasTomJuridico('Esse boato circula bastante por aí. Um abraço!').length === 0, 'a resposta leve passa');
   const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
-  check(/\.\.\.falhasTomJuridico\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
+  check(/\.\.\.falhasTomJuridico\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
 grupo('a regra do boato nao manda dizer a frase que a trava barra (a Evani, terceira vez)');
@@ -228,6 +228,31 @@ grupo('a conferencia de cidade nao paga de novo o "nao e cidade" (Feliz, Saude, 
   check(/const jaOuvido = cidadesSemCidade\.get\(chaveCidade\);/.test(painel) && /const r = jaOuvido \|\| await iaCliente\.conferirCidade/.test(painel),
     'o semcidade ja ouvido nesta sessao nao chama a IA');
   check(/if \(r\?\.acao === 'semcidade' && !jaOuvido\) cidadesSemCidade\.set/.test(painel), 'e so o semcidade e guardado, em memoria');
+}
+
+grupo('opiniao ou bandeira nao e cortesia (a Gabriela)');
+{
+  const ate = '2026-11-16T11:04:00-03:00';
+  check(!cortesia.cortesiaParaRascunho([ela('https://www.facebook.com/share/v/1AbCdEf/'),
+    ela('Boa tarde Capitão Martim, lamentável que coisas desse tipo continuem acontecendo😥Por mais Escolas Cívico Militares.')], ate),
+    'lamentar e defender uma causa nao vira "agradeco o carinho"');
+  check(!!cortesia.cortesiaParaRascunho([ela('Bom dia meu amigo, que Deus abençoe você e sua família, um abraço')], ate),
+    'a bencao pura continua sendo cortesia');
+}
+
+grupo('"seguimos firmes" e bordao, e xingar eleitor nao e deboche do adversario (a Maria Teresa)');
+{
+  const ia = await lib('ia.js');
+  check(ia.falhasDeBordao('Pois é. Seguimos firmes! Um abraço').length === 1, '"seguimos firmes" pede reescrita');
+  check(ia.falhasDeBordao('Seguimos trabalhando para recuperar nosso estado! Um abraço').length === 0, 'a frase dele passa');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const i = sis.indexOf('DEBOCHE E IRONIA CONTRA O ADVERSÁRIO');
+  const regra = sis.slice(i, i + 2500);
+  check(!/Seguimos firmes!"/.test(regra) && !/"É isso aí! Obrigado por compartilhar/.test(regra), 'o exemplo do deboche nao ensina mais o "e isso ai... seguimos firmes"');
+  check(/XINGAMENTO AO POVO OU A ELEITORES NÃO É DEBOCHE DO ADVERSÁRIO/.test(regra), 'insulto a eleitor tem regra propria');
+  check(/"SEGUIMOS FIRMES" VIROU BORDÃO — NÃO USE/.test(sis), 'e o bordao esta proibido pelo nome');
+  const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(/\.\.\.falhasDeBordao\(texto\)\]/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');

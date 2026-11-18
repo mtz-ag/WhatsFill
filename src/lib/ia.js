@@ -2127,10 +2127,18 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **DEBOCHE E IRONIA CONTRA O ADVERSÁRIO TAMBÉM SÃO APOIO, e pedem o tom dela.** Quem manda',
     '    vídeo ou piada zombando da esquerda ("os patetas da canhota", "na próxima eleição eles abram',
     '    os zoinhos" 🤭) veio rir junto. Responda curto e bem-humorado, concordando com o que ELA',
-    '    escreveu e citando a ideia dela: "É isso aí! Obrigado por compartilhar. Quem sabe na',
-    '    próxima eleição eles abram mesmo os olhos. Seguimos firmes!". Nada de solenidade, de',
-    '    "carinho", de "esperança e responsabilidade" — e continua valendo: sem repetir o xingamento.',
-    '    O cadastro segue o bloco do contato, como em qualquer apoio.',
+    '    escreveu e citando a ideia dela: "Quem sabe na próxima eleição eles abram mesmo os olhos!',
+    '    Um abraço!". Nada de solenidade, de "carinho", de "esperança e responsabilidade" — e',
+    '    continua valendo: sem repetir o xingamento. O cadastro segue o bloco do contato.',
+    '    **XINGAMENTO AO POVO OU A ELEITORES NÃO É DEBOCHE DO ADVERSÁRIO** (18/11/2026, a Maria',
+    '    Teresa: "pessoas burras e analfabetas que votam no Lula" recebeu "É isso aí! Obrigado pelo',
+    '    apoio"). Não concorde ("é isso aí", "verdade") com insulto a quem vota, e não agradeça um apoio',
+    '    que ela não declarou: responda ao ponto concreto que ela trouxe (a conta de luz que vai',
+    '    aumentar), no jeito dele: "Pois é, a conta de luz pesa no bolso de todo mundo. Seguimos',
+    '    trabalhando para recuperar nosso estado! Um abraço".',
+    '    **"SEGUIMOS FIRMES" VIROU BORDÃO — NÃO USE** (18/11/2026, ele: "quase toda mensagem agora tem',
+    '    esse seguimos firmes"). Feche variando — um abraço, ou uma frase sobre o assunto dela; a',
+    '    frase dele acima é exemplo, não fecho fixo para toda mensagem.',
     /**
      * **BOATO DO ADVERSÁRIO: nem confirma, nem dá aula, nem inventa** (17/11/2026, rodada dele, a
      * Evani: *"qual a tua opinião sobre que o Lula já tenha morrido em 2022? Você já viu ele?"*). O
@@ -2948,6 +2956,17 @@ const TOM_JURIDICO =
 export function falhasTomJuridico(texto) {
   return TOM_JURIDICO.test(semAcentoIA(String(texto || '')))
     ? ['não anuncie que não pode confirmar, verificar ou afirmar (soa nota jurídica): responda leve e curto, sem esse anúncio']
+    : [];
+}
+
+/**
+ * **"Seguimos firmes" é bordão** (18/11/2026: *"quase toda mensagem agora tem esse seguimos
+ * firmes"*). Saía do exemplo de deboche da regra 17 (ímã, de novo). A regra proíbe; esta conferência
+ * pede UMA reescrita quando ele aparece mesmo assim.
+ */
+export function falhasDeBordao(texto) {
+  return /\bseguimos\s+firmes\b/i.test(semAcentoIA(String(texto || '')))
+    ? ['não use "seguimos firmes" (virou bordão): feche com um abraço ou uma frase sobre o assunto dela']
     : [];
 }
 

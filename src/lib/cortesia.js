@@ -132,6 +132,16 @@ export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
       reclamaSemResposta(pendentes, null) || semInteresse(pendentes, null) || denunciaOuCorrente(pendentes, null)) return null;
   // Cumprimentos simples já têm caminho próprio; esta exceção cobre a cortesia elaborada.
   if (soCortesia(pendentes)) return null;
+  /**
+   * **Opinião ou bandeira dela não é cortesia** (18/11/2026, a Gabriela: *"Boa tarde Capitão
+   * Martim, lamentável que coisas desse tipo continuem acontecendo 😥 Por mais Escolas Cívico
+   * Militares"* virou "Agradeço o carinho e a mensagem", porque o "Boa tarde" acendia a cortesia e
+   * o tom dela obriga a agradecer o carinho). Quem lamenta, critica ou defende uma causa quer
+   * posição, e esse caso segue para o rascunho comum.
+   */
+  const semLink = semAcentos(texto.replace(LINKS, ' ')).toLowerCase();
+  PUXA_OPINIAO.lastIndex = 0;
+  if (PUXA_OPINIAO.test(semLink) || COMENTARIO_POLITICO.test(semLink) || /\bpor mais\b|\bescolas? civic/.test(semLink)) return null;
   return { motivo: 'saudação, bênção ou carinho sem pedido — gerar um rascunho curto de cortesia' };
 }
 
