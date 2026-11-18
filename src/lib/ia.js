@@ -3287,7 +3287,7 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
    * legenda ou o link chegavam como fala comum — o modelo perguntava o que era.
    */
   const temMidiaOuLink = lista.some(
-    (m, i) => m.de !== 'nos' && i > ultimaNossa && (m.semConteudo || m.midia || /https?:\/\/|www\./i.test(String(m.texto || '')))
+    (m, i) => m.de !== 'nos' && i > ultimaNossa && (m.semConteudo || m.midia || m.repassado || /https?:\/\/|www\./i.test(String(m.texto || '')))
   );
   const pediuRoupa = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && ehPedidoDeRoupa(m.texto));
   /**
@@ -3687,7 +3687,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
     temMidiaSemTexto || temMidiaOuLink
       ? 'MÍDIA E LINK: ela mandou imagem, vídeo ou link, e o conteúdo deles NÃO é o assunto. Você não o ' +
         'vê — então NÃO pergunte o que é, não peça para explicar, não descreva e não adivinhe o que ' +
-        'tem nele. E NUNCA diga que não viu, não abriu ou não carregou. Desconverse com leveza: agradeça ' +
+        'tem nele — nem suponha que é sobre o assunto da NOSSA última mensagem (um vídeo depois do ' +
+        'nosso aviso de temporal não é, por isso, sobre o temporal). E NUNCA diga que não viu, não abriu ou não carregou. Desconverse com leveza: agradeça ' +
         'em poucas palavras se couber e responda pelo que ela ESCREVEU; se ela só mandou a mídia, uma ' +
         'frase curta e calorosa basta.'
       : '',

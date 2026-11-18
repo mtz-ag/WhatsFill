@@ -140,6 +140,30 @@ grupo('a preocupacao mais grave do bloco nao some atras da mais recente (a Lia, 
   check(/perder benefício, renda, salário ou moradia/.test(bloco), 'com os exemplos que a tornam reconhecivel');
 }
 
+grupo('"o que e isso?" com link recebe a resposta pronta de link, sem a IA adivinhar o video (o Taura)');
+{
+  const ate = '2026-11-17T09:44:00-03:00';
+  const link = 'https://www.facebook.com/share/v/1AbCdEfGhI/';
+  const r = cortesia.linkComOpiniao([ela('O que é isso Jesus Querido?..'), ela(link)], ate);
+  check(!!r, 'exclamacao "o que e isso?" junto do link puxa a nossa opiniao');
+  check(!cortesia.linkComOpiniao([ela('O que é isso? É verdade que vai fechar o posto?'), ela(link)], ate),
+    'pergunta de conteudo depois continua indo para a IA');
+  check(!cortesia.linkComOpiniao([ela('O que é isso?')], ate), 'sem link, nada muda');
+  const ia = await lib('ia.js');
+  const contato = ia.montarContatoRascunho({ agora: new Date('2026-11-18T10:00:00-03:00'),
+    mensagens: [{ de: 'ela', texto: link, at: '2026-11-18T09:48:00-03:00' }] });
+  check(/nem suponha que é sobre o assunto da NOSSA última mensagem/.test(contato), 'e a IA nao supoe que o video e sobre o nosso ultimo aviso');
+}
+
+grupo('trocar o rascunho pela tecla do popup nao registra o rascunho como enviado (a Julita)');
+{
+  check(/if \(mandou\.ok && \/\^tecla \\d\/\.test\(String\(mandou\.como \|\| ''\)\)\) trocouPelaTecla = mandou\.como;/.test(painel),
+    'a espera do rascunho sabe que a tecla trocou o texto');
+  const i = painel.indexOf('if (trocouPelaTecla) {');
+  check(i > 0 && i < painel.indexOf("markSent(state.contact.id, 'ia-rascunho'", i), 'e conclui antes de marcar o rascunho e as etiquetas dele');
+  check(/Você trocou pela \$\{mandou\.como\}/.test(painel), 'a resposta pronta trocada pela tecla tambem nao se marca como enviada');
+}
+
 grupo('legenda de foto nao troca a cidade do cadastro (o Gilberto)');
 {
   const ex = await lib('extract.js');

@@ -1,4 +1,23 @@
-## 2026-11-18 - v3.321.0 - ESTADO DE AGORA - legenda de foto nao troca a cidade; visita em curso sem formulario
+## 2026-11-18 - v3.322.0 - ESTADO DE AGORA - "o que e isso?" com link, e a tecla que troca o rascunho
+
+Rodada de verdade em Minhas na v3.321 (18 enviados, 5 pulados, 2 concluidos sem enviar; ele
+aprovou ou trocou cada rascunho). Tres defeitos:
+1. **O Taura** mandou *"O que e isso Jesus Querido?.."* + um video do Facebook, e o rascunho disse
+   que o video era *"um alerta sobre temporal"* (o assunto do NOSSO aviso de ontem) e colou o
+   formulario. `linkComOpiniao` nao conhecia "o que e isso" (hoje conhece, e pergunta de conteudo
+   depois continua indo para a IA), e a regra MIDIA E LINK nem entrava quando o link vira
+   `[REPASSADO]` (`temMidiaOuLink` passou a contar `m.repassado`); a regra agora proibe supor que o
+   link e sobre a nossa ultima fala. Pulado sem enviar.
+2. **A Julita:** ele trocou o rascunho pela tecla 1 (mensagem do momento) e a rodada registrou
+   *"IA escreveu e voce mandou"*, marcando `ia-rascunho` e tirando etiquetas e o pedido de dados do
+   texto que NAO saiu. Hoje a troca pela tecla conclui com a linha certa e sem as marcas do rascunho;
+   o mesmo vale na resposta pronta do modo "Eu mando". Conferido no banco: saiu a do momento.
+3. Observado e **nao mexido**: video repassado com transcricao vai para a IA pela tecla 6
+   (`ultima-pede-resposta-pessoal`: a fala do video conta como dela) — a Isabel e a Julita. E a
+   Claudete foi pulada porque `sendText` exige os dois sinais e eles discordaram.
+Prova: 8 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-18 - v3.321.0 - HISTORICO - legenda de foto nao troca a cidade; visita em curso sem formulario
 
 Rodada de verdade em Minhas na v3.320. O Gilberto (cadastro em Porto Alegre) mandou a foto de uma
 visita com a legenda "Santa Maria" e *"Estamos aqui no Gabinete pra fazer uma visita"*. **A extensao

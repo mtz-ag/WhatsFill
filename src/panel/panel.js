@@ -3453,6 +3453,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          * As ETIQUETAS continuam de fora, como a decisão de 02/10 deixou: a de palavra já saiu
          * acima (`etiquetarPorPalavra`), e a de material segue sendo escolha dele.
          */
+        // Trocado pela tecla do popup (18/11/2026): saiu OUTRO texto, e quem anotou foi a tecla.
+        if (/^tecla \d/.test(String(mandou.como || ''))) {
+          setStatus(`Você trocou pela ${mandou.como} — sigo daqui.`, 'ok');
+          return true;
+        }
         await templatesLib.avancarVariante(template);
         if (alvo?.id) await templatesLib.markSent(alvo.id, template.id, { nome: alvo.name });
 
@@ -12126,8 +12131,14 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
            * **E não espera com o automático LIGADO**, de propósito: lá quem manda é o painel, e
            * esperar o campo esvaziar seria esperar um Enter que ninguém vai dar.
            */
+          // A tecla do popup (1 = mensagem do momento, 4… = as guardadas) TROCA o texto: o que saiu
+          // não foi o rascunho (18/11/2026, a Julita). Sem isto a linha dizia "IA escreveu e você
+          // mandou" e as marcas (pedido de dados, endereço, palavra) eram tiradas de um texto que
+          // ninguém recebeu.
+          let trocouPelaTecla = '';
           if (euMando) {
             const mandou = await esperarVoceEnviar(rascunho.texto);
+            if (mandou.ok && /^tecla \d/.test(String(mandou.como || ''))) trocouPelaTecla = mandou.como;
             if (!mandou.ok) {
               // Mesmo canal do `sendTemplate`: a tecla 2/3 traz o desfecho dela e o motivo pronto.
               return {
@@ -12160,6 +12171,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
             }
           }
           state.lastSendAt = Date.now();
+          if (trocouPelaTecla) {
+            const fechouTecla = await concluirPeloPainel();
+            const linha = `a IA escreveu, mas você trocou pela ${trocouPelaTecla} (${porQue})`;
+            if (!fechouTecla.ok) return { nome, resultado: 'enviado', parar: true, motivo: `${linha}, mas ${fechouTecla.reason}` };
+            return { nome, resultado: 'enviado', motivo: `${linha} — e concluí` };
+          }
           try {
             await templatesLib.markSent(state.contact.id, 'ia-rascunho', { nome });
             if (templatesLib.ehPedidoDeDados(rascunho.texto)) {
