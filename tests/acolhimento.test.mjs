@@ -88,7 +88,7 @@ grupo('emoji de tristeza pede acolhimento, nunca formulario (05/11/2026)');
     'o fecho por cortesia NAO conclui em cima de sofrimento'
   );
   check(
-    !!cortesia.cortesiaDeFechamento(polegar, NOSSA_AT, { janelaHoras: 48 }),
+    !!cortesia.cortesiaDeFechamento(polegar, NOSSA_AT, { janelaHoras: 48, agora: new Date(NOSSA_AT) }),
     'e continua concluindo quando ela so reagiu — a regra de 31/10 nao afrouxou'
   );
   check(

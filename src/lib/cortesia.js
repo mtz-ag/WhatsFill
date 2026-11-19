@@ -956,8 +956,15 @@ export function soAgradeceOuElogia(entrantes, nossaUltimaAt) {
   };
 }
 
-export function cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras = 48 } = {}) {
+export function cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras = 48, agora = new Date() } = {}) {
   if (!nossaUltimaAt) return null;
+  /**
+   * **Fecho é do MESMO DIA** (19/11/2026, ele: *"estou tendo conversas encerradas de ontem que a
+   * pessoa enviou link ou emoji por último; hoje é outro dia e era pra ser mensagem do momento"*).
+   * A janela de horas media só da nossa fala à reação dela, e a rodada da manhã seguinte fechava
+   * em silêncio quem reagiu ontem. Virou o dia, quem decide é o fluxo (a mensagem do momento).
+   */
+  if (new Date(nossaUltimaAt).toDateString() !== new Date(agora).toDateString()) return null;
   /**
    * **O fecho por cortesia NÃO fecha em cima de sofrimento** (05/11/2026) — ver
    * `reacaoDeTristeza`. Concluir em silêncio aqui é virar as costas para quem acabou de dizer,

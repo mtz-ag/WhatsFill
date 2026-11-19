@@ -22,6 +22,9 @@ const painel = readFileSync(new URL('src/panel/panel.js', raiz), 'utf8');
 const at = (h, d = 31) => new Date(`2026-10-${d}T${h}:00-03:00`).toISOString();
 
 const NOSSA_HOJE = at('14:59');
+// 19/11/2026: o fecho passou a ser do MESMO DIA da nossa fala. Estes casos sao 'hoje' = 31/10 a tarde.
+const AGORA = new Date(at('17:30'));
+const fecho = (e, n, o = {}) => cortesia.cortesiaDeFechamento(e, n, { agora: AGORA, ...o });
 const CASO = [
   { texto: 'Gratidão', tipo: 'TEXT', at: at('17:11', 30) },
   { texto: 'Boa tarde  obrigado igualmente', tipo: 'TEXT', at: at('16:29') },
@@ -43,7 +46,7 @@ function sinais(entrantes, nossaUltimaAt, extra = {}) {
     desabafoPessoal: cortesia.desabafoPessoal(entrantes, nossaUltimaAt),
     denunciaOuCorrente: cortesia.denunciaOuCorrente(entrantes, nossaUltimaAt),
     pedeAlgoIndefinido: cortesia.pedeAlgoIndefinido(entrantes, nossaUltimaAt),
-    cortesiaDeFechamento: cortesia.cortesiaDeFechamento(entrantes, nossaUltimaAt, { janelaHoras: 12 }),
+    cortesiaDeFechamento: fecho(entrantes, nossaUltimaAt, { janelaHoras: 12 }),
     podeMandarMomento: true,
     podePedirDados: true,
     temEtiquetaDeCidade: true,
@@ -57,24 +60,24 @@ const decidir = (c) => arv.decidir(c, arv.fluxoPadrao(), {});
 
 {
   grupo('cortesiaDeFechamento: só agradeceu/retribuiu depois da nossa');
-  check(!!cortesia.cortesiaDeFechamento(CASO, NOSSA_HOJE), '"Boa tarde obrigado igualmente" depois da nossa de 14:59');
-  check(!!cortesia.cortesiaDeFechamento(CASO.slice(0, 1), at('15:31', 30)), 'o "Gratidão" de ontem, depois da nossa de 15:31');
+  check(!!fecho(CASO, NOSSA_HOJE), '"Boa tarde obrigado igualmente" depois da nossa de 14:59');
+  check(!fecho(CASO.slice(0, 1), at('15:31', 30)), 'o "Gratidão" de ontem NÃO fecha hoje: virou o dia, vale a mensagem do momento (19/11/2026)');
   for (const t of ['Amém 🙏', '🙏', 'Obrigado, igualmente!', 'Valeu capitão, tmj', 'Bom dia! Deus abençoe', 'Pra você também!',
     'Obrigada, um ótimo sábado pra você também', '👍👍', 'Muito obrigado deputado, Deus abençoe sua família']) {
-    check(!!cortesia.cortesiaDeFechamento(so(t), NOSSA_HOJE), `fecha: "${t}"`);
+    check(!!fecho(so(t), NOSSA_HOJE), `fecha: "${t}"`);
   }
-  check(!!cortesia.cortesiaDeFechamento(so('', '16:29', 'STICKER'), NOSSA_HOJE), 'fecha: figurinha sem legenda');
+  check(!!fecho(so('', '16:29', 'STICKER'), NOSSA_HOJE), 'fecha: figurinha sem legenda');
   for (const t of ['Obrigado. Quando vai ter reunião?', 'obrigado, me manda o material', 'Obrigada capitão, minha mãe está doente',
     'www.instagram.com/x', 'Boa tarde capitão, preciso de ajuda', 'Obrigado! Vou votar no senhor', 'Parabéns pelo trabalho!',
     'Obrigada. Briguei com minha família por causa de política e estou muito triste', 'Pode me ligar?']) {
-    check(!cortesia.cortesiaDeFechamento(so(t), NOSSA_HOJE), `NÃO fecha: "${t}"`);
+    check(!fecho(so(t), NOSSA_HOJE), `NÃO fecha: "${t}"`);
   }
-  check(!cortesia.cortesiaDeFechamento(so('', '16:29', 'AUDIO'), NOSSA_HOJE), 'NÃO fecha: áudio');
-  check(!cortesia.cortesiaDeFechamento(so('obrigado'), null), 'NÃO fecha: sem mensagem nossa antes (chegada)');
-  check(!cortesia.cortesiaDeFechamento(so('😍'), null), 'NÃO fecha: emoji na chegada continua com a mensagem do momento');
-  check(!cortesia.cortesiaDeFechamento(so('obrigado'), at('10:00', 28), { janelaHoras: 12 }), 'NÃO fecha: a nossa foi há dias (passou da janela)');
-  check(!cortesia.cortesiaDeFechamento([{ texto: 'obrigado', at: at('16:29') }, { texto: 'e o material?', at: at('16:30') }], NOSSA_HOJE), 'NÃO fecha: uma das mensagens tem pedido');
-  check(!cortesia.cortesiaDeFechamento([{ texto: 'obrigado', at: at('14:00') }], NOSSA_HOJE), 'NÃO fecha: a dela é de ANTES da nossa (nada depois)');
+  check(!fecho(so('', '16:29', 'AUDIO'), NOSSA_HOJE), 'NÃO fecha: áudio');
+  check(!fecho(so('obrigado'), null), 'NÃO fecha: sem mensagem nossa antes (chegada)');
+  check(!fecho(so('😍'), null), 'NÃO fecha: emoji na chegada continua com a mensagem do momento');
+  check(!fecho(so('obrigado'), at('10:00', 28), { janelaHoras: 12 }), 'NÃO fecha: a nossa foi há dias (passou da janela)');
+  check(!fecho([{ texto: 'obrigado', at: at('16:29') }, { texto: 'e o material?', at: at('16:30') }], NOSSA_HOJE), 'NÃO fecha: uma das mensagens tem pedido');
+  check(!fecho([{ texto: 'obrigado', at: at('14:00') }], NOSSA_HOJE), 'NÃO fecha: a dela é de ANTES da nossa (nada depois)');
 }
 
 {
@@ -145,7 +148,7 @@ grupo('retribuir o bom dia e o carinho fecha sem a IA ter a ultima palavra (17/1
 {
   const nossaAt = '2026-11-17T08:00:00';
   const at = '2026-11-17T08:30:00';
-  const fecha = (t) => !!cortesia.cortesiaDeFechamento([{ texto: t, tipo: 'TEXT', at }], nossaAt);
+  const fecha = (t) => !!fecho([{ texto: t, tipo: 'TEXT', at }], nossaAt, { agora: new Date('2026-11-17T09:00:00') });
   // Respostas ficticias ao nosso "bom dia": antes, 14 das 21 iam para o rascunho pago da IA.
   const retribuicoes = [
     'Bom dia', 'Bom dia 🙏', 'Bom dia! Deus abençoe', 'Bom dia, um ótimo dia pra você também',

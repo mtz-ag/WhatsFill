@@ -9,7 +9,9 @@ let chamadas = 0;
 const ia = async () => { chamadas++; return true; };
 assert.equal(await executar(true, () => false, {entrantes: []}, ia, true), false);
 assert.equal(chamadas, 0);
-assert.equal(await executar(true, () => true, {entrantes: []}, ia, true), true);
+assert.equal(await executar(true, () => true, {entrantes: [], nossaUltimaAt: new Date().toISOString()}, ia, true), true);
+// 19/11/2026: despedida de ONTEM nao encerra a conversa de hoje.
+assert.equal(await executar(true, () => true, {entrantes: [], nossaUltimaAt: new Date(Date.now() - 36 * 3600e3).toISOString()}, ia, true), false);
 assert.equal(chamadas, 0);
 assert.equal(await executar(false, () => false, {entrantes: []}, ia, true), true);
 assert.equal(chamadas, 1);

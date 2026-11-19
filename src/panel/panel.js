@@ -3828,6 +3828,9 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
    * **Nunca acrescenta mensagem: só silencia.** O pior caso deste caminho é o caso de hoje.
    */
   async function encerrouAConversa(jaRespondemosAntes) {
+    // Encerrar é do MESMO DIA (19/11/2026, ele: "hoje é outro dia e era pra ser mensagem do
+    // momento"). Despedida, reação ou "encerrou" de ontem não fecham a conversa de hoje.
+    if (!state.nossaUltimaAt || new Date(state.nossaUltimaAt).toDateString() !== new Date().toDateString()) return false;
     const peloVocabulario = ultimaEhDespedida(state.entrantes);
     if (peloVocabulario) return true;
     /**
@@ -11333,7 +11336,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
        */
       // Previa e leitura local: nunca faz chamada paga, mesmo com IA ligada.
       const encerrou = simular
-        ? !!ultimaEhDespedida(state.entrantes)
+        ? !!state.nossaUltimaAt && new Date(state.nossaUltimaAt).toDateString() === new Date().toDateString() && !!ultimaEhDespedida(state.entrantes)
         : await encerrouAConversa(jaRespondemosAntes);
 
       // Lida aqui, antes das opções e da regra, porque as duas usam.

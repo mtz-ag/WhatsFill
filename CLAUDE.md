@@ -795,6 +795,11 @@ mudaram as maos, nao a cabeca.
   emoji de volta mandava a do momento. A guarda fica depois da decisao do fluxo e antes da IA.
   Nasce ligada (`concluirCortesiaSozinho`). Sem mensagem nossa antes, nao fecha. Devolver `null`
   em `cortesiaDeFechamento` derruba 18 assercoes.
+  **E DESDE 19/11/2026 (v3.330) O FECHO E DO MESMO DIA**, a pedido dele: *"conversas encerradas de
+  ontem que a pessoa enviou link ou emoji por ultimo; hoje e outro dia e era pra ser mensagem do
+  momento"*. `cortesiaDeFechamento` e `encerrouAConversa` (vocabulario, fecho e a conferencia paga)
+  so valem quando a nossa ultima fala e de HOJE; virou o dia, o fluxo decide (tecla 5). Isto
+  inverte a frase acima sobre "no dia seguinte".
   **MOMENTO DE OUTRO DIA E DESILUSAO (31/10, v3.247).** Texto da tecla 5 que fala de outro dia da
   semana ou de uma data passada (quinta-feira, 29 de outubro, num sabado) nao sai: a tecla some,
   a Config avisa, e o comeco da rodada registra. Convite futuro ("2 de novembro", "domingo tem

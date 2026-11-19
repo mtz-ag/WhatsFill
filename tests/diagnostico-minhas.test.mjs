@@ -284,6 +284,20 @@ grupo('fale com ela, nao sobre o texto dela (a Lia)');
   check(/\.\.\.falhasDeImpessoal\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
+grupo('virou o dia: reacao ou link de ontem nao fecha, vale a mensagem do momento (19/11)');
+{
+  const nossaOntem = '2026-11-18T16:00:00-03:00';
+  const emoji = [{ texto: '👍', tipo: 'TEXT', at: '2026-11-18T16:20:00-03:00' }];
+  check(!!cortesia.cortesiaDeFechamento(emoji, nossaOntem, { janelaHoras: 16, agora: new Date('2026-11-18T18:00:00-03:00') }),
+    'no mesmo dia, a reacao depois da nossa fecha');
+  check(!cortesia.cortesiaDeFechamento(emoji, nossaOntem, { janelaHoras: 16, agora: new Date('2026-11-19T08:30:00-03:00') }),
+    'no dia seguinte nao fecha mais');
+  const enc = painel.slice(painel.indexOf('async function encerrouAConversa'), painel.indexOf('async function encerrouAConversa') + 600);
+  check(/toDateString\(\) !== new Date\(\)\.toDateString\(\)\) return false;/.test(enc), 'e a conferencia "ela encerrou?" tambem e do mesmo dia');
+  const regra = sug.REGRAS.find((r) => r.id === 'ultima-e-so-reacao');
+  check(regra.tecla({ respondidoHoje: false, podeMandarMomento: true }) === '5', 'e o fluxo manda a mensagem do momento');
+}
+
 grupo('envio com o id da rodada nao pula pela lista atrasada (a Claudete)');
 {
   const pm = readFileSync(new URL('../src/lib/page-mob.js', import.meta.url), 'utf8');

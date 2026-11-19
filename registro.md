@@ -1,4 +1,19 @@
-## 2026-11-18 - v3.329.0 - ESTADO DE AGORA - fale com ela, nao sobre o texto dela
+## 2026-11-19 - v3.330.0 - ESTADO DE AGORA - virou o dia, nada de ontem fecha a conversa
+
+Relato dele: *"estou tendo conversas encerradas de ontem que a pessoa enviou link ou emoji por
+ultimo, hoje e outro dia e era pra ser mensagem do momento"*. **Duas portas concluiam sem olhar o
+dia:** (1) `cortesiaDeFechamento` media a janela (16h) so da nossa fala ate a reacao dela — o emoji
+de ontem a tarde fechava a conversa na rodada desta manha, com o log dizendo "(o fluxo ia: tecla
+5)"; (2) `encerrouAConversa` (vocabulario de despedida, o fecho e a conferencia paga da IA) virava
+`ultimaEhDespedida` e a tecla 3, inclusive para link com emoji. Hoje os dois so valem quando a nossa
+ultima fala e de HOJE (a previa tambem). Virou o dia, o fluxo decide, e `ultima-e-so-reacao` manda a
+mensagem do momento. **Isto inverte a regra de 31/10** (fecho no dia seguinte), registrada no
+CLAUDE.md. Conferido no painel: a mensagem do momento de hoje esta atualizada (quinta-feira), entao
+nao era ela vencida. Testes de 31/10 e 17/11 passaram a dizer qual e o "agora" deles; o "Gratidao
+de ontem" foi invertido. Prova: 4 assercoes em `diagnostico-minhas.test.mjs` + `previa-sem-ia`.
+**Nao conferido ao vivo.** O commit da v3.329 ainda nao tinha subido para o GitHub (push barrado).
+
+## 2026-11-18 - v3.329.0 - HISTORICO - fale com ela, nao sobre o texto dela
 
 Setima rodada em Minhas na v3.328 (2 enviados, 1 pulado, 5 concluidos sem enviar; parada por mim
 para corrigir). **A Lia** mandou reflexoes longas ("as escolas civico militares sao o ALICERCE...
