@@ -1838,6 +1838,17 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    responsável, sem coletar detalhes clínicos desnecessários. Não negue ajuda que ela não pediu.',
     '    Para desabafo com menção a doença, basta acolher e desejar recuperação, sem abrir nova demanda.',
     /**
+     * **Temporal e enchente** (21/11/2026, o Cleomar: a mãe tirada dos escombros, a casa para
+     * reconstruir; o rascunho abriu com "Entendo", falou que "a lei eleitoral proíbe" e só depois
+     * orientou). Quem perdeu a casa precisa ouvir solidariedade e o caminho, não a negativa primeiro.
+     */
+    '    QUEM FOI ATINGIDO POR TEMPORAL, ENCHENTE OU DESASTRE: solidariedade primeiro, em uma frase, e',
+    '    depois o caminho — registrar a situação na Defesa Civil e na assistência social do município',
+    '    onde fica a casa, que é por onde chegam os auxílios às famílias atingidas. NÃO abra negando, NÃO',
+    '    cite lei para quem perdeu a casa, e não prometa reconstruir, doar ou mandar nada.',
+    '    EM TODO ACOLHIMENTO: não rotule o que ela sente ("entendo sua revolta", "dá revolta") e não feche',
+    '    com discurso ("isso precisa ser tratado com seriedade"); diga algo concreto ou um abraço.',
+    /**
      * **Não dê a impressão de que há chance** — anotação da Solange (08/09/2026, lida em 10/09). Ela
      * pediu para trabalhar na campanha e ajuda para ir embora para São Paulo, e o rascunho respondeu
      * *"em período eleitoral as contratações são bem limitadas e as decisões saem da assessoria com
@@ -2981,6 +2992,31 @@ export function falhasDeImpessoal(texto) {
   // concessionária") não fala de "mensagem" nem de "reflexão" e continua valendo.
   const parecer = /(^|[^a-z])(e uma (mensagem|reflexao)|(mensagem|reflexao|texto|palavras|video|post)[^.!?]{0,80}(merece|trazem?|podem?|mostram?|lembram?))([^a-z]|$)/;
   return conversa.test(t) || !parecer.test(t) ? [] : ['fale com ela na primeira pessoa (não comente o texto dela em terceira pessoa) e feche com um abraço'];
+}
+
+/**
+ * **Acolher não é rotular nem discursar** (21/11/2026, Vanda, Rogerio e Cleomar). A IA abriu com
+ * "Eu entendo a sua revolta", escreveu "dá muita revolta" para um temporal e fechou com "segurança e
+ * moradia precisam ser tratadas com seriedade". Ele trocou um e pulou os outros dois. "Revolta" põe
+ * na boca dela uma raiva que ela não disse (ou a atiça); "Entendo" na abertura é o que ele pediu
+ * para não fazer (o aviso `ABRE_REPETINDO` só olhava o começo cru, e a saudação na frente o
+ * escondia); e a frase de "precisa ser tratado com seriedade" é discurso, não resposta. As três são
+ * FORMA, então pedem UMA reescrita, como o bordão.
+ */
+export function falhasDeAcolhimento(texto) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  const falhas = [];
+  if (/(^|[^a-z])revolt(a|ad[oa]s?|ante|antes)([^a-z]|$)/.test(t)) {
+    falhas.push('não fale em "revolta" (nem "entendo sua revolta", nem "dá revolta"): mostre solidariedade com o que aconteceu, sem rotular o que ela sente');
+  }
+  const semSaudacao = t.replace(/^\s*(ola|oi|bom dia|boa tarde|boa noite)[!,.\s]*/, '');
+  if (/^\s*(eu\s+)?(entendi|entendo|compreendo|entendemos)\b/.test(semSaudacao)) {
+    falhas.push('não abra com "entendo" ou "eu entendo": comece direto pelo que importa para ela');
+  }
+  if (/precisa(m)?\s+ser\s+tratad[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade)/.test(t)) {
+    falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');
+  }
+  return falhas;
 }
 
 export function falhasDeBordao(texto) {

@@ -1,4 +1,23 @@
-## 2026-11-19 - v3.330.0 - ESTADO DE AGORA - virou o dia, nada de ontem fecha a conversa
+## 2026-11-21 - v3.331.0 - ESTADO DE AGORA - acolher nao e rotular nem discursar
+
+Rodada em Minhas na v3.330 (3 enviados, 2 pulados, 5 concluidos sem enviar; parada por mim para
+corrigir). **A v3.330 funcionou ao vivo:** o Claudio Stefanello e a Rosa, com reacao de ontem por
+ultimo, receberam a mensagem do momento; o Rogerio Castilho e a Nara, com "Amem" depois da nossa de
+hoje, foram concluidos sem nada. **Tres rascunhos ruins, todos de acolhimento:** a Vanda (temporal,
+"capeta do Lula") recebeu *"Da muita revolta ver o nosso povo sofrendo"* e ele trocou pelo texto
+*"Pois e, tempos dificeis aqui no Sul. Seguimos trabalhando para ajudar quem foi atingido! Um
+abraco!"*; o Cleomar (mae tirada dos escombros, casa para reconstruir) recebeu *"Entendo... um
+mandato nao pode doar... a lei eleitoral proibe"*; o Rogerio Senna (perseguido, aluguel, inscrito no
+Minha Casa Minha Vida) recebeu *"Eu entendo a sua revolta... seguranca e moradia precisam ser
+tratadas com seriedade"*. Os dois ultimos ele pulou para atender. Hoje `ia.falhasDeAcolhimento` pede
+UMA reescrita quando o rascunho fala em "revolta", abre com "entendo"/"eu entendo" (mesmo depois da
+saudacao, que escondia o `ABRE_REPETINDO`) ou fecha com "precisa ser tratado com seriedade"; e a
+regra 11 ganhou, depois da excecao de saude, a linha de quem foi atingido por temporal (solidariedade
+primeiro, depois Defesa Civil e assistencia social do municipio, sem abrir negando nem citar lei).
+Prova: 10 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente, decisao
+dele: o texto do Rogerio Senna e do Cleomar continuam sem resposta (ele vai atender).
+
+## 2026-11-19 - v3.330.0 - HISTORICO - virou o dia, nada de ontem fecha a conversa
 
 Relato dele: *"estou tendo conversas encerradas de ontem que a pessoa enviou link ou emoji por
 ultimo, hoje e outro dia e era pra ser mensagem do momento"*. **Duas portas concluiam sem olhar o

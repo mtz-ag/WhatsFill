@@ -325,4 +325,24 @@ grupo('legenda de foto nao troca a cidade do cadastro (o Gilberto)');
   check(/VISITA QUE JÁ ACONTECEU OU ESTÁ ACONTECENDO/.test(sis + contato), 'visita que ja esta acontecendo nao recebe o formulario da agenda');
 }
 
+
+grupo('acolher nao e rotular nem discursar (Vanda, Rogerio e Cleomar, 21/11)');
+{
+  const ia = await lib('ia.js');
+  const f = (t) => ia.falhasDeAcolhimento(t);
+  check(f('Dá muita revolta ver o nosso povo sofrendo tanto com essas tragédias. Um abraço!').length === 1, '"da revolta" pede reescrita');
+  check(f('Boa tarde! Eu entendo a sua revolta. Viver com medo é pesado.').length === 2, '"Eu entendo a sua revolta" depois da saudacao: as duas falhas');
+  check(f('Entendo. Depois de uma cirurgia, espero que você se recupere bem.').length === 1, '"Entendo." na abertura pede reescrita');
+  check(f('Segurança e moradia precisam ser tratadas com seriedade. Um abraço!').length === 1, 'frase de discurso pede reescrita');
+  check(f('Pois é, tempos difíceis aqui no Sul. Seguimos trabalhando para ajudar quem foi atingido! Um abraço!').length === 0, 'a frase que ele aprovou passa');
+  check(f('Bom dia! Que bom que vocês estão bem. Para a reconstrução, procure a Defesa Civil do município. Um abraço!').length === 0, 'orientar com solidariedade passa');
+  check(f('Bom dia! Eu também acho que a gente se entende bem. Um abraço!').length === 0, '"entende" no meio nao e abertura');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/QUEM FOI ATINGIDO POR TEMPORAL, ENCHENTE OU DESASTRE/.test(sis), 'o temporal tem regra no prompt');
+  const i = sis.indexOf('11. CANAL DE ATENDIMENTO'); const j = sis.indexOf('QUEM FOI ATINGIDO POR TEMPORAL');
+  check(i > 0 && j > i && j - i < 2500, 'e ela mora colada na regra 11');
+  const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(/\.\.\.falhasDeAcolhimento\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
+}
+
 fim();
