@@ -3399,6 +3399,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     }
 
     if (!send || !state.settings.autoSend) {
+      if (!(await telaNaConversaDaRodada())) {
+        setStatus(MOTIVO_TELA_EM_OUTRA, 'err');
+        return anotarEnvioQueNaoSaiu(MOTIVO_TELA_EM_OUTRA);
+      }
       await page.setComposerText(text);
       /**
        * **A ETIQUETA POR PALAVRA VALE TAMBÉM AQUI — COLAR É ESCOLHER O TEXTO** (relato dele,
@@ -6674,6 +6678,24 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
   function idDoEnvio() {
     return idQueARodadaAbriu ? { id: idQueARodadaAbriu } : {};
   }
+
+  /**
+   * **Escrever no campo exige a TELA na conversa que a rodada abriu** (21/11/2026, o Peco: a aba
+   * congelou 60s, a tela ficou no contato anterior e o rascunho do Peco foi escrito no campo de
+   * OUTRA pessoa — um Enter mandaria o texto de um eleitor para outro). `setComposerText` não confere
+   * nada de propósito (fora da rodada, quem vê a tela é ele); DENTRO da rodada, quem escolheu a
+   * conversa foi a rodada, e ela tem de provar que a tela acompanhou. Fora da rodada, sempre vale.
+   */
+  async function telaNaConversaDaRodada() {
+    if (!state.auto.rodando || !idQueARodadaAbriu) return true;
+    try {
+      const st = await page.getState();
+      return !!st && String(st.sessionId || '') === idQueARodadaAbriu;
+    } catch (_) {
+      return false;
+    }
+  }
+  const MOTIVO_TELA_EM_OUTRA = 'a tela não mostra a conversa deste contato (ficou em outra) — não escrevi no campo';
 
   function idDaConversaParaConcluir() {
     return idQueARodadaAbriu || (naPlataformaNova() ? String(state.session?.id || '') : '');
@@ -12112,6 +12134,10 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         if (state.auto.parar) {
           return { nome, resultado: 'pulado', parar: true, motivo: 'você parou a rodada' };
         }
+        // A tela ficou em outra conversa (o Peco, 21/11): nada foi escrito; pula este contato.
+        if (!rascunho?.ok && rascunho?.motivo === MOTIVO_TELA_EM_OUTRA) {
+          return { nome, resultado: 'pulado', motivo: MOTIVO_TELA_EM_OUTRA };
+        }
 
         const porQue = sugestao?.id === 'resposta-ao-formulario'
           ? 'ela respondeu ao formulário que mandamos, e o fluxo pediu um rascunho sobre isso'
@@ -17424,6 +17450,9 @@ const CONTATOS_POR_PAGINA = 200;
      */
     if (state.auto.parar) {
       return { ok: false, enviado: false, motivo: 'você parou a rodada' };
+    }
+    if (!(await telaNaConversaDaRodada())) {
+      return { ok: false, enviado: false, motivo: MOTIVO_TELA_EM_OUTRA };
     }
     try {
       await page.setComposerText(texto);

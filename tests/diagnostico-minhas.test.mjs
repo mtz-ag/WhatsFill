@@ -339,6 +339,7 @@ grupo('acolher nao e rotular nem discursar (Vanda, Rogerio e Cleomar, 21/11)');
   check(f('Bom dia! Eu também acho que a gente se entende bem. Um abraço!').length === 0, '"entende" no meio nao e abertura');
   const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
   check(/QUEM FOI ATINGIDO POR TEMPORAL, ENCHENTE OU DESASTRE/.test(sis), 'o temporal tem regra no prompt');
+  check(/só entra se ela PEDIR ajuda agora, com clareza/.test(sis) && /Força nessa/.test(sis), 'o caminho so para quem pede; quem agradece recebe solidariedade (o Cleomar, 3a vez)');
   const i = sis.indexOf('11. CANAL DE ATENDIMENTO'); const j = sis.indexOf('QUEM FOI ATINGIDO POR TEMPORAL');
   check(i > 0 && j > i && j - i < 2500, 'e ela mora colada na regra 11');
   const cli = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
@@ -431,6 +432,44 @@ grupo('cobranca em mensagens separadas mantem a fala antiga com a IA (o Rogerio 
   check(hojeSoGestoSobreFalaAntiga(ent, nossa, AGORA) === false, 'o "????" separado e o "ate quando" seguram o caso');
   check(hojeSoGestoSobreFalaAntiga(ent.filter((m) => !/[?]$|Até quando|E aí/.test(m.texto)), nossa, AGORA) === true, 'sem a cobranca, vira a mensagem do momento');
   check(hojeSoGestoSobreFalaAntiga([L('Olha que historia aconteceu hoje no mercado', '2026-11-19T20:00:00-03:00'), L('https://exemplo.test/v?id=9', '2026-11-21T05:46:00-03:00')], nossa, AGORA) === true, 'o "?" de dentro do link nao conta como pergunta');
+}
+
+
+grupo('"Boa tarde. Meu dep. Martin." fecha a conversa (a Isabel, 21/11)');
+{
+  const cortesia = await lib('cortesia.js');
+  const nossa = '2026-11-21T14:10:00-03:00';
+  const agora = new Date('2026-11-21T14:30:00-03:00');
+  const f = (t) => cortesia.cortesiaDeFechamento([{ de: 'ela', texto: t, at: '2026-11-21T14:17:00-03:00', tipo: 'TEXT' }], nossa, { agora });
+  check(!!f('Boa tarde. Meu dep. Martin.'), 'o tratamento abreviado e o nome com n fecham');
+  check(!!f('Boa tarde meu deputado'), '"meu deputado" fecha');
+  check(!f('Boa tarde dep. preciso falar com o senhor'), 'pedido continua aberto');
+  check(!f('Boa tarde, dep. quando vem a Cachoeirinha?'), 'pergunta continua aberta');
+}
+
+
+grupo('provocacao de militante nao vira nota oficial (o Andre, 21/11)');
+{
+  const ia = await lib('ia.js');
+  check(ia.falhasDeAcolhimento('Boa tarde! Prefiro que qualquer viagem custeada com recursos públicos seja acompanhada de transparência e responsabilidade. Um abraço!').some((f) => /nota oficial/.test(f)), 'o "prefiro que... acompanhada de transparencia" pede reescrita');
+  check(ia.falhasDeAcolhimento('Boa tarde! Pois é, viagem paga com dinheiro do povo tinha que ter muito mais transparência. Um abraço!').length === 0, 'a frase que ele aprovou passa');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/JANJA NA ESPANHA, GOSTARAM/.test(sis), 'o exemplo dele esta na regra da provocacao');
+}
+
+
+grupo('a rodada so escreve no campo com a tela na conversa que ela abriu (o Peco, 21/11)');
+{
+  const fn = painel.slice(painel.indexOf('async function telaNaConversaDaRodada'), painel.indexOf('const MOTIVO_TELA_EM_OUTRA'));
+  check(fn.includes("if (!state.auto.rodando || !idQueARodadaAbriu) return true"), 'fora da rodada sempre vale');
+  check(fn.includes("String(st.sessionId || '') === idQueARodadaAbriu"), 'dentro da rodada compara a tela com o id aberto');
+  const rasc = painel.slice(painel.indexOf('async function rascunharParaEle'));
+  const i = rasc.indexOf('telaNaConversaDaRodada()'); const j = rasc.indexOf('await page.setComposerText(texto)');
+  check(i > 0 && j > i, 'o rascunho da IA confere a tela antes de escrever');
+  const ins = painel.indexOf('if (!send || !state.settings.autoSend) {');
+  const trecho = painel.slice(ins, ins + 400);
+  check(trecho.indexOf('telaNaConversaDaRodada()') > 0 && trecho.indexOf('telaNaConversaDaRodada()') < trecho.indexOf('setComposerText(text)'), 'a resposta pronta inserida tambem confere');
+  check(painel.includes("rascunho?.motivo === MOTIVO_TELA_EM_OUTRA) {\n          return { nome, resultado: 'pulado'"), 'e a rodada pula o contato em vez de perguntar sobre a tela errada');
 }
 
 fim();

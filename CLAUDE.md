@@ -3561,6 +3561,14 @@ mudaram as maos, nao a cabeca.
 
 ## Armadilhas do próprio painel
 
+- **NA RODADA, ESCREVER NO CAMPO EXIGE A TELA NA CONVERSA QUE A RODADA ABRIU** (21/11/2026, o
+  Peco). A aba congelou 60s, a tela ficou no contato anterior e o rascunho do Peco foi escrito no
+  campo da conversa de OUTRA pessoa: um Enter mandaria o texto de um eleitor para outro. Hoje
+  `telaNaConversaDaRodada()` compara `getState().sessionId` com `idQueARodadaAbriu` antes de
+  `setComposerText` (rascunho da IA e resposta pronta inserida) e, discordando, a rodada PULA.
+  Fora da rodada não confere nada, de propósito: quem escolheu a conversa foi ele. **E quem opera
+  a rodada pela extensão do Claude confere o NOME da conversa na tela antes de dar Enter.**
+
 - **NA RODADA OS QUADROS TOMAM O LUGAR DO PAINEL — e "esconder o painel" NAO e isso** (10/11/2026,
   pedido dele: *"substitua o painel atual da extensao pelo do automatizado e ao parar retorna o
   painel normal"*). **A v3.284 errou o pedido:** escondeu o painel tirando o empurrao da pagina, e o

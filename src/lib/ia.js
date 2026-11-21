@@ -1842,10 +1842,13 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * reconstruir; o rascunho abriu com "Entendo", falou que "a lei eleitoral proíbe" e só depois
      * orientou). Quem perdeu a casa precisa ouvir solidariedade e o caminho, não a negativa primeiro.
      */
-    '    QUEM FOI ATINGIDO POR TEMPORAL, ENCHENTE OU DESASTRE: solidariedade primeiro, em uma frase, e',
-    '    depois o caminho — registrar a situação na Defesa Civil e na assistência social do município',
-    '    onde fica a casa, que é por onde chegam os auxílios às famílias atingidas. NÃO abra negando, NÃO',
-    '    cite lei para quem perdeu a casa, e não prometa reconstruir, doar ou mandar nada.',
+    '    QUEM FOI ATINGIDO POR TEMPORAL, ENCHENTE OU DESASTRE: solidariedade primeiro. O caminho',
+    '    (registrar a situação na Defesa Civil e na assistência social do município onde fica a casa)',
+    '    só entra se ela PEDIR ajuda agora, com clareza. Quem conta a perda e depois só agradece,',
+    '    abençoa ou torce pelos outros recebe solidariedade e um abraço, sem orientação — o jeito DELE',
+    '    (21/11/2026): "Amém! Que Deus abençoe você, sua mãe e todos que estão lá. Força nessa',
+    '    recuperação, um grande abraço!". NÃO abra negando, NÃO cite lei para quem perdeu a casa, e não',
+    '    prometa reconstruir, doar ou mandar nada.',
     '    EM TODO ACOLHIMENTO: não rotule o que ela sente ("entendo sua revolta", "dá revolta") e não feche',
     '    com discurso ("isso precisa ser tratado com seriedade"); diga algo concreto ou um abraço.',
     /**
@@ -1966,7 +1969,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    país?", "até quando?"): concorde com o sentido dela numa frase leve e feche com um abraço —',
     '    o jeito DELE: "Pois é, quem ama o Brasil fala dele com respeito e trabalha para ele melhorar!',
     '    Um abraço!". Nunca responda ao pé da letra ("não dá para medir...") nem dê lição ("o mais',
-    '    importante é manter o respeito").',
+    '    importante é manter o respeito"). Outro do jeito dele, para "JANJA NA ESPANHA, GOSTARAM ??":',
+    '    "Boa tarde! Pois é, viagem paga com dinheiro do povo tinha que ter muito mais transparência.',
+    '    Um abraço!" — e não "prefiro que... seja acompanhada de transparência e responsabilidade".',
     /**
      * **A regra 14 nasceu do caminhoneiro de fronteira (22/09/2026)** — ver a linha colada no pedido,
      * no bloco do contato. Aqui ela fica pelo mesmo motivo das outras: a colada só aparece quando o
@@ -3030,7 +3035,9 @@ export function falhasDeAcolhimento(texto) {
   }
   // Nota jurídica (a Iria): "a preocupação é legítima, mas..." e "órgãos e laboratórios competentes".
   if (/(preocupa\w*|cobranca|critica|indignacao)[^.!?]{0,60}(e|eh)\s+legitim/.test(t) ||
-      /(orgaos|laboratorios|autoridades|instituicoes)[^.!?]{0,40}competentes/.test(t)) {
+      /(orgaos|laboratorios|autoridades|instituicoes)[^.!?]{0,40}competentes/.test(t) ||
+      // O André (21/11): "Prefiro que qualquer viagem... seja acompanhada de transparência".
+      /(^|[^a-z])prefiro\s+que\b/.test(t) || /acompanhad[oa]s?\s+de\s+(transparencia|responsabilidade)/.test(t)) {
     falhas.push('não escreva como nota oficial ("é legítima, mas", "órgãos competentes"): fale leve e curto, como num papo');
   }
   // Lição de moral numa apoiadora (a logos.veit): "o mais importante é manter o respeito".

@@ -806,7 +806,8 @@ const FECHO_DE_CORTESIA = new RegExp(
     String.raw`(abra(ç|c)os?|beijos?|bjs?|bj(o|ão)s?)`,
     String.raw`(ok|okay|blz|beleza|show|top|perfeito|certo|combinado|entendi|t(á|a)\s+bom|tudo\s+bem|tudo\s+certo)`,
     String.raw`(bom|[óo]timo|feliz|abençoado|abencoado)\s+(s(á|a)bado|domingo|fim\s+de\s+semana|final\s+de\s+semana|fds|semana|dia|feriado)`,
-    String.raw`(capit(ã|a)o|martim|deputado|amigo|amiga|irm(ã|ao))`,
+    // "Meu dep. Martin" (21/11/2026, a Isabel): o tratamento abreviado e o nome com "n" também.
+    String.raw`(capit(ã|a)o|cap|martim|martin|deputad[oa]|dep|amigo|amiga|irm(ã|ao))`,
     String.raw`((a\s+)?(sua|tua)\s+fam(í|i)lia|voc(ê|e)s|vcs)`,
     String.raw`(e|pra|para|de|da|do|um|uma|muito|mt|mto|sempre|tudo|a\s+todos|todos|todas|s(ó|o))`,
   ].join('|') + ')(?![\\p{L}\\p{N}])',

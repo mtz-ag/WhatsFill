@@ -1,4 +1,24 @@
-## 2026-11-21 - v3.333.0 - ESTADO DE AGORA - a cobranca partida segura a fala antiga, e pergunta retorica nao vira licao
+## 2026-11-21 - v3.334.0 - ESTADO DE AGORA - a rodada so escreve com a tela na conversa certa
+
+Quarta rodada em Minhas no dia, na v3.333. **Defeito grave achado, sem dano:** a aba congelou 60s,
+a tela ficou no contato de Sao Vendelino e a rodada escreveu o rascunho do **Peco Grazziotin** no
+campo daquela conversa. Eu tinha posto, ali, o texto aprovado para Sao Vendelino e dei Enter: ele
+foi para a pessoa certa (conferido no banco, "entregue"), e o Peco nao recebeu nada (continua
+em_atendimento). Mas um Enter no rascunho mandaria o texto de um eleitor para outro.
+`telaNaConversaDaRodada()` agora confere a tela contra `idQueARodadaAbriu` antes de escrever no
+campo (rascunho e resposta pronta inserida), e discordando a rodada PULA. O contato de Sao
+Vendelino ficou em_atendimento (o tempo de 10 min venceu antes do Enter). **Ajustes da rodada:**
+a Isabel ("Boa tarde. Meu dep. Martin.") agora fecha sem mensagem (o fecho conhecia "martim" e
+"deputado", nao "martin" nem "dep"); o Cleomar so agradeceu e abencoou, e a regra do temporal que
+eu escrevi mandava a Defesa Civil sempre — agora o caminho so entra se ela pedir ajuda com clareza,
+e quem agradece recebe solidariedade (o texto dele virou exemplo); o Andre ("JANJA NA ESPANHA,
+GOSTARAM ??") recebeu "prefiro que... seja acompanhada de transparencia" e eu mandei o texto dele;
+"prefiro que" e "acompanhada de transparencia" agora pedem reescrita. Conferido ao vivo: a Bernadette
+Breton recebeu a mensagem do momento pela regra nova da fala antiga. Prova: 13 assercoes novas em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o Peco e o contato de Sao
+Vendelino ficaram abertos; o Rogerio Senna ainda precisa ser reaberto e respondido por ele.
+
+## 2026-11-21 - v3.333.0 - HISTORICO - a cobranca partida segura a fala antiga, e pergunta retorica nao vira licao
 
 Terceira rodada em Minhas no dia, na v3.332 (3 enviados, 1 pulado, 5 concluidos sem enviar; parada
 por mim). **Defeito MEU que chegou a um eleitor:** a regra nova da v3.332 mandou a mensagem do
