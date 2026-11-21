@@ -1958,6 +1958,15 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    nada de dizer o que o mandato pode ou não doar, nada de CRAS, nada de "se precisar, a equipe',
     '    procura ajudar". Responda em UMA ou DUAS frases curtas: respeite a opinião dela e agradeça por',
     '    ela ter escrito. Sem discurso sobre política e sem tentar convencer.',
+    /** **Pergunta retórica de quem está do nosso lado** (21/11/2026, a logos.veit: "qual o QI de um
+     * cidadão que fala mal do próprio país?" recebeu "não dá para medir o QI... o mais importante é
+     * manter o respeito"; ele aprovou "Pois é, quem ama o Brasil fala dele com respeito e trabalha
+     * para ele melhorar! Um abraço!"). */
+    '    PERGUNTA RETÓRICA OU PROVOCAÇÃO DE QUEM ESTÁ DO NOSSO LADO ("qual o QI de quem fala mal do',
+    '    país?", "até quando?"): concorde com o sentido dela numa frase leve e feche com um abraço —',
+    '    o jeito DELE: "Pois é, quem ama o Brasil fala dele com respeito e trabalha para ele melhorar!',
+    '    Um abraço!". Nunca responda ao pé da letra ("não dá para medir...") nem dê lição ("o mais',
+    '    importante é manter o respeito").',
     /**
      * **A regra 14 nasceu do caminhoneiro de fronteira (22/09/2026)** — ver a linha colada no pedido,
      * no bloco do contato. Aqui ela fica pelo mesmo motivo das outras: a colada só aparece quando o
@@ -3023,6 +3032,10 @@ export function falhasDeAcolhimento(texto) {
   if (/(preocupa\w*|cobranca|critica|indignacao)[^.!?]{0,60}(e|eh)\s+legitim/.test(t) ||
       /(orgaos|laboratorios|autoridades|instituicoes)[^.!?]{0,40}competentes/.test(t)) {
     falhas.push('não escreva como nota oficial ("é legítima, mas", "órgãos competentes"): fale leve e curto, como num papo');
+  }
+  // Lição de moral numa apoiadora (a logos.veit): "o mais importante é manter o respeito".
+  if (/(o\s+mais\s+importante|o\s+importante)\s+(e|eh)\s+(manter|ter|respeitar|cultivar)\b/.test(t)) {
+    falhas.push('não dê lição ("o mais importante é manter o respeito"): concorde com o sentido dela numa frase leve');
   }
   if (/precisa(m)?\s+ser\s+tratad[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade)/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');

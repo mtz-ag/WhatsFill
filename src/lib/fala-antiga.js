@@ -34,5 +34,21 @@ export function hojeSoGestoSobreFalaAntiga(entrantes, nossaUltimaAt, agora = new
   const deHoje = pendentes.filter(ehDeHoje);
   const antigasProprias = pendentes.filter(m => !ehDeHoje(m) && !ehGestoOuRepasse(m));
   if (!deHoje.length || !antigasProprias.length) return false;
+  if (antigaPedeResposta(pendentes.filter(m => !ehDeHoje(m)))) return false;
   return deHoje.every(ehGestoOuRepasse);
+}
+
+/**
+ * **A fala antiga perguntou, cobrou ou pediu?** (21/11/2026, o Rogerio Senna: "E aí capitão",
+ * "Até quando", "????" em mensagens SEPARADAS — `perguntaPendente` não viu pergunta, e ele recebeu
+ * a mensagem do momento por cima de um pedido de socorro). Aqui a conta é sobre todas as falas
+ * antigas juntas: uma interrogação em qualquer uma delas (fora de links, cuja query string tem "?"),
+ * uma cobrança ou um pedido de ajuda mantém o caso com a IA e com ele — a exceção que ele escolheu.
+ */
+const COBRANCA_OU_PEDIDO = /\b(at[eé]\s+quando|e\s+a[ií]\s*,?\s*(capit|deputad|martim)|cad[eê]\s+(voc|o\s+capit|o\s+deputad)|preciso\s+de|me\s+ajud|ajuda\s+(pra|para|com)|socorro|n[aã]o\s+aguento)/i;
+const LINK_SOLTO = /https?:\/\/\S+|www\.\S+/gi;
+
+function antigaPedeResposta(antigas) {
+  const texto = antigas.map(m => String(m?.texto || '').replace(LINK_SOLTO, ' ')).join('\n');
+  return texto.includes('?') || COBRANCA_OU_PEDIDO.test(texto);
 }

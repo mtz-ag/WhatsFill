@@ -401,4 +401,36 @@ grupo('fala de outro dia + so gesto ou repasse hoje = mensagem do momento (a Ber
   check(painel.includes('hojeSoGestoSobreFalaAntiga: hojeSoGestoSobreFalaAntiga(state.entrantes, state.nossaUltimaAt)'), 'e o painel passa o sinal');
 }
 
+
+grupo('pergunta retorica de apoiadora nao vira resposta ao pe da letra nem licao (a logos.veit, 21/11)');
+{
+  const ia = await lib('ia.js');
+  const rascunho = 'Boa tarde! Não dá para medir o QI de alguém apenas por uma opinião. O mais importante é manter o respeito, tanto dentro de casa quanto ao falar do nosso país. Um abraço!';
+  check(ia.falhasDeAcolhimento(rascunho).some((f) => /lição/.test(f)), 'a licao pede reescrita');
+  check(ia.falhasDeAcolhimento('Boa tarde! Pois é, quem ama o Brasil fala dele com respeito e trabalha para ele melhorar! Um abraço!').length === 0, 'a frase que ele aprovou passa');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  const i = sis.indexOf('13. DESCRENÇA E PERGUNTA RETÓRICA'); const j = sis.indexOf('PERGUNTA RETÓRICA OU PROVOCAÇÃO DE QUEM ESTÁ DO NOSSO LADO');
+  check(i > 0 && j > i && j - i < 1200, 'a regra mora colada na 13');
+}
+
+
+grupo('cobranca em mensagens separadas mantem a fala antiga com a IA (o Rogerio Senna, 21/11)');
+{
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const AGORA = new Date('2026-11-21T14:00:00-03:00');
+  const nossa = '2026-11-19T14:48:00-03:00';
+  const L = (t, at) => ({ de: 'ela', texto: t, at, tipo: 'TEXT' });
+  const ent = [
+    L('Eu sendo perseguido ja faz duas semanas que nao vou trabalhar, tenho que pagar meu aluguel. Sou inscrito mas nunca ganhei casa', '2026-11-19T14:53:00-03:00'),
+    L('E aí capitão', '2026-11-19T17:21:00-03:00'),
+    L('https://exemplo.test/reel?x=1', '2026-11-19T17:21:10-03:00'),
+    L('Até quando', '2026-11-19T17:21:20-03:00'),
+    L('????', '2026-11-19T17:21:30-03:00'),
+    L('https://exemplo.test/reel/z', '2026-11-21T05:46:00-03:00'),
+  ];
+  check(hojeSoGestoSobreFalaAntiga(ent, nossa, AGORA) === false, 'o "????" separado e o "ate quando" seguram o caso');
+  check(hojeSoGestoSobreFalaAntiga(ent.filter((m) => !/[?]$|Até quando|E aí/.test(m.texto)), nossa, AGORA) === true, 'sem a cobranca, vira a mensagem do momento');
+  check(hojeSoGestoSobreFalaAntiga([L('Olha que historia aconteceu hoje no mercado', '2026-11-19T20:00:00-03:00'), L('https://exemplo.test/v?id=9', '2026-11-21T05:46:00-03:00')], nossa, AGORA) === true, 'o "?" de dentro do link nao conta como pergunta');
+}
+
 fim();

@@ -1,4 +1,22 @@
-## 2026-11-21 - v3.332.0 - ESTADO DE AGORA - o que ela mandou HOJE decide, e teoria nao vira nota oficial
+## 2026-11-21 - v3.333.0 - ESTADO DE AGORA - a cobranca partida segura a fala antiga, e pergunta retorica nao vira licao
+
+Terceira rodada em Minhas no dia, na v3.332 (3 enviados, 1 pulado, 5 concluidos sem enviar; parada
+por mim). **Defeito MEU que chegou a um eleitor:** a regra nova da v3.332 mandou a mensagem do
+momento ao Rogerio Senna e concluiu o atendimento dele — a excecao que ele escolheu (pergunta ou
+pedido na fala antiga) olhava `perguntaPendente`, e a cobranca dele veio partida em mensagens
+separadas ("E ai capitao", "Ate quando", "????"), que aquele sinal nao junta. **A historia dele
+(perseguido, aluguel, Minha Casa Minha Vida) continua sem resposta e o atendimento esta concluido:
+ele precisa reabrir para atender.** Hoje `fala-antiga.js` olha as proprias falas antigas JUNTAS:
+interrogacao em qualquer uma (fora de link), cobranca ("ate quando", "e ai capitao") ou pedido de
+ajuda seguram o caso com a IA e com ele. **A logos.veit** ("qual o QI de um cidadao que fala mal do
+proprio pais?") recebeu "nao da para medir o QI... o mais importante e manter o respeito" — mandei o
+texto dele ("Pois e, quem ama o Brasil fala dele com respeito e trabalha para ele melhorar! Um
+abraco!"); a regra 13 ganhou a pergunta retorica de apoiadora e `falhasDeAcolhimento` reescreve a
+licao. Conferido ao vivo: a Isabel, a Bernardete e outros com reacao de outro dia receberam a
+mensagem do momento; a Iria ficou com o rascunho no campo quando parei (limpei, nada saiu). Prova:
+6 assercoes novas em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+
+## 2026-11-21 - v3.332.0 - HISTORICO - o que ela mandou HOJE decide, e teoria nao vira nota oficial
 
 Segunda rodada em Minhas no mesmo dia, na v3.331 (a aba recarregou no meio; nada saiu para a
 Bernadette Breton). **A v3.331 melhorou o Cleomar e o Rogerio Senna ao vivo** (sem "Entendo", sem
