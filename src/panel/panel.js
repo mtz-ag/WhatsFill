@@ -8,6 +8,7 @@
 import * as api from '../lib/api.js';
 import { limitarContextoIA } from '../lib/contexto-ia.js';
 import { preservarFalasPendentes } from '../lib/repasse-ia.js';
+import { hojeSoGestoSobreFalaAntiga } from '../lib/fala-antiga.js';
 import { avisoJanelaResposta, statusJanelaResposta } from '../lib/janela-resposta.js';
 import * as page from '../lib/page.js';
 import * as fieldsLib from '../lib/fields.js';
@@ -11663,6 +11664,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         ultimaEhSoReacao: ultimaEhSoReacao(state.entrantes),
         // Só links e vídeos repassados: é ruído, e ruído não pede formulário (print do Odone).
         rajadaEhSoRepasse: rajadaEhSoRepasse(state.entrantes, state.nossaUltimaAt),
+        // Virou o dia e hoje ela só mandou gesto ou repasse sobre uma fala antiga (a Bernadette, 21/11).
+        hojeSoGestoSobreFalaAntiga: hojeSoGestoSobreFalaAntiga(state.entrantes, state.nossaUltimaAt),
         /**
          * **Denúncia política ou corrente encaminhada na rajada** (31/10/2026, print da corrente).
          * Só cala o formulário no fim do rascunho da IA — ver `sugestao.rascunhoSemCadastro`.

@@ -1,4 +1,25 @@
-## 2026-11-21 - v3.331.0 - ESTADO DE AGORA - acolher nao e rotular nem discursar
+## 2026-11-21 - v3.332.0 - ESTADO DE AGORA - o que ela mandou HOJE decide, e teoria nao vira nota oficial
+
+Segunda rodada em Minhas no mesmo dia, na v3.331 (a aba recarregou no meio; nada saiu para a
+Bernadette Breton). **A v3.331 melhorou o Cleomar e o Rogerio Senna ao vivo** (sem "Entendo", sem
+lei, sem "revolta"; ele pulou os dois para atender). Tres causas novas, as tres corrigidas:
+(1) **a Bernadette Flores** ("obrigada pelo carinho" em 17/11, so 🌹🙏 hoje) recebeu um rascunho de
+cortesia em vez da mensagem do momento: `cortesiaParaRascunho` lia tudo desde a nossa ultima, e
+agora le so o DIA da ultima fala dela — mandei a do momento pela tecla 1, como ele escolheu.
+(2) **a Bernadette Breton** (historia do supermercado em 19/11, so repasses depois) foi a IA, que
+respondeu a historia de dois dias atras: `preservarFalasPendentes` guarda de proposito a fala sem
+resposta. Regra dele, escolhida hoje: **nossa ultima de outro dia + hoje so gesto, link ou repasse =
+mensagem do momento**, exceto se a fala antiga tinha pergunta ou pedido (o Rogerio Senna, "Ate
+quando ????", continua com a IA e com ele). Mora em `fala-antiga.js` (o sinal) e
+`sugestao.momentoSobreFalaAntiga` (ajuste DEPOIS da decisao, nos dois motores; vale no quadro
+salvo). Post repassado com hashtag e texto sem letra contam como repasse. (3) **a Iria** (granizo com
+"arsenico", "colete amostras") recebeu "a preocupacao e legitima, mas... orgaos e laboratorios
+competentes" + o formulario; ele pulou. `falhasDeAcolhimento` agora pede reescrita para "e legitima"
+e "orgaos competentes", e a regra do boato cobre teoria sobre temporal. Prova: 22 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** O push da v3.331 foi barrado; o desta
+tambem pode ser.
+
+## 2026-11-21 - v3.331.0 - HISTORICO - acolher nao e rotular nem discursar
 
 Rodada em Minhas na v3.330 (3 enviados, 2 pulados, 5 concluidos sem enviar; parada por mim para
 corrigir). **A v3.330 funcionou ao vivo:** o Claudio Stefanello e a Rosa, com reacao de ontem por

@@ -108,7 +108,18 @@ export function falaPessoalDela(entrantes, nossaUltimaAt) {
 
 /** Cortesia elaborada: conteúdo antes do tamanho, sem esconder pendências reais. */
 export function cortesiaParaRascunho(entrantes, nossaUltimaAt) {
-  const pendentes = desdeNossaUltima(entrantes, nossaUltimaAt).filter(m => !m?.sistema && !m?.geradaPeloAnuncio);
+  const todas = desdeNossaUltima(entrantes, nossaUltimaAt).filter(m => !m?.sistema && !m?.geradaPeloAnuncio);
+  /**
+   * **A cortesia é do DIA da última fala dela** (21/11/2026, a Bernardete: *"obrigada pelo carinho"*
+   * em 17/11, só 🌹🙏 hoje, e a rodada pediu à IA "obrigado pelo carinho" em vez da mensagem do
+   * momento). O agradecimento de dias atrás não responde mais nada; virou o dia, o que ela mandou
+   * HOJE é que decide — e só emoji é caso do fluxo (a mensagem do momento, regra dele de 19/11).
+   */
+  const datadas = todas.filter(m => m?.at && Number.isFinite(new Date(m.at).getTime()));
+  const diaDaUltima = datadas.length ? new Date(datadas[datadas.length - 1].at).toDateString() : null;
+  const pendentes = diaDaUltima
+    ? todas.filter(m => !m?.at || new Date(m.at).toDateString() === diaDaUltima)
+    : todas;
   if (!pendentes.length) return null;
   /**
    * **Arquivo com texto próprio que basta** (12/11/2026, o Tenente Fraga) — ver `tom-anexo.js`. O

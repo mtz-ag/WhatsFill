@@ -345,4 +345,60 @@ grupo('acolher nao e rotular nem discursar (Vanda, Rogerio e Cleomar, 21/11)');
   check(/\.\.\.falhasDeAcolhimento\(texto\)/.test(cli), 'e entra na conferencia que manda reescrever');
 }
 
+
+grupo('cortesia de dias atras nao vence o emoji de hoje (a Bernardete, 21/11)');
+{
+  const cortesia = await lib('cortesia.js');
+  const nossa = '2026-11-17T09:40:00-03:00';
+  const ent = [
+    { de: 'ela', texto: 'Bom dia Deus no comando boa terca feira pra voce tambem querido obrigada pelo carinho', at: '2026-11-17T09:42:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: '🌹', at: '2026-11-21T13:20:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: '🙏', at: '2026-11-21T13:20:00-03:00', tipo: 'TEXT' },
+  ];
+  check(cortesia.cortesiaParaRascunho(ent, nossa) === null, 'so emoji hoje: o carinho de 17/11 nao pede rascunho (decide o fluxo)');
+  check(!!cortesia.cortesiaParaRascunho(ent.slice(0, 1), nossa), 'o carinho sozinho, no dia dele, continua indo para o rascunho');
+  const hoje = [{ de: 'ela', texto: ent[0].texto, at: '2026-11-21T09:42:00-03:00', tipo: 'TEXT' }, { de: 'ela', texto: '🌹', at: '2026-11-21T13:20:00-03:00', tipo: 'TEXT' }];
+  check(!!cortesia.cortesiaParaRascunho(hoje, '2026-11-20T09:40:00-03:00'), 'carinho e emoji no mesmo dia continuam sendo cortesia');
+}
+
+grupo('teoria sobre o temporal nao se responde com nota oficial (a Iria, 21/11)');
+{
+  const ia = await lib('ia.js');
+  const rascunho = 'A preocupação com a segurança das pessoas e das famílias atingidas é legítima, mas eu não posso prometer fazer a coleta. A presença de substâncias precisa ser confirmada por análise técnica, com coleta e destino definidos por órgãos e laboratórios competentes.';
+  check(ia.falhasDeAcolhimento(rascunho).some((f) => /nota oficial/.test(f)), 'o rascunho da Iria pede reescrita');
+  check(ia.falhasDeAcolhimento('Obrigado pela confiança! Esse assunto circula bastante por aí, e só as análises técnicas podem confirmar alguma coisa. Cuide-se, um abraço!').length === 0, 'a resposta leve passa');
+  const sis = ia.montarSistemaRascunho({ templates: [], regras: '', gabinete: '' });
+  check(/O MESMO VALE PARA TEORIA SOBRE TEMPORAL OU DESASTRE/.test(sis), 'a teoria do temporal tem regra no prompt');
+}
+
+
+grupo('fala de outro dia + so gesto ou repasse hoje = mensagem do momento (a Bernadette Breton, 21/11)');
+{
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const sug = await lib('sugestao.js');
+  const AGORA = new Date('2026-11-21T14:00:00-03:00');
+  const nossa = '2026-11-19T13:49:00-03:00';
+  const bern = [
+    { de: 'ela', texto: '🙏🙏🙏', at: '2026-11-19T20:45:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: 'Eu estava ha pouco no Supermercado e o sistema caiu, as pessoas largaram os carrinhos e eu fiquei ajudando a botar os produtos nos lugares', at: '2026-11-19T23:12:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: 'Assinei o abaixo-assinado. Assine voce tambem: https://exemplo.test/a', at: '2026-11-20T18:19:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: 'https://exemplo.test/x', at: '2026-11-21T01:07:00-03:00', tipo: 'TEXT' },
+    { de: 'ela', texto: '*DR. BRASIL FALA SOBRE A SAUDE DO PRESIDENTE* ' + 'O Brasil esta vendo ao vivo uma injustica. Um homem inocente, com a saude debilitada, preso. '.repeat(3) + 'Liberdade para Bolsonaro! #BolsonaroInocente', at: '2026-11-21T01:08:00-03:00', tipo: 'TEXT' },
+  ];
+  check(hojeSoGestoSobreFalaAntiga(bern, nossa, AGORA) === true, 'a Bernadette: so repasse hoje sobre a historia de 19/11');
+  check(hojeSoGestoSobreFalaAntiga(bern.slice(0, 2), nossa, AGORA) === false, 'sem nada hoje, nao se aplica');
+  check(hojeSoGestoSobreFalaAntiga([...bern, { de: 'ela', texto: 'e voces viram isso?', at: '2026-11-21T09:00:00-03:00', tipo: 'TEXT' }], nossa, AGORA) === false, 'fala propria hoje: decide o fluxo de sempre');
+  check(hojeSoGestoSobreFalaAntiga(bern, '2026-11-21T09:00:00-03:00', AGORA) === false, 'nossa ultima de hoje: nao se aplica');
+  const base = { hojeSoGestoSobreFalaAntiga: true, podeMandarMomento: true, respondidoHoje: false };
+  const d6 = { id: 'ultima-pede-resposta-pessoal', tecla: '6', motivo: 'x' };
+  check(sug.momentoSobreFalaAntiga(base, d6)?.tecla === '5', 'tecla 6 vira a mensagem do momento');
+  check(sug.momentoSobreFalaAntiga({ ...base, perguntaPendente: true }, d6) === null, 'o Rogerio: pergunta pendente continua com a IA e com ele');
+  check(sug.momentoSobreFalaAntiga({ ...base, pedeAjudaFinanceira: true }, d6) === null, 'pedido continua com a IA e com ele');
+  check(sug.momentoSobreFalaAntiga(base, { id: 'sem-interesse', tecla: 's' }) === null, 'decisao que nao vai para a IA nao e trocada');
+  check(sug.momentoSobreFalaAntiga({ ...base, podeMandarMomento: false }, d6) === null, 'sem mensagem do momento, nada muda');
+  const arv = readFileSync(new URL('../src/lib/arvore.js', import.meta.url), 'utf8');
+  check(arv.includes('momentoSobreFalaAntiga(c, escolhida)'), 'e vale no quadro salvo, sem reimportar');
+  check(painel.includes('hojeSoGestoSobreFalaAntiga: hojeSoGestoSobreFalaAntiga(state.entrantes, state.nossaUltimaAt)'), 'e o painel passa o sinal');
+}
+
 fim();

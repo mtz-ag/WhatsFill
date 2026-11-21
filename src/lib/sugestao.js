@@ -1453,9 +1453,9 @@ export function sugerirAcao(ctx, fluxo) {
     const tecla = daConfig || (typeof regra.tecla === 'function' ? regra.tecla(c) : regra.tecla);
     if (!tecla) continue; // a regra casou mas não há tecla para ela agora
     const decisao = { id: regra.id, tecla, motivo: regra.motivo(c) };
-    return encerrouDepoisDeHoje(c, decisao) || decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || decisaoDaRespostaAoFormulario(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
+    return encerrouDepoisDeHoje(c, decisao) || momentoSobreFalaAntiga(c, decisao) || decisaoDoPostEncaminhado(c, decisao) || respostaLinkComOpiniao(c, decisao) || decisaoDaRespostaAoFormulario(c, decisao) || rascunhoDeCortesia(c, decisao) || decisao;
   }
-  return decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || decisaoDaRespostaAoFormulario(c, null) || rascunhoDeCortesia(c, null);
+  return momentoSobreFalaAntiga(c, null) || decisaoDoPostEncaminhado(c, null) || respostaLinkComOpiniao(c, null) || decisaoDaRespostaAoFormulario(c, null) || rascunhoDeCortesia(c, null);
 }
 
 /**
@@ -1555,6 +1555,27 @@ export function encerrouDepoisDeHoje(c, decisao) {
     resposta: null,
     ia: false,
     motivo: 'já respondemos hoje e ela encerrou (agradeceu, abençoou ou repassou um texto, sem pedir nada) — concluo sem enviar',
+  };
+}
+
+/**
+ * **Fala de outro dia + só gesto ou repasse hoje = mensagem do momento** (21/11/2026, a Bernadette
+ * Breton — ver `fala-antiga.js`). Ajuste DEPOIS da decisão, como os outros: vale no quadro salvo.
+ * Só troca o que iria para a IA (tecla 6 ou rascunho); pergunta ou pedido na fala antiga continua
+ * com ela e com você (o Rogerio Senna).
+ */
+export function momentoSobreFalaAntiga(c, decisao) {
+  if (!c?.hojeSoGestoSobreFalaAntiga || !c.podeMandarMomento || c.respondidoHoje || c.ultimaEhNossa) return null;
+  if (decisao && !(decisao.tecla === '6' || decisao.ia)) return null;
+  if (c.perguntaPendente || c.perguntaAberta || c.pedeAjudaFinanceira || c.pedeEmprego || c.pedeLigacao ||
+      c.pedeFalarComDeputado || c.materialPendente || c.pedeAlgoIndefinido || c.reclamaSemResposta ||
+      c.naoPodeFalarAgora || c.semInteresse || c.confirmouPresenca || c.informouEndereco) return null;
+  return {
+    id: 'momento-sobre-fala-antiga',
+    tecla: '5',
+    resposta: null,
+    ia: false,
+    motivo: 'a nossa última é de outro dia e hoje ela só mandou gesto ou repasse — a fala antiga não pede resposta; vai a mensagem do momento',
   };
 }
 

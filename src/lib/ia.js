@@ -2175,6 +2175,12 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    não sabe, e quem lê toma como fato dito por ele. Pergunta assim ("você já viu ele?") NÃO se',
     '    responde: deixe esse pedaço de lado (18/11/2026, a Evani) — "não tenho uma experiência',
     '    pessoal para relatar" e "não tenho como afirmar" soam robô. Duas ou três frases leves bastam.',
+    /** **Teoria sobre o temporal** (21/11/2026, a Iria: o granizo "tinha arsênico", e o rascunho saiu
+     * "a preocupação é legítima, mas... órgãos e laboratórios competentes" + o formulário). */
+    '    O MESMO VALE PARA TEORIA SOBRE TEMPORAL OU DESASTRE ("o granizo tinha veneno", "foi provocado",',
+    '    "colete uma amostra"): agradeça a confiança, diga que o assunto circula bastante e que só as',
+    '    análises técnicas podem confirmar alguma coisa, e feche com um abraço. Sem "é legítima, mas",',
+    '    sem "órgãos competentes", sem prometer coleta e sem mandar formulário.',
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
      *
@@ -3012,6 +3018,11 @@ export function falhasDeAcolhimento(texto) {
   const semSaudacao = t.replace(/^\s*(ola|oi|bom dia|boa tarde|boa noite)[!,.\s]*/, '');
   if (/^\s*(eu\s+)?(entendi|entendo|compreendo|entendemos)\b/.test(semSaudacao)) {
     falhas.push('não abra com "entendo" ou "eu entendo": comece direto pelo que importa para ela');
+  }
+  // Nota jurídica (a Iria): "a preocupação é legítima, mas..." e "órgãos e laboratórios competentes".
+  if (/(preocupa\w*|cobranca|critica|indignacao)[^.!?]{0,60}(e|eh)\s+legitim/.test(t) ||
+      /(orgaos|laboratorios|autoridades|instituicoes)[^.!?]{0,40}competentes/.test(t)) {
+    falhas.push('não escreva como nota oficial ("é legítima, mas", "órgãos competentes"): fale leve e curto, como num papo');
   }
   if (/precisa(m)?\s+ser\s+tratad[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade)/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');
