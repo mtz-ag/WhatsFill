@@ -129,9 +129,12 @@ grupo('6. o tom do rascunho político');
   const certo = 'Boa tarde! A justiça precisa prevalecer e a Constituição tem que valer para todos. Sigo firme na defesa da liberdade. Obrigado por compartilhar, um grande abraço!';
   check(p.falhasTomPost(certo, ctx).length === 0, `o exemplo dele passa: ${p.falhasTomPost(certo, ctx)}`);
   const falhas = p.falhasTomPost('Boa tarde! O texto do Senador Silva é forte. Nossa equipe concorda. O que você acha?', ctx);
-  for (const f of ['não faça pergunta', 'não fale em "equipe"', 'feche com "um grande abraço"', 'não resuma nem comente o texto encaminhado', 'não cite quem assinou o post']) {
+  for (const f of ['não faça pergunta', 'não fale em "equipe"', 'não resuma nem comente o texto encaminhado', 'não cite quem assinou o post']) {
     check(falhas.includes(f), `barra: ${f}`);
   }
+  // 23/11/2026: o abraço no fim deixou de ser exigido ("virou repetição de mensagens").
+  const semAbraco = 'Boa tarde! A justiça precisa prevalecer e a Constituição tem que valer para todos. Sigo firme na defesa da liberdade. Obrigado por compartilhar!';
+  check(p.falhasTomPost(semAbraco, ctx).length === 0, `sem abraço no fim também passa: ${p.falhasTomPost(semAbraco, ctx)}`);
 
   // O prompt: o tom do post entra, e a regra da denúncia ("agradeça as informações… PARE") sai.
   const conversa = [{ de: 'nos', texto: 'Bom dia!', at: ontem.toISOString() }, { de: 'contato', texto: SUELY, at: agora.toISOString() }];

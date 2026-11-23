@@ -1,4 +1,18 @@
-## 2026-11-23 - v3.344.0 - ESTADO DE AGORA - gesto solidario contado pede obrigado, nao o texto do dia
+## 2026-11-23 - v3.345.0 - ESTADO DE AGORA - o abraco no fim nao vai em toda mensagem
+
+Mesma rodada. Pedido dele: "botar em todas mensagens um grande abraco no final esta se tornando em
+repeticao de mensagens". O abraco era EXIGIDO: quatro conferencias de tom (cortesia, autoria/repasse,
+anexo, post encaminhado) reprovavam o rascunho sem ele, e o prompt mandava "na despedida, use um grande
+abraco" e "feche com um abraco" em cinco regras. Agora ele e opcional em todos esses lugares, e
+`ia.falhasDeAbracoRepetido` pede UMA reescrita quando a nossa ultima mensagem ja fechou com abraco e o
+rascunho fecha de novo. As minhas sugestoes tambem param de colar o abraco por habito. **O Pedro**
+respondeu ao parabens ("sai da MB, mas a MB nao saiu de mim") e recebeu "E isso mesmo! A gente sai da
+Marinha, mas a Marinha nao sai da gente." Na rodada: Armando e Celso pela mensagem do momento; Cleomar
+e Vilmar, que agradeceram a de hoje, concluidos sem envio. Prova: 6 assercoes novas e uma ajustada.
+**Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.345; o Rogerio Senna, o Nilson e a
+Suely para ele.
+
+## 2026-11-23 - v3.344.0 - HISTORICO - gesto solidario contado pede obrigado, nao o texto do dia
 
 Mesma rodada. **A Suely** respondeu a nossa mensagem sobre Tupancireta: "Passamos nos BOMBEIROS de
 Santo Antonio da Patrulha e fizemos a nossa doacao. E o minimo...". A IA disse que nao havia o que

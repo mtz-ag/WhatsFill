@@ -1966,7 +1966,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * manter o respeito"; ele aprovou "Pois é, quem ama o Brasil fala dele com respeito e trabalha
      * para ele melhorar! Um abraço!"). */
     '    PERGUNTA RETÓRICA OU PROVOCAÇÃO DE QUEM ESTÁ DO NOSSO LADO ("qual o QI de quem fala mal do',
-    '    país?", "até quando?"): concorde com o sentido dela numa frase leve e feche com um abraço —',
+    '    país?", "até quando?"): concorde com o sentido dela numa frase leve e feche de forma leve —',
     '    o jeito DELE: "Pois é, quem ama o Brasil fala dele com respeito e trabalha para ele melhorar!',
     '    Um abraço!". Nunca responda ao pé da letra ("não dá para medir...") nem dê lição ("o mais',
     '    importante é manter o respeito"). Outro do jeito dele, para "JANJA NA ESPANHA, GOSTARAM ??":',
@@ -2167,7 +2167,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
     '    **FALE COM ELA, NÃO SOBRE O TEXTO DELA** (18/11/2026, a Lia: a reflexão dela recebeu "A',
     '    reflexão interior... pode trazer mais serenidade. É uma mensagem de fé que merece ser acolhida',
     '    com respeito" — comentário de terceiro, sem ninguém do outro lado). Responda a ela, na primeira',
-    '    pessoa ("Que bonita reflexão! Concordo que..."), e feche com um abraço.',
+    '    pessoa ("Que bonita reflexão! Concordo que..."), e feche de forma leve.',
     /**
      * **BOATO DO ADVERSÁRIO: nem confirma, nem dá aula, nem inventa** (17/11/2026, rodada dele, a
      * Evani: *"qual a tua opinião sobre que o Lula já tenha morrido em 2022? Você já viu ele?"*). O
@@ -2193,7 +2193,7 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
      * "a preocupação é legítima, mas... órgãos e laboratórios competentes" + o formulário). */
     '    O MESMO VALE PARA TEORIA SOBRE TEMPORAL OU DESASTRE ("o granizo tinha veneno", "foi provocado",',
     '    "colete uma amostra"): agradeça a confiança, diga que o assunto circula bastante e que só as',
-    '    análises técnicas podem confirmar alguma coisa, e feche com um abraço. Sem "é legítima, mas",',
+    '    análises técnicas podem confirmar alguma coisa, e feche de forma leve. Sem "é legítima, mas",',
     '    sem "órgãos competentes", sem prometer coleta e sem mandar formulário.',
     /**
      * **A ELEIÇÃO NÃO ACABOU, E A CAMPANHA EM CURSO É NOSSA** — print dele (15/10/2026).
@@ -3018,6 +3018,21 @@ const PALAVRAS_FRACAS_PARABENS = new Set(['parabens', 'conquista', 'especial', '
   'futura', 'futuro', 'agora', 'entao', 'tambem', 'quando', 'porque', 'senhor', 'capitao', 'martim', 'deputado',
   'abraco', 'abracos', 'grande', 'abencoe', 'abencoado', 'abencoada', 'jesus', 'cristo', 'feliz', 'saude', 'caminhada']);
 
+/**
+ * **O abraço no fim não vai em toda mensagem** (23/11/2026, ele: *"botar em todas mensagens um grande
+ * abraço no final está se tornando em repetição de mensagens"*). As conferências de tom EXIGIAM o
+ * abraço; agora ele é opcional, e esta pede reescrita quando a nossa última mensagem já fechou com ele.
+ */
+const FECHA_COM_ABRACO = /abra[çc]o\p{L}*\s*[!.🙏🤗❤️\s]*$/iu;
+
+export function falhasDeAbracoRepetido(texto, mensagens = []) {
+  if (!FECHA_COM_ABRACO.test(String(texto || '').trim())) return [];
+  const nossas = mensagens.map(m => typeof m === 'string' ? null : m).filter(m => m && m.de === 'nos');
+  const ultima = nossas[nossas.length - 1];
+  if (!ultima || !/abra[çc]o/i.test(String(ultima.texto || '').slice(-120))) return [];
+  return ['a nossa última mensagem já fechou com abraço: termine de outro jeito, sem repetir o abraço'];
+}
+
 export function falhasDeParabensGenerico(texto, mensagens = []) {
   const t = semAcentoIA(String(texto || '')).toLowerCase();
   if (!/\bparabens\b/.test(t)) return [];
@@ -3052,7 +3067,7 @@ export function falhasDeImpessoal(texto) {
   // Só o PARECER sobre o que ela mandou: resposta objetiva a uma pergunta ("a manutenção cabe à
   // concessionária") não fala de "mensagem" nem de "reflexão" e continua valendo.
   const parecer = /(^|[^a-z])(e uma (mensagem|reflexao)|(mensagem|reflexao|texto|palavras|video|post)[^.!?]{0,80}(merece|trazem?|podem?|mostram?|lembram?))([^a-z]|$)/;
-  return conversa.test(t) || !parecer.test(t) ? [] : ['fale com ela na primeira pessoa (não comente o texto dela em terceira pessoa) e feche com um abraço'];
+  return conversa.test(t) || !parecer.test(t) ? [] : ['fale com ela na primeira pessoa (não comente o texto dela em terceira pessoa)'];
 }
 
 /**
@@ -3096,14 +3111,14 @@ export function falhasDeAcolhimento(texto) {
     falhas.push('não responda como repartição ("não sei exatamente a que você se refere", "responder com responsabilidade"): pergunte de forma leve do que se trata, como numa conversa');
   }
   if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t)) {
-    falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');
+    falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto, numa frase leve');
   }
   return falhas;
 }
 
 export function falhasDeBordao(texto) {
   return /\bseguimos\s+firmes\b/i.test(semAcentoIA(String(texto || '')))
-    ? ['não use "seguimos firmes" (virou bordão): feche com um abraço ou uma frase sobre o assunto dela']
+    ? ['não use "seguimos firmes" (virou bordão): feche com uma frase sobre o assunto dela']
     : [];
 }
 

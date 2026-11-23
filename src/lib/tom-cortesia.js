@@ -32,7 +32,7 @@ export function contextoCortesia(mensagens = []) {
   return { ativo: carinho && !demanda && !relato, demanda, texto, bencao: /\b(?:abenco\w*|deus|bencaos?)\b/.test(t) };
 }
 
-export const TOM_CORTESIA = 'CORTESIA AFETUOSA: a intenção desta rajada é saudação, bênção ou carinho, mesmo com tema público citado de passagem. Responda na primeira pessoa do candidato: retribua a bênção, agradeça o carinho e encerre com um grande abraço ou um abraço. No máximo 3 frases, sem pergunta. Não comente nem parafraseie temas incidentais (clima, soluções, estado, governo, enchente). Não use o nome do contato, equipe, urgência/prioridade, notas internas ou promessa de levar ao deputado. Saudação somente pelo horário real. Nunca devolva beijo, bjs ou beijão. Perguntas e pedidos reais devem receber resposta ao conteúdo, não este encerramento.';
+export const TOM_CORTESIA = 'CORTESIA AFETUOSA: a intenção desta rajada é saudação, bênção ou carinho, mesmo com tema público citado de passagem. Responda na primeira pessoa do candidato: retribua a bênção e agradeça o carinho; o abraço no fim é opcional, e não se repete se a nossa última já fechou com ele. No máximo 3 frases, sem pergunta. Não comente nem parafraseie temas incidentais (clima, soluções, estado, governo, enchente). Não use o nome do contato, equipe, urgência/prioridade, notas internas ou promessa de levar ao deputado. Saudação somente pelo horário real. Nunca devolva beijo, bjs ou beijão. Perguntas e pedidos reais devem receber resposta ao conteúdo, não este encerramento.';
 
 export function falhasTomCortesia(texto, contexto) {
   if (!contexto?.ativo) return [];
@@ -49,7 +49,6 @@ export function falhasTomCortesia(texto, contexto) {
   // "Abençoada segunda-feira para você também" também retribui (o Kayan, 23/11/2026: a IA reprovou
   // duas vezes, e esse foi o texto que ele aprovou).
   if (contexto.bencao && !/\b(?:deus.{0,30}abencoe|abencoe.{0,30}deus|abencoad[ao]s?\b.{0,40}\b(?:para|pra)\s+(?:voce|vc|ti|o\s+senhor|a\s+senhora))\b/.test(t)) falhas.push('retribua a bênção');
-  if (!/\babraco\b/.test(t)) falhas.push('encerre com abraço');
   return falhas;
 }
 

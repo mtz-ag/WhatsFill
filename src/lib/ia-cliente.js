@@ -61,6 +61,7 @@ import {
   falhasDeImpessoal,
   falhasDeFormulaDeDenuncia,
   falhasDeParabensGenerico,
+  falhasDeAbracoRepetido,
 } from './ia.js';
 
 import { desabafoPessoal } from './cortesia.js';
@@ -339,7 +340,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     + (tomCortesia.ativo ? '\n\n' + TOM_CORTESIA : '')
     + (tomAnexo.ativo ? '\n\n' + TOM_ANEXO : '')
     + (tomPost.ativo ? '\n\n' + TOM_POST_POLITICO : '')
-    + '\nNunca use beijo, bjs ou beijão no rascunho; na despedida, use um grande abraço ou um abraço.';
+    + '\nNunca use beijo, bjs ou beijão no rascunho. O abraço no fim é opcional e NÃO vai em toda mensagem (virou repetição, 23/11/2026): se a nossa última mensagem já fechou com abraço, termine de outro jeito ou no próprio conteúdo.';
   const lidoPelaIA = {
     contato,
     sistemaTokens: tokensAproximados(sistema),
@@ -362,7 +363,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
     const conferirTom = (resposta) => {
       const texto = validarRascunho(resposta.decisao, agora, {}).texto || '';
-      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasTomPost(texto, tomPost), ...falhasDeAutoria(texto, autoria), ...falhasTomJuridico(texto), ...falhasDeBordao(texto), ...falhasDeAcolhimento(texto), ...falhasDeImpessoal(texto), ...falhasDeFormulaDeDenuncia(texto, tomPost.ativo ? [] : mensagens), ...falhasDeParabensGenerico(texto, mensagens)];
+      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasTomPost(texto, tomPost), ...falhasDeAutoria(texto, autoria), ...falhasTomJuridico(texto), ...falhasDeBordao(texto), ...falhasDeAcolhimento(texto), ...falhasDeImpessoal(texto), ...falhasDeFormulaDeDenuncia(texto, tomPost.ativo ? [] : mensagens), ...falhasDeParabensGenerico(texto, mensagens), ...falhasDeAbracoRepetido(texto, mensagens)];
     };
     const falhasTom = conferirTom(r);
     if (falhasTom.length) {

@@ -653,4 +653,20 @@ grupo('gesto solidario contado nao recebe a mensagem do momento (a Suely, 23/11)
   check(sug.abstencaoNaoCabe({ contouGestoSolidario: true }) !== null, 'a abstencao da IA nao cabe');
 }
 
+grupo('o abraco no fim nao vai em toda mensagem (23/11)');
+{
+  const ia = await lib('ia.js');
+  const tom = await lib('tom-cortesia.js');
+  const f = ia.falhasDeAbracoRepetido;
+  const comAbraco = [{ de: 'nos', texto: 'Bom dia! Que orgulho, parabens! Um grande abraço!' }, { de: 'ela', texto: 'A MB nao saiu de mim' }];
+  const semAbraco = [{ de: 'nos', texto: 'Bom dia! Que orgulho, parabens!' }, { de: 'ela', texto: 'A MB nao saiu de mim' }];
+  check(f('É isso mesmo! Um grande abraço!', comAbraco).length > 0, 'abraco de novo, logo depois do nosso abraco, pede reescrita');
+  check(f('É isso mesmo! A gente sai da Marinha, mas a Marinha não sai da gente.', comAbraco).length === 0, 'sem abraco passa');
+  check(f('É isso mesmo! Um abraço!', semAbraco).length === 0, 'abraco depois de uma nossa sem abraco passa');
+  const ctx = tom.contextoCortesia([{ de: 'nos', texto: 'Oi' }, { de: 'ela', texto: 'Deus abencoe, obrigado pelo carinho' }]);
+  check(!tom.falhasTomCortesia('Bom dia! Obrigado pelo carinho, Deus abençoe você também.', ctx).includes('encerre com abraço'), 'a cortesia nao exige mais o abraco');
+  const ic = readFileSync(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(!/na despedida, use um grande abraço/.test(ic), 'a instrucao do rascunho nao manda mais fechar com abraco');
+}
+
 fim();

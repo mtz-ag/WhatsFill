@@ -63,7 +63,7 @@ export const TOM_ANEXO =
   'Não diga que leu, viu, abriu ou analisou o arquivo, e não comente o que há nele. Responda ao que ela ' +
   'ESCREVEU (apresentação, apoio, despedida), na primeira pessoa do candidato, e agradeça por ela enviar ' +
   'o material ("muito obrigado pelo apoio e por enviar o material"). Sem pergunta, sem o nome dela, sem ' +
-  '"equipe", sem promessa de levar ao deputado. Feche com "um grande abraço". No máximo 4 frases.';
+  '"equipe", sem promessa de levar ao deputado. O abraço no fim é opcional. No máximo 4 frases.';
 
 /** O rascunho cumpriu o ANEXO? Devolve o que falhou, para a reescrita que já existe. */
 export function falhasTomAnexo(texto, contexto) {
@@ -78,7 +78,6 @@ export function falhasTomAnexo(texto, contexto) {
   if (!/\b(?:obrigad[oa]|agradec\w*)\b/.test(t) || !/\b(?:material|arquivo|apresentac\w*|documento|enviar|envio|mandar)\b/.test(t)) {
     falhas.push('agradeça por enviar o material');
   }
-  if (!/\babraco\b/.test(t)) falhas.push('encerre com um grande abraço');
   if ((String(texto).match(/[^.!?]+(?:[.!?]+|$)/g) || []).filter((v) => v.trim()).length > 4) falhas.push('máximo de 4 frases');
   return falhas;
 }

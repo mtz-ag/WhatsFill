@@ -162,9 +162,9 @@ export const TOM_POST_POLITICO =
   'para todos. Sigo firme na defesa da liberdade."). NÃO resuma o texto, NÃO repita números, nomes ou ' +
   'fatos dele, NÃO cite quem assinou e NÃO use o nome dela. Sem pergunta, sem "equipe", sem beijo, sem ' +
   'pedir nome ou cidade. Abra com a saudação do horário — ou sem saudação, se já falamos com ela hoje — ' +
-  'e feche agradecendo por compartilhar, com "um grande abraço". Exemplo do jeito: "Boa tarde! A justiça ' +
-  'precisa prevalecer e a Constituição tem que valer para todos. Sigo firme na defesa da liberdade. ' +
-  'Obrigado por compartilhar, um grande abraço!" No máximo 4 frases.';
+  'e feche agradecendo por compartilhar (o abraço no fim é opcional). Exemplo do jeito: "Boa tarde! A ' +
+  'justiça precisa prevalecer e a Constituição tem que valer para todos. Sigo firme na defesa da ' +
+  'liberdade. Obrigado por compartilhar!" No máximo 4 frases.';
 
 /** O rascunho cumpriu o POST POLÍTICO? Devolve o que falhou, para a reescrita que já existe. */
 export function falhasTomPost(texto, contexto) {
@@ -174,7 +174,6 @@ export function falhasTomPost(texto, contexto) {
   if (t.includes('?')) falhas.push('não faça pergunta');
   if (/\bequipe\b/.test(t)) falhas.push('não fale em "equipe"');
   if (/\b(?:beij\w*|bjs?|bjos?)\b/.test(t)) falhas.push('sem beijo');
-  if (!/\babraco\b/.test(t)) falhas.push('feche com "um grande abraço"');
   if (!/\b(?:obrigad[oa]|agradec\w*)\b/.test(t)) falhas.push('agradeça por compartilhar');
   if (!/\b(?:sigo|seguimos|seguirei|defendo|acredito|concordo|estou|continuo|luto|lutarei|vou seguir|me posiciono|nao aceito)\b/.test(t)) {
     falhas.push('falta posição na primeira pessoa do candidato');

@@ -43,8 +43,8 @@ export function contextoDeAutoria(mensagens = []) {
 
 export function instrucaoDeAutoria(contexto) {
   const base = 'AUTORIA: FALA DELA é texto próprio; REPASSADO é material de terceiro, nunca opinião atribuível ao contato. Priorize a fala própria mais recente ainda sem resposta e o ponto central da sequência dela, mesmo que links ou áudios repassados tenham chegado depois. Não resuma o repasse nem responda ao comentarista. Nunca copie ou parafraseie a sequência de argumentos dela. Preserve primeira pessoa, saudação pelo horário real, sem nome, equipe, urgência/prioridade ou promessa de levar ao deputado.';
-  if (contexto.soRepasse) return base + ' Só há REPASSADO pendente: agradeça brevemente por mandar e encerre com um abraço, sem resumir assuntos, atribuir preocupações ou fazer pergunta; no máximo 3 frases.';
-  if (contexto.politico) return base + ' COMPARTILHAMENTO POLÍTICO PRÓPRIO: uma frase de posição em primeira pessoa sobre o ponto central (concordo, defendo, sigo firme), sem inventar ações nem endossar acusações contra terceiros. Agradeça calorosamente o apoio quando declarado e feche com abraço, sem pergunta, no máximo 3 frases. Não liste temas, não escreva "Questões como...", "precisam continuar sendo", "devem ser acompanhadas" nem "Obrigado por compartilhar suas preocupações".' +
+  if (contexto.soRepasse) return base + ' Só há REPASSADO pendente: agradeça brevemente por mandar, sem resumir assuntos, atribuir preocupações ou fazer pergunta; no máximo 3 frases.';
+  if (contexto.politico) return base + ' COMPARTILHAMENTO POLÍTICO PRÓPRIO: uma frase de posição em primeira pessoa sobre o ponto central (concordo, defendo, sigo firme), sem inventar ações nem endossar acusações contra terceiros. Agradeça calorosamente o apoio quando declarado, sem pergunta, no máximo 3 frases. Não liste temas, não escreva "Questões como...", "precisam continuar sendo", "devem ser acompanhadas" nem "Obrigado por compartilhar suas preocupações".' +
     (/\b(?:voto aberto|transparencia)\b/.test(normalizar(contexto.texto)) ? ' O ponto próprio é a transparência do voto: posicione-se sobre ela, sem repetir acusações contra terceiros.' : '');
   return base;
 }
@@ -56,7 +56,7 @@ export function falhasDeAutoria(texto, contexto) {
     if (/\b(?:questoes como|precisam continuar sendo|devem ser acompanhad\w*|precisam ser acompanhad\w*|obrigado por compartilhar suas preocupacoes)\b/.test(t)) falhas.push('voz impessoal ou agradecimento genérico');
     if (/\?/.test(t)) falhas.push('não faça pergunta');
     if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
-    if (!/\b(?:obrigado|agradeco)\b/.test(t) || !/\babraco\b/.test(t)) falhas.push('agradeça e encerre com abraço');
+    if (!/\b(?:obrigado|agradeco)\b/.test(t)) falhas.push('agradeça');
   }
   if (contexto.politico) {
     if (!/\b(?:concordo|defendo|sigo|acredito|considero|sou a favor|me posiciono)\b/.test(t)) falhas.push('falta posição em primeira pessoa');
