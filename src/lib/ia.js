@@ -3008,6 +3008,34 @@ export function falhasDeFormulaDeDenuncia(texto, mensagens = []) {
 }
 
 /**
+ * **Parabéns tem de dizer PELO QUÊ** (o Pedro, 23/11/2026): ele contou que entrou no livro dos
+ * Fuzileiros Navais do Sul, e o rascunho saiu "Parabéns por essa conquista tão especial" — que serve
+ * para qualquer um, e por isso soa como quem não leu. Ele mandou o texto que cita os Fuzileiros.
+ * Pede UMA reescrita quando o parabéns não repete nenhuma palavra de conteúdo do que ela contou.
+ */
+const PALAVRAS_FRACAS_PARABENS = new Set(['parabens', 'conquista', 'especial', 'muito', 'sempre', 'hoje', 'ontem', 'deste',
+  'desse', 'dessa', 'nosso', 'nossa', 'minha', 'meu', 'voce', 'voces', 'graca', 'deus', 'obrigado', 'obrigada', 'bom', 'boa',
+  'futura', 'futuro', 'agora', 'entao', 'tambem', 'quando', 'porque', 'senhor', 'capitao', 'martim', 'deputado',
+  'abraco', 'abracos', 'grande', 'abencoe', 'abencoado', 'abencoada', 'jesus', 'cristo', 'feliz', 'saude', 'caminhada']);
+
+export function falhasDeParabensGenerico(texto, mensagens = []) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  if (!/\bparabens\b/.test(t)) return [];
+  const lista = mensagens.map(m => typeof m === 'string' ? { de: 'contato', texto: m } : m).filter(Boolean);
+  let corte = -1;
+  lista.forEach((m, i) => { if (m.de === 'nos') corte = i; });
+  const dela = lista.slice(corte + 1)
+    .filter(m => m.de !== 'nos' && !m.anuncio && !m.geradaPeloAnuncio && !repasseParaIA(m))
+    // Legenda de figura é quase sempre bênção pronta; o que ela contou vem escrito ou falado.
+    .filter(m => !['IMAGE', 'STICKER', 'VIDEO'].includes(String(m.tipo || 'TEXT').toUpperCase()))
+    .map(m => semAcentoIA(String(m.texto || '')).toLowerCase()).join(' ');
+  const palavras = (dela.match(/[a-z]{5,}/g) || []).filter(p => !PALAVRAS_FRACAS_PARABENS.has(p));
+  if (!palavras.length) return [];
+  if (palavras.some(p => t.includes(p))) return [];
+  return ['parabéns genérico: diga pelo que é o parabéns, citando o que ela contou (não "essa conquista tão especial")'];
+}
+
+/**
  * **"Seguimos firmes" é bordão** (18/11/2026: *"quase toda mensagem agora tem esse seguimos
  * firmes"*). Saía do exemplo de deboche da regra 17 (ímã, de novo). A regra proíbe; esta conferência
  * pede UMA reescrita quando ele aparece mesmo assim.

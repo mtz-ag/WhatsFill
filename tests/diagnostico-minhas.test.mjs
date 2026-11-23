@@ -617,4 +617,20 @@ grupo('retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao ped
   check(!ia.falhasDeAcolhimento('Estou acompanhando, sim! Me conta do que trata o video?').some(f => /reparti/.test(f)), 'pergunta leve passa');
 }
 
+grupo('parabens tem de dizer pelo que e (o Pedro, 23/11)');
+{
+  const ia = await lib('ia.js');
+  const f = ia.falhasDeParabensGenerico;
+  const msgs = [
+    { de: 'nos', texto: 'Boa tarde!' },
+    { de: 'ela', tipo: 'TEXT', texto: '*VIDEO: Ponte se rompe durante travessia de estudantes no litoral* https://exemplo.test/n' },
+    { de: 'ela', tipo: 'IMAGE', texto: 'Eu, Jesus, enviei o meu anjo para vos testificar estas coisas nas igrejas. Um grande abraco.' },
+    { de: 'ela', tipo: 'TEXT', texto: 'Entrei na historia do livro Fuzileiros Navais do Sul, lancado na Feira do Livro deste ano' },
+  ];
+  check(f('Bom dia! Parabéns por essa conquista tão especial. Que Deus abençoe você e sua caminhada. Um grande abraço!', msgs).length > 0, 'parabens generico pede reescrita');
+  check(f('Bom dia! Que orgulho, parabéns! Fazer parte da história dos Fuzileiros Navais do Sul é uma honra enorme. Um grande abraço!', msgs).length === 0, 'o texto que ele aprovou passa');
+  check(f('Bom dia! Que Deus abençoe você. Um grande abraço!', msgs).length === 0, 'sem parabens, nao confere');
+  check(f('Parabéns!', [{ de: 'nos', texto: 'Oi' }, { de: 'ela', tipo: 'TEXT', texto: 'Bom dia, Deus abencoe' }]).length === 0, 'sem conteudo dela, nao exige nada');
+}
+
 fim();

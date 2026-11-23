@@ -1,4 +1,16 @@
-## 2026-11-23 - v3.341.0 - ESTADO DE AGORA - retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao reescreve
+## 2026-11-23 - v3.342.0 - ESTADO DE AGORA - parabens tem de dizer pelo que e
+
+Mesma rodada. **O Pedro** contou que entrou no livro dos Fuzileiros Navais do Sul (lancado na Feira do
+Livro de POA), e o rascunho saiu "Parabens por essa conquista tao especial" — serve para qualquer um,
+soa como quem nao leu. Ele mandou o texto que cita os Fuzileiros. `ia.falhasDeParabensGenerico` pede
+UMA reescrita quando o rascunho da parabens sem repetir nenhuma palavra de conteudo do que ela contou
+desde a nossa ultima (legenda de figura e repasse nao contam; palavras de bencao e cortesia nao
+contam). Na rodada: Jose Rene (despedida) e Isabel (reacao no dia em que ja respondemos) concluidos sem
+envio; Rejane e Osmar receberam a do momento por reacao. Prova: 4 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.342;
+o Rogerio Senna e o Nilson para ele responder.
+
+## 2026-11-23 - v3.341.0 - HISTORICO - retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao reescreve
 
 Rodada em Minhas na v3.340, com ele recarregando. **Conferido ao vivo:** a Fatima recebeu a mensagem
 do momento pela regra da v3.340, e o Cleomar pela fala antiga; Julião, Erenito, Dinarte, Claudete,
