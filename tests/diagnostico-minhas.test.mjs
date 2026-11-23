@@ -393,7 +393,8 @@ grupo('fala de outro dia + so gesto ou repasse hoje = mensagem do momento (a Ber
   const base = { hojeSoGestoSobreFalaAntiga: true, podeMandarMomento: true, respondidoHoje: false };
   const d6 = { id: 'ultima-pede-resposta-pessoal', tecla: '6', motivo: 'x' };
   check(sug.momentoSobreFalaAntiga(base, d6)?.tecla === '5', 'tecla 6 vira a mensagem do momento');
-  check(sug.momentoSobreFalaAntiga({ ...base, perguntaPendente: true }, d6) === null, 'o Rogerio: pergunta pendente continua com a IA e com ele');
+  // 23/11 (a Fatima): quem julga a pergunta antiga e o sinal; o Rogerio fica protegido nele (grupo abaixo).
+  check(sug.momentoSobreFalaAntiga({ ...base, perguntaPendente: true }, d6)?.tecla === '5', 'pergunta retorica ja julgada pelo sinal nao segura de novo');
   check(sug.momentoSobreFalaAntiga({ ...base, pedeAjudaFinanceira: true }, d6) === null, 'pedido continua com a IA e com ele');
   check(sug.momentoSobreFalaAntiga(base, { id: 'sem-interesse', tecla: 's' }) === null, 'decisao que nao vai para a IA nao e trocada');
   check(sug.momentoSobreFalaAntiga({ ...base, podeMandarMomento: false }, d6) === null, 'sem mensagem do momento, nada muda');
@@ -587,6 +588,20 @@ grupo('hoje so link com "boa semana na paz de Jesus" sobre fala antiga: mensagem
   check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('https://x.com/a Bom dia, isso nao pode terminar em pizza')], nossa, agora) === false, 'cumprimento com opiniao continua sendo fala');
   check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('Bom dia, preciso falar com voces')], nossa, agora) === false, 'cumprimento com pedido continua sendo fala');
   check(hojeSoGestoSobreFalaAntiga([{ de: 'ela', tipo: 'TEXT', at: '2026-11-22T05:07:00-03:00', texto: 'Bom dia' }, hoje('https://x.com/a')], nossa, agora) === true, 'fala antiga so de cumprimento continua contando como antes');
+}
+
+grupo('pergunta retorica sobre terceiros nao segura a fala antiga; pergunta para nos segura (a Fatima, 23/11)');
+{
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const agora = new Date('2026-11-23T08:00:00-03:00');
+  const nossa = '2026-11-13T16:09:00-03:00';
+  const hoje = { de: 'ela', tipo: 'TEXT', at: '2026-11-23T07:48:00-03:00', texto: 'https://www.instagram.com/p/abc/' };
+  const antiga = (texto) => ({ de: 'ela', tipo: 'TEXT', at: '2026-11-22T17:12:00-03:00', texto });
+  check(hojeSoGestoSobreFalaAntiga([antiga('Se ele ja morreu porque permitem sosias governarem? E ninguem desmascara eles.'), hoje], nossa, agora) === true, 'retorica sobre terceiros: mensagem do momento');
+  check(hojeSoGestoSobreFalaAntiga([antiga('Voces viram isso? O que vao fazer?'), hoje], nossa, agora) === false, 'pergunta para nos segura');
+  check(hojeSoGestoSobreFalaAntiga([antiga('Capitao, o senhor vai na reuniao?'), hoje], nossa, agora) === false, 'pergunta ao candidato segura');
+  check(hojeSoGestoSobreFalaAntiga([antiga('Ate quando isso'), antiga('????'), hoje], nossa, agora) === false, 'cobranca partida continua segurando (o Rogerio)');
+  check(hojeSoGestoSobreFalaAntiga([antiga('E ai'), antiga('????'), hoje], nossa, agora) === false, '"????" sozinho continua segurando');
 }
 
 fim();

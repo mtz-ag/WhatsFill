@@ -1,4 +1,18 @@
-## 2026-11-23 - v3.339.0 - ESTADO DE AGORA - hoje so cumprimento ou bencao sobre fala antiga e gesto
+## 2026-11-23 - v3.340.0 - ESTADO DE AGORA - pergunta retorica sobre terceiros nao segura a fala antiga
+
+Mesma rodada. **A Fatima** (nossa ultima em 13/11) escreveu em 22/11 "Se ele ja morreu porque
+permitem sosias governarem?" e hoje so mandou links. A IA respondeu ao boato; ele escolheu a mensagem
+do momento. Duas guardas seguravam o caso: `antigaPedeResposta` contava qualquer "?" das falas antigas,
+e `sugestao.momentoSobreFalaAntiga` recusava com `perguntaPendente`. Hoje so segura a pergunta PARA
+NOS (segunda pessoa, o candidato), o "????" sem letra e a cobranca ou pedido de sempre — o caso do
+Rogerio continua protegido e testado; e a funcao da sugestao deixou de repetir a guarda, porque quem
+julga a pergunta antiga e o sinal. **Achado na tela:** a extensao foi recarregada no meio da rodada, e
+a tecla 1 do popup falhava com o aviso so no console ("a extensao foi recarregada e esta aba ficou
+para tras") — na tela nada mudava. Nao consertado. Prova: 5 assercoes novas, uma reescrita; sem o
+conserto cai 1. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.340; o Rogerio Senna
+precisa ser reaberto por ele.
+
+## 2026-11-23 - v3.339.0 - HISTORICO - hoje so cumprimento ou bencao sobre fala antiga e gesto
 
 Mesma rodada. **O Joao Sergio** respondeu a nossa de 21/11 (Tupancireta) com oracao e disposicao de
 ajudar, mandou links e um versiculo, e hoje so um link com "BOA SEMANA NA PAZ DE JESUS". A IA escreveu

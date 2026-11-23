@@ -1567,7 +1567,9 @@ export function encerrouDepoisDeHoje(c, decisao) {
 export function momentoSobreFalaAntiga(c, decisao) {
   if (!c?.hojeSoGestoSobreFalaAntiga || !c.podeMandarMomento || c.respondidoHoje || c.ultimaEhNossa) return null;
   if (decisao && !(decisao.tecla === '6' || decisao.ia)) return null;
-  if (c.perguntaPendente || c.perguntaAberta || c.pedeAjudaFinanceira || c.pedeEmprego || c.pedeLigacao ||
+  // A pergunta das falas antigas quem julga é o próprio sinal (`fala-antiga.antigaPedeResposta`):
+  // `perguntaPendente` contava também a retórica sobre terceiros (a Fatima, 23/11/2026).
+  if (c.pedeAjudaFinanceira || c.pedeEmprego || c.pedeLigacao ||
       c.pedeFalarComDeputado || c.materialPendente || c.pedeAlgoIndefinido || c.reclamaSemResposta ||
       c.naoPodeFalarAgora || c.semInteresse || c.confirmouPresenca || c.informouEndereco) return null;
   return {

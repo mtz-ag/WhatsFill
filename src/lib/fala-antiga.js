@@ -77,7 +77,16 @@ export function hojeSoGestoSobreFalaAntiga(entrantes, nossaUltimaAt, agora = new
 const COBRANCA_OU_PEDIDO = /\b(at[eé]\s+quando|e\s+a[ií]\s*,?\s*(capit|deputad|martim)|cad[eê]\s+(voc|o\s+capit|o\s+deputad)|preciso\s+de|me\s+ajud|ajuda\s+(pra|para|com)|socorro|n[aã]o\s+aguento)/i;
 const LINK_SOLTO = /https?:\/\/\S+|www\.\S+/gi;
 
+/**
+ * **A interrogação segura o caso quando a pergunta é para NÓS** (a Fatima, 23/11/2026): *"Se ele já
+ * morreu porque permitem sósias governarem?"* é pergunta retórica sobre terceiros, e ele escolheu a
+ * mensagem do momento. Segura: "?" sem letra nenhuma (o "????" que cobra), pergunta em segunda
+ * pessoa ou com o candidato, e a cobrança e o pedido de sempre (o Rogerio, 21/11).
+ */
+const PARA_NOS = /(^|[^\p{L}])(voc[eê]s?|vcs?|o\s+senhor|a\s+senhora|tu|contigo|capit[aã]o|cap|deputad[oa]|martim|martin|dep)([^\p{L}]|$)/iu;
+
 function antigaPedeResposta(antigas) {
-  const texto = antigas.map(m => String(m?.texto || '').replace(LINK_SOLTO, ' ')).join('\n');
-  return texto.includes('?') || COBRANCA_OU_PEDIDO.test(texto);
+  const textos = antigas.map(m => String(m?.texto || '').replace(LINK_SOLTO, ' '));
+  if (COBRANCA_OU_PEDIDO.test(textos.join('\n'))) return true;
+  return textos.some(t => t.includes('?') && (!/\p{L}/u.test(t) || PARA_NOS.test(t)));
 }
