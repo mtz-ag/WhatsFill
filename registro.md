@@ -1,4 +1,16 @@
-## 2026-11-23 - v3.338.0 - ESTADO DE AGORA - a moldura do compartilhamento do TikTok e repasse
+## 2026-11-23 - v3.339.0 - ESTADO DE AGORA - hoje so cumprimento ou bencao sobre fala antiga e gesto
+
+Mesma rodada. **O Joao Sergio** respondeu a nossa de 21/11 (Tupancireta) com oracao e disposicao de
+ajudar, mandou links e um versiculo, e hoje so um link com "BOA SEMANA NA PAZ DE JESUS". A IA escreveu
+um "Amem, uma semana tranquila"; ele escolheu a mensagem do momento. A regra da fala antiga so aceitava
+como gesto de hoje reacao e repasse, e o cumprimento da semana contava como fala. Hoje, nas mensagens
+DE HOJE, texto que tirando links, cumprimentos, bencaos e palavras de ligacao nao deixa letra e gesto
+("Bom dia, isso nao pode terminar em pizza" continua sendo fala). Nas falas antigas nada muda. Na
+rodada: Silvia Mariza e um contato sem nome receberam a do momento por reacao. Prova: 5 assercoes em
+`diagnostico-minhas.test.mjs`; sem o conserto caem 2. **Nao conferido ao vivo.** Pendente: o push das
+versoes 3.335 a 3.339; o Rogerio Senna precisa ser reaberto por ele.
+
+## 2026-11-23 - v3.338.0 - HISTORICO - a moldura do compartilhamento do TikTok e repasse
 
 Mesma rodada. **A Teresinha** (nossa ultima em 16/11) so mandou hoje um compartilhamento do TikTok:
 link + o texto que o APLICATIVO escreve ("Confira o video de fulano! #TikTok Abra o TikTok para ver

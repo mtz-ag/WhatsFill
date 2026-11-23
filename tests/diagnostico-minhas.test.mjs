@@ -572,4 +572,21 @@ grupo('compartilhamento do TikTok com a moldura do app e repasse (a Teresinha, 2
   check(!cortesia.falouAlgoProprio(entrantes, nossa), 'nao conta como fala propria');
 }
 
+grupo('hoje so link com "boa semana na paz de Jesus" sobre fala antiga: mensagem do momento (o Joao Sergio, 23/11)');
+{
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const agora = new Date('2026-11-23T08:00:00-03:00');
+  const nossa = '2026-11-21T15:27:00-03:00';
+  const antigas = [
+    { de: 'ela', tipo: 'TEXT', at: '2026-11-22T05:07:00-03:00', texto: 'Amem, que Deus restaure a cidade atingida' },
+    { de: 'ela', tipo: 'TEXT', at: '2026-11-22T05:08:00-03:00', texto: 'Estamos em oracao e com disposicao de ajudar' },
+  ];
+  const hoje = (texto) => ({ de: 'ela', tipo: 'TEXT', at: '2026-11-23T07:56:00-03:00', texto });
+  check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('https://www.facebook.com/share/r/abc/\n\n🔥🔥BOA SEMANA NA PAZ DE JESUS 🔥🔥')], nossa, agora) === true, 'link + boa semana na paz de Jesus e gesto');
+  check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('Bom dia! Semana abencoada para todos')], nossa, agora) === true, 'so o cumprimento da semana e gesto');
+  check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('https://x.com/a Bom dia, isso nao pode terminar em pizza')], nossa, agora) === false, 'cumprimento com opiniao continua sendo fala');
+  check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('Bom dia, preciso falar com voces')], nossa, agora) === false, 'cumprimento com pedido continua sendo fala');
+  check(hojeSoGestoSobreFalaAntiga([{ de: 'ela', tipo: 'TEXT', at: '2026-11-22T05:07:00-03:00', texto: 'Bom dia' }, hoje('https://x.com/a')], nossa, agora) === true, 'fala antiga so de cumprimento continua contando como antes');
+}
+
 fim();

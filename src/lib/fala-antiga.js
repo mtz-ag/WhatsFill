@@ -31,6 +31,24 @@ function ehGestoOuRepasse(m) {
   return !/\p{L}/u.test(texto) && String(m.tipo || 'TEXT').toUpperCase() === 'TEXT';
 }
 
+/**
+ * **Link com "boa semana na paz de Jesus" é gesto, não fala** (o João Sergio, 23/11/2026): a fala
+ * dele era de outro dia, e hoje veio só um link com o cumprimento da semana. Ele escolheu a mensagem
+ * do momento. Conta como gesto o texto que, tirando links, cumprimentos, bênçãos e palavras de
+ * ligação, não deixa letra nenhuma — "Bom dia, isso não pode terminar em pizza" continua sendo fala.
+ */
+const SAUDACAO_OU_BENCAO = /\b(?:bom\s+(?:dia|domingo|sabado|fim\s+de\s+semana)|boa\s+(?:tarde|noite|semana|sexta|segunda)|otima\s+(?:semana|segunda|sexta)|feliz\s+(?:domingo|segunda|semana)|(?:semana|dia|noite|tarde)\s+abencoad[ao]|na\s+paz\s+de\s+(?:jesus|deus|cristo)|deus\s+(?:te\s+|vos\s+|nos\s+)?abencoe\w*|fi(?:que|ca)\s+com\s+deus|amem|gratidao|abencoad[ao]s?)\b/g;
+const PALAVRAS_DE_LIGACAO = /\b(?:e|a|o|as|os|um|uma|na|no|de|da|do|com|para|pra|voce|vc|voces|todos|todas|muito|muita|que|tambem|sempre)\b/g;
+
+function soSaudacaoOuBencao(texto) {
+  const t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/https?:\/\/\S+|www\.\S+/g, ' ');
+  if (!SAUDACAO_OU_BENCAO.test(t)) return false;
+  SAUDACAO_OU_BENCAO.lastIndex = 0;
+  const resto = t.replace(SAUDACAO_OU_BENCAO, ' ').replace(PALAVRAS_DE_LIGACAO, ' ');
+  return !/\p{L}/u.test(resto);
+}
+
 export function hojeSoGestoSobreFalaAntiga(entrantes, nossaUltimaAt, agora = new Date()) {
   if (!nossaUltimaAt) return false;
   const hoje = new Date(agora).toDateString();
@@ -44,7 +62,9 @@ export function hojeSoGestoSobreFalaAntiga(entrantes, nossaUltimaAt, agora = new
   // A pergunta tem de ser DELA: a transcrição de um vídeo repassado com "?" dentro (o Vilmar,
   // 23/11) segurava o caso com a IA. "????" sozinho continua contando (o Rogerio, 21/11).
   if (antigaPedeResposta(pendentes.filter(m => !ehDeHoje(m) && !ehMaterialRepassado(m)))) return false;
-  return deHoje.every(ehGestoOuRepasse);
+  // Hoje, cumprimento ou bênção (com link ou sem) também é gesto; nas falas antigas não, para não
+  // tirar da conta o que ela disse (ver `soSaudacaoOuBencao`).
+  return deHoje.every(m => ehGestoOuRepasse(m) || soSaudacaoOuBencao(m?.texto));
 }
 
 /**
