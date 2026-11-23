@@ -11584,6 +11584,11 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
           falouAlgoProprio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio, {
             jaSabemos: [state.nomeInformado, state.cidadeInformada?.value, state.contact?.name],
           }),
+        // NOVO QUE ESCREVEU (23/11/2026): nunca respondemos e há fala própria — o limite de horas não
+        // vale; ver `sugestao` (contexto-de-outro-dia).
+        chegadaComFalaPropria: !jaRespondemosAntes && !!falouAlgoProprio(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio, {
+          jaSabemos: [state.nomeInformado, state.cidadeInformada?.value, state.contact?.name],
+        }),
         // Pergunta de razão ou de posição: nenhuma resposta pronta responde, e mandar o modelo
         // vira material de campanha em cima da pergunta dela (print da Clair, 31/08).
         perguntaAberta: conversaTemPerguntaAberta(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio),

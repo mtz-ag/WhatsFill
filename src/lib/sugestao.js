@@ -630,7 +630,14 @@ export const REGRAS = [
      * sempre concluiu em silêncio neste projeto. Se ele cortar esta também, a regra passa a valer
      * para todo mundo que não está nas seis protecões acima.
      */
-    quando: (c) => !!c.contextoPerdido && !c.ultimaEhDespedida,
+    /**
+     * **Quem NUNCA recebeu resposta nossa e escreveu algo próprio sai do limite** (decisão dele,
+     * 23/11/2026, rodada dos Novos): o Lucas (equipe para Tupanciretã, queria falar com o Martim), a
+     * Patricia (apelo à Caixa) e outros dois receberam só a mensagem do momento. Ali não há contexto
+     * que esfriou: ninguém respondeu nada ainda. O caso segue o fluxo e vai para a IA, que espera a
+     * revisão dele. Quem só mandou gesto continua recebendo a mensagem do momento.
+     */
+    quando: (c) => !!c.contextoPerdido && !c.ultimaEhDespedida && !c.chegadaComFalaPropria,
     motivo: (c) =>
       c.podeMandarMomento && !c.momentoJaEnviado
         ? 'faz mais tempo que o limite desde a última mensagem dela — o contexto passou; a mensagem do momento é o que há de novo.'

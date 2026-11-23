@@ -1,4 +1,22 @@
-## 2026-11-23 - v3.348.0 - ESTADO DE AGORA - cortesia nao exige "carinho" nem retribui bencao que nao veio
+## 2026-11-23 - v3.349.0 - ESTADO DE AGORA - novo que escreveu algo proprio sai do limite de horas
+
+Primeira rodada pelos NOVOS, na v3.348. A regra do limite (`contexto-de-outro-dia`: passou de 16h desde
+a fala dela -> so a mensagem do momento) mandou a mensagem do momento a 11 contatos novos — a maioria so
+tinha mandado emoji, e ali esta certo. Quatro tinham escrito algo de verdade e NUNCA tinham recebido
+resposta nossa: o Lucas (de Alegrete, quer montar uma equipe da prefeitura para Tupancireta e falar com o
+Martim), a Patricia (apelo a Caixa pela Mega para Tupancireta), uma opiniao sobre prevencao e "Gostaria
+de mais informacoes sobre o Capitao Martim". Parei a rodada e ele decidiu: **nos Novos, quem nunca
+recebeu resposta e escreveu algo proprio sai do limite** — segue o fluxo, que manda para a IA (tecla 6),
+e o rascunho espera a revisao dele. Quem so mandou gesto continua recebendo a mensagem do momento. O
+sinal e `chegadaComFalaPropria` (`!jaRespondemosAntes` + `falouAlgoProprio`), na `quando` da regra:
+vale nos dois motores e no quadro salvo. Na rodada: o Claudio Rossoni ("Posso ter mais informacoes
+sobre isso?") recebeu a minha sugestao com boas-vindas e pedido de nome e cidade. **Os quatro precisam
+de resposta a mao** (a mensagem do momento ja saiu e os atendimentos foram concluidos). Achado sem
+conserto: a plataforma publicou versao nova no meio da sessao e o pacote antigo da pagina aberta passou
+a 404; a extensao segue com a chave que ja tinha, e um F5 resolve. Prova: 4 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.349.
+
+## 2026-11-23 - v3.348.0 - HISTORICO - cortesia nao exige "carinho" nem retribui bencao que nao veio
 
 Mesma rodada. **A Simone** agradeceu o trabalho pelo povo gaucho; o rascunho saiu "Que Deus abencoe voce
 tambem. Agradeco de coracao pelo carinho" — retribuindo uma bencao que ela nao deu. Ele aprovou "Muito

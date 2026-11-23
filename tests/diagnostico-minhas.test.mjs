@@ -667,6 +667,19 @@ grupo('gesto solidario contado nao recebe a mensagem do momento (a Suely, 23/11)
   check(sug.abstencaoNaoCabe({ contouGestoSolidario: true }) !== null, 'a abstencao da IA nao cabe');
 }
 
+grupo('novo que escreveu algo proprio sai do limite de horas (o Lucas e a Patricia, 23/11)');
+{
+  const arvore = await lib('arvore.js');
+  const base = { contextoPerdido: true, podeMandarMomento: true, jaRespondemosAntes: false, respondidoHoje: false, veioDeAnuncio: false };
+  const escreveu = { ...base, chegadaComFalaPropria: true, pedeRespostaPessoal: true };
+  const gesto = { ...base, chegadaComFalaPropria: false, ultimaEhSoReacao: true };
+  check(sug.sugerirAcao(escreveu)?.tecla !== '5', 'tabela: quem escreveu nao recebe a mensagem do momento');
+  check(arvore.decidir(escreveu, arvore.fluxoPadrao(), {})?.tecla !== '5', 'arvore: idem');
+  check(sug.sugerirAcao(gesto)?.tecla === '5', 'tabela: quem so mandou gesto continua recebendo a mensagem do momento');
+  const quem = sug.sugerirAcao({ ...base, pedeRespostaPessoal: true });
+  check(quem?.id === 'contexto-de-outro-dia', 'sem o sinal, a regra do limite continua decidindo');
+}
+
 grupo('o abraco no fim nao vai em toda mensagem (23/11)');
 {
   const ia = await lib('ia.js');
