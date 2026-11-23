@@ -1,4 +1,13 @@
-## 2026-11-23 - v3.342.0 - ESTADO DE AGORA - parabens tem de dizer pelo que e
+## 2026-11-23 - v3.343.0 - ESTADO DE AGORA - "igualmente" nao vira palpite de cidade
+
+Mesma rodada. A Maria Ivone respondeu "igualmente", o modo generoso do parser o ofereceu como
+cidade, e a IA gastou uma conferencia paga para recusar. `cities.naoPodeSerNomeDeLugar` ganhou
+"igualmente", "parabens", "gratidao" e "valeu" — conferido: nenhuma aparece em nome de municipio do
+Brasil. Na rodada, Evani, Rosa, Maria Ivone, logos.veit, Nelso e outros sairam pela mensagem do
+momento, pelas regras. Prova: 5 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+Pendente: o push das versoes 3.335 a 3.343; o Rogerio Senna e o Nilson para ele responder.
+
+## 2026-11-23 - v3.342.0 - HISTORICO - parabens tem de dizer pelo que e
 
 Mesma rodada. **O Pedro** contou que entrou no livro dos Fuzileiros Navais do Sul (lancado na Feira do
 Livro de POA), e o rascunho saiu "Parabens por essa conquista tao especial" — serve para qualquer um,

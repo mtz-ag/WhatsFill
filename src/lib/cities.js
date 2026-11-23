@@ -491,6 +491,9 @@ const PALAVRAS_QUE_NAO_SAO_LUGAR = new Set([
   'apoiador', 'apoiadores', 'voto', 'votos', 'urna', 'pais', 'politica', 'direita', 'esquerda',
   'material', 'conteudo', 'whatsapp', 'instagram', 'facebook', 'tiktok', 'youtube', 'link',
   'obrigado', 'obrigada', 'oi', 'ola', 'abraco', 'amem',
+  // cortesia (23/11/2026, a Maria Ivone: "igualmente" virou palpite de cidade e custou uma conferência
+  // paga da IA). Nenhuma das quatro aparece em nome de município do Brasil.
+  'igualmente', 'parabens', 'gratidao', 'valeu',
 ]);
 
 /** `Nossa Senhora ...` e `Nossa Senhora Aparecida ...` são nomes de município; "nossa" solto não. */

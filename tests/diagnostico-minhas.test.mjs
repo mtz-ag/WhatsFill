@@ -633,4 +633,13 @@ grupo('parabens tem de dizer pelo que e (o Pedro, 23/11)');
   check(f('Parabéns!', [{ de: 'nos', texto: 'Oi' }, { de: 'ela', tipo: 'TEXT', texto: 'Bom dia, Deus abencoe' }]).length === 0, 'sem conteudo dela, nao exige nada');
 }
 
+grupo('"igualmente" nao vira palpite de cidade (a Maria Ivone, 23/11)');
+{
+  const c = await lib('cities.js');
+  const ex = await lib('extract.js');
+  for (const w of ['Igualmente', 'Parabéns', 'Gratidão', 'Valeu']) check(c.naoPodeSerNomeDeLugar(w) === true, w + ' nao e lugar');
+  const r = await ex.extract(['Igualmente'], { respostaAoPedido: true });
+  check(!r.cidade, 'a resposta "Igualmente" nao gera cidade');
+}
+
 fim();
