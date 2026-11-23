@@ -3848,6 +3848,17 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     if (cortesiaDeFechamento(state.entrantes, state.nossaUltimaAt, {
       janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,
     })) return true;
+    /**
+     * **Agradeceu e depois repassou um link: ainda é encerrar** (o Peco, 23/11/2026): "Obrigado
+     * igualmente" e um link do Facebook depois da nossa de hoje foram para a IA, que escreveu "Eu que
+     * agradeço a gentileza"; ele resolveu sem enviar. Link e vídeo de outra pessoa não reabrem a
+     * conversa — tirados eles, vale a mesma conta do vocabulário e do fecho por cortesia.
+     */
+    const semRepasse = (state.entrantes || []).filter((m) => !ehRepasse(m));
+    if (semRepasse.length !== (state.entrantes || []).length &&
+        (ultimaEhDespedida(semRepasse) || cortesiaDeFechamento(semRepasse, state.nossaUltimaAt, {
+          janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,
+        }))) return true;
     if (!(state.ia?.ligada && state.iaTemChave)) return false;
     if (!jaRespondemosAntes) return false;
 

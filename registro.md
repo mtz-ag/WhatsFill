@@ -1,4 +1,16 @@
-## 2026-11-23 - v3.355.0 - ESTADO DE AGORA - pedir a cidade sempre com o porque
+## 2026-11-23 - v3.356.0 - ESTADO DE AGORA - agradeceu e repassou um link: ainda e encerrar
+
+Mesma rodada nas Minhas. **O Peco** recebeu hoje a mensagem do momento, respondeu "Obrigado igualmente"
+e depois mandou um link do Facebook; a conferencia de encerramento leu o link como conversa continuando,
+e o caso foi para a IA ("Eu que agradeco a gentileza"). Ele resolveu sem enviar. Hoje
+`encerrouAConversa` tira os repasses (link e video de outra pessoa) e, se o que sobra e despedida ou
+fecho por cortesia, encerra — de graca, antes da chamada paga. Na rodada: Nelso e Carlos Odena (reacao
+depois da nossa) concluidos sem envio; o Lucas Sena respondeu "Ok" e foi concluido como despedida — a
+oferta da equipe de Alegrete continua esperando a resposta dele. Prova: 3 assercoes em
+`diagnostico-minhas.test.mjs`; a distancia de `rascunho-vazio.test.mjs` foi alargada (o que importa e a
+ordem). **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.356; recarregar a extensao.
+
+## 2026-11-23 - v3.355.0 - HISTORICO - pedir a cidade sempre com o porque
 
 Rodada nas Minhas na v3.351. **O Marcelo** respondeu a apresentacao com o nome, "O capitao Martim deve
 ser do PL, certo?" e "Republicanos?". O dossie confirma Republicanos. Eu sugeri terminar com "E de qual

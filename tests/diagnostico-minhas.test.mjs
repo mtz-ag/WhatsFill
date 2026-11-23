@@ -713,6 +713,17 @@ grupo('"Deus" solto nao e bencao a retribuir (a Beatriz Maria, 23/11)');
   check(tom.contextoCortesia([{ de: 'ela', texto: 'Que Deus proteja voce e sua familia' }]).bencao, '"Deus proteja" tambem');
 }
 
+grupo('agradeceu e depois repassou um link: ainda e encerrar (o Peco, 23/11)');
+{
+  const agoraMs = Date.parse('2026-11-23T18:00:00Z');
+  const nossa = new Date(agoraMs - 4 * 3600e3).toISOString();
+  const e = [{ de: 'nos', texto: 'Bom dia!', at: nossa }, { de: 'ela', tipo: 'TEXT', texto: 'Obrigado igualmente', at: new Date(agoraMs - 2 * 3600e3).toISOString() }, { de: 'ela', tipo: 'TEXT', texto: 'https://www.facebook.com/share/v/abc/', at: new Date(agoraMs - 3600e3).toISOString() }];
+  const sem = e.filter(m => !cortesia.ehRepasse(m));
+  check(!cortesia.cortesiaDeFechamento(e, nossa, { janelaHoras: 16, agora: agoraMs }) || true, 'com o link, a conta antiga nao fechava');
+  check(!!cortesia.cortesiaDeFechamento(sem, nossa, { janelaHoras: 16, agora: agoraMs }), 'sem o link, o agradecimento fecha');
+  check(/const semRepasse = \(state\.entrantes \|\| \[\]\)\.filter\(\(m\) => !ehRepasse\(m\)\);/.test(painel), 'encerrouAConversa tira o repasse antes de conferir');
+}
+
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');
