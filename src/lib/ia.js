@@ -3145,7 +3145,9 @@ export function falhasDeAcolhimento(texto) {
   if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+responsabilidade|sem\s+saber\s+a\s+que\s+voce\s+se\s+refere|qual\s+(medida|situacao)\s+ou\s+\S+\s+voce\s+(quer|esta)/.test(t)) {
     falhas.push('não responda como repartição ("não sei exatamente a que você se refere", "responder com responsabilidade"): pergunte de forma leve do que se trata, como numa conversa');
   }
-  if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t)) {
+  // O Rogerio (23/11): "Esse ponto merece atenção no debate sobre segurança pública."
+  if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t) ||
+      /merece(m)?\s+(toda\s+a\s+)?atencao\s+no\s+debate|no\s+debate\s+sobre\s+\S+(\s+\S+)?\s*[.!]?$/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto, numa frase leve');
   }
   return falhas;

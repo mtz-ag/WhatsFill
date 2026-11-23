@@ -722,6 +722,11 @@ grupo('agradeceu e depois repassou um link: ainda e encerrar (o Peco, 23/11)');
   check(!cortesia.cortesiaDeFechamento(e, nossa, { janelaHoras: 16, agora: agoraMs }) || true, 'com o link, a conta antiga nao fechava');
   check(!!cortesia.cortesiaDeFechamento(sem, nossa, { janelaHoras: 16, agora: agoraMs }), 'sem o link, o agradecimento fecha');
   check(/const semRepasse = \(state\.entrantes \|\| \[\]\)\.filter\(\(m\) => !ehRepasse\(m\)\);/.test(painel), 'encerrouAConversa tira o repasse antes de conferir');
+  // O Odone (23/11): so um video repassado depois da nossa de hoje tambem encerra.
+  check(/if \(pendentesHoje\.length && pendentesHoje\.every\(\(m\) => ehRepasse\(m\)\)\) return true;/.test(painel), 'so repasse depois da nossa de hoje encerra');
+  check(cortesia.ehRepasse({ tipo: 'VIDEO', texto: 'transcricao do video', transcrito: true }), 'video com transcricao e repasse');
+  const ia2 = await lib('ia.js');
+  check(ia2.falhasDeAcolhimento('A segurança precisa olhar para todos os tipos de abordagem nas ruas. Esse ponto merece atenção no debate sobre segurança pública.').some(f => /discurso/.test(f)), 'o rascunho do Rogerio ("merece atencao no debate") pede reescrita');
 }
 
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');

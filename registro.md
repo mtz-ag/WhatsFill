@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.356.0 - ESTADO DE AGORA - agradeceu e repassou um link: ainda e encerrar
+## 2026-11-23 - v3.357.0 - ESTADO DE AGORA - so repasse depois da nossa de hoje encerra
+
+Mesma rodada nas Minhas. **O Odone** recebeu hoje a mensagem do momento e depois so repassou um video;
+a transcricao do video levou o caso para a IA ("Obrigado por enviar. 🙏") e ele resolveu sem enviar —
+a regra dele de 16/10 (so repasse conclui). Hoje `encerrouAConversa` encerra quando tudo o que chegou
+depois da nossa de hoje e repasse. **O Rogerio** (ele responde a mao) tinha um rascunho de discurso
+("Esse ponto merece atencao no debate sobre seguranca publica"), que agora pede reescrita. Na rodada:
+o contato 555491359445 recebeu o rascunho que agradece a musica e pede o nome; Nadia, Silda,
+peixotojussara e Sergio concluidos sem envio. Prova: 3 assercoes em `diagnostico-minhas.test.mjs`.
+**Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.357; recarregar a extensao.
+
+## 2026-11-23 - v3.356.0 - HISTORICO - agradeceu e repassou um link: ainda e encerrar
 
 Mesma rodada nas Minhas. **O Peco** recebeu hoje a mensagem do momento, respondeu "Obrigado igualmente"
 e depois mandou um link do Facebook; a conferencia de encerramento leu o link como conversa continuando,
