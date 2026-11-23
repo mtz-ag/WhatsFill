@@ -560,4 +560,16 @@ grupo('video repassado com "?" nao segura a fala antiga, e chamar de deputado na
   check(politico.politico === true, 'falar dos deputados continua sendo politico');
 }
 
+grupo('compartilhamento do TikTok com a moldura do app e repasse (a Teresinha, 23/11)');
+{
+  const tiktok = 'Confira o vídeo de fulanodetal! #TikTok Abra o TikTok para ver a publicação de  @fulanodetal #bomdia #gratidão #🙏🙏🙏 #yyy... https://vm.tiktok.com/ZMabc123/ Esta publicação é compartilhada via TikTok Lite. Baixe o TikTok Lite para curtir mais publicações: https://www.tiktok.com/tiktoklite';
+  check(cortesia.ehRepasse({ tipo: 'TEXT', texto: tiktok }) === true, 'a moldura do TikTok nao e fala dela');
+  check(cortesia.ehRepasse({ tipo: 'TEXT', texto: 'Olha que lindo esse video, me lembrou voces! ' + tiktok }) === false, 'comentario dela junto do compartilhamento continua sendo fala');
+  check(cortesia.ehRepasse({ tipo: 'TEXT', texto: 'Confira o video de ontem no meu perfil, fiquei feliz https://exemplo.com/x' }) === false, '"confira o video de" escrito por ela nao apaga o resto');
+  const nossa = '2026-11-16T09:44:00-03:00';
+  const entrantes = [{ de: 'ela', tipo: 'TEXT', texto: tiktok, at: '2026-11-23T08:08:00-03:00' }];
+  check(cortesia.rajadaEhSoRepasse(entrantes, nossa) === true, 'a rajada so de compartilhamento e repasse');
+  check(!cortesia.falouAlgoProprio(entrantes, nossa), 'nao conta como fala propria');
+}
+
 fim();

@@ -1,4 +1,18 @@
-## 2026-11-23 - v3.337.0 - ESTADO DE AGORA - pergunta dentro de video repassado nao segura a fala antiga
+## 2026-11-23 - v3.338.0 - ESTADO DE AGORA - a moldura do compartilhamento do TikTok e repasse
+
+Mesma rodada. **A Teresinha** (nossa ultima em 16/11) so mandou hoje um compartilhamento do TikTok:
+link + o texto que o APLICATIVO escreve ("Confira o video de fulano! #TikTok Abra o TikTok para ver
+a publicacao de @fulano #bomdia ... Esta publicacao e compartilhada via TikTok Lite. Baixe o TikTok
+Lite..."). `cortesia.ehRepasse` so aceitava link SEM texto (e tirava so o primeiro link), entao a
+moldura virou fala dela e o caso foi para a IA, que agradeceu "o carinho e a bencao" — que ela nao
+deu. Hoje, havendo a moldura do app, tira-se a moldura, os links, as hashtags e as mencoes; sem letra
+sobrando, e repasse. Comentario dela junto do link continua sendo fala. Ele escolheu a mensagem do
+momento e ela saiu. Na rodada: a Bernadette Breton (tristeza com o Bolsonaro, sem pergunta) recebeu a
+do momento pela regra da fala antiga; Edson foi concluido sem envio. Prova: 5 assercoes em
+`diagnostico-minhas.test.mjs`; sem a moldura caem 2. **Nao conferido ao vivo.** Pendente: o push das
+versoes 3.335 a 3.338; o Rogerio Senna precisa ser reaberto por ele.
+
+## 2026-11-23 - v3.337.0 - HISTORICO - pergunta dentro de video repassado nao segura a fala antiga
 
 Rodada em Minhas na v3.336 (a aba esteve minimizada e o primeiro comeco deu "Failed to fetch";
 recarreguei e recomecei). Tania e Joseh receberam a mensagem do momento sozinhos, pelas regras dele.

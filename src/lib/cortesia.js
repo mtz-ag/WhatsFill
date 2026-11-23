@@ -2634,8 +2634,31 @@ export function ehRepasse(msg) {
   if (!texto.trim()) return false;
 
   // Link e nada mais: tirando os links, não sobra nada escrito por ela.
-  return LINK.test(texto) && !texto.replace(LINK, ' ').replace(/\s+/g, ' ').trim();
+  if (!LINK.test(texto)) return false;
+  if (!texto.replace(LINK, ' ').replace(/\s+/g, ' ').trim()) return true;
+  /**
+   * **O texto que o APLICATIVO escreve junto do link também não é dela** (a Teresinha, 23/11/2026):
+   * *"Confira o vídeo de fulano! #TikTok Abra o TikTok para ver a publicação de @fulano #bomdia...
+   * Esta publicação é compartilhada via TikTok Lite. Baixe o TikTok Lite..."*. Com isso o
+   * compartilhamento virou "fala própria" e o caso foi para a IA, que agradeceu uma bênção que ela
+   * não deu. Tirando a moldura do app, as hashtags e as menções, não pode sobrar nenhuma letra.
+   */
+  if (!MOLDURA_DE_COMPARTILHAMENTO.test(texto)) return false;
+  const resto = texto
+    .replace(LINKS, ' ')
+    .replace(MOLDURAS_DE_COMPARTILHAMENTO, ' ')
+    .replace(/(^|\s)[#@][^\s]*/g, ' ');
+  return !/\p{L}/u.test(resto);
 }
+
+/** Frases que o app de vídeo escreve ao compartilhar (TikTok, Kwai, Instagram). */
+const MOLDURA_DE_COMPARTILHAMENTO = /\b(?:compartilhad[ao]\s+via|abra\s+o\s+(?:tiktok|kwai)|baixe\s+o\s+(?:tiktok|kwai)|confira\s+o\s+v[ií]deo\s+de)\b/i;
+const MOLDURAS_DE_COMPARTILHAMENTO = new RegExp([
+  String.raw`confira\s+o\s+v[ií]deo\s+de\s+\S+`,
+  String.raw`abra\s+o\s+(?:tiktok|kwai)(?:\s+lite)?\s+para\s+ver\s+a\s+publica[çc][ãa]o\s+de`,
+  String.raw`(?:esta|essa)\s+publica[çc][ãa]o\s+[ée]\s+compartilhad[ao]\s+via\s+(?:tiktok|kwai|instagram)(?:\s+lite)?`,
+  String.raw`baixe\s+o\s+(?:tiktok|kwai)(?:\s+lite)?\s+para\s+curtir\s+mais\s+publica[çc][õo]es`,
+].join('|'), 'giu');
 
 /**
  * A rajada inteira é repasse — links e vídeos, e nada que a pessoa tenha escrito?
