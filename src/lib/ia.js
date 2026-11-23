@@ -3062,6 +3062,11 @@ export function falhasDeAcolhimento(texto) {
   if (/(^|[^a-z])sem\s+(transformar|generalizar|demonizar|rotular)\b/.test(t)) {
     falhas.push('não corrija quem está do nosso lado ("sem generalizar", "sem transformar... em ameaça"): agradeça e siga o que ela disse');
   }
+  // O Nilson (23/11): "Não sei exatamente a que situação você se refere. Me diga qual medida ou
+  // assunto... para eu entender melhor e responder com responsabilidade" — seco e de repartição.
+  if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+responsabilidade/.test(t)) {
+    falhas.push('não responda como repartição ("não sei exatamente a que você se refere", "responder com responsabilidade"): pergunte de forma leve do que se trata, como numa conversa');
+  }
   if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');
   }

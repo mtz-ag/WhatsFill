@@ -1,4 +1,21 @@
-## 2026-11-23 - v3.340.0 - ESTADO DE AGORA - pergunta retorica sobre terceiros nao segura a fala antiga
+## 2026-11-23 - v3.341.0 - ESTADO DE AGORA - retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao reescreve
+
+Rodada em Minhas na v3.340, com ele recarregando. **Conferido ao vivo:** a Fatima recebeu a mensagem
+do momento pela regra da v3.340, e o Cleomar pela fala antiga; Julião, Erenito, Dinarte, Claudete,
+Geminiano e um contato so com emojis sairam por reacao; o Amarildo pela etiqueta que dispensa. A IA
+recusou gravar "Feliz" como cidade (veio de audio) — certo. **O Kayan** manda uma bencao por dia
+("Abencoada segunda feira, irmao"); a IA falhou DUAS vezes na conferencia de cortesia, porque
+`falhasTomCortesia` so aceitava "Deus abencoe" como retribuicao — e o texto que ele aprovou ("Abencoada
+segunda-feira para voce tambem, irmao! Obrigado pelo carinho de sempre. Um grande abraco!") tambem
+seria reprovado. Hoje "abencoad[ao]... para voce" tambem retribui. **O Nilson** perguntou "O Sr esta
+vendo oque querem fazer" sobre um video que nao da para abrir; o rascunho ("Nao sei exatamente a que
+situacao voce se refere... responder com responsabilidade") pede reescrita agora. Ele pulou o Nilson.
+**O Valdoir** (audios exaltados em 22/11, hoje "Bom dia e a paz do senhor Jesus") recebeu a minha
+sugestao, curta e sem entrar nos audios. Prova: 5 assercoes em `diagnostico-minhas.test.mjs`; sem o
+conserto do Kayan cai 1. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.341; o
+Rogerio Senna e o Nilson para ele responder.
+
+## 2026-11-23 - v3.340.0 - HISTORICO - pergunta retorica sobre terceiros nao segura a fala antiga
 
 Mesma rodada. **A Fatima** (nossa ultima em 13/11) escreveu em 22/11 "Se ele ja morreu porque
 permitem sosias governarem?" e hoje so mandou links. A IA respondeu ao boato; ele escolheu a mensagem

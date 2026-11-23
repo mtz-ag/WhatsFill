@@ -604,4 +604,17 @@ grupo('pergunta retorica sobre terceiros nao segura a fala antiga; pergunta para
   check(hojeSoGestoSobreFalaAntiga([antiga('E ai'), antiga('????'), hoje], nossa, agora) === false, '"????" sozinho continua segurando');
 }
 
+grupo('retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao pede reescrita (Kayan e Nilson, 23/11)');
+{
+  const tom = await lib('tom-cortesia.js');
+  const ia = await lib('ia.js');
+  const ctx = tom.contextoCortesia([{ de: 'nos', texto: 'Boa tarde!' }, { de: 'ela', texto: 'Abencoada segunda feira, irmao' }]);
+  check(ctx.ativo && ctx.bencao, 'a bencao do dia e cortesia com bencao');
+  check(tom.falhasTomCortesia('Bom dia! Abençoada segunda-feira para você também, irmão! Obrigado pelo carinho de sempre. Um grande abraço!', ctx).length === 0, 'o texto que ele aprovou passa');
+  check(tom.falhasTomCortesia('Bom dia! Obrigado pelo carinho. Um grande abraço!', ctx).includes('retribua a bênção'), 'sem retribuir continua falhando');
+  const rep = 'Não sei exatamente a que situação você se refere. Me diga qual medida ou assunto você está mencionando, para eu entender melhor e responder com responsabilidade.';
+  check(ia.falhasDeAcolhimento(rep).some(f => /reparti/.test(f)), 'resposta de reparticao pede reescrita');
+  check(!ia.falhasDeAcolhimento('Estou acompanhando, sim! Me conta do que trata o video?').some(f => /reparti/.test(f)), 'pergunta leve passa');
+}
+
 fim();

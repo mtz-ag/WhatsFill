@@ -46,7 +46,9 @@ export function falhasTomCortesia(texto, contexto) {
   if (/\?/.test(t)) falhas.push('não faça pergunta na cortesia');
   if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
   if (!/\b(?:obrigado|agradeco)\b/.test(t) || !/\bcarinho\b/.test(t)) falhas.push('agradeça o carinho em primeira pessoa');
-  if (contexto.bencao && !/\b(?:deus.{0,30}abencoe|abencoe.{0,30}deus)\b/.test(t)) falhas.push('retribua a bênção');
+  // "Abençoada segunda-feira para você também" também retribui (o Kayan, 23/11/2026: a IA reprovou
+  // duas vezes, e esse foi o texto que ele aprovou).
+  if (contexto.bencao && !/\b(?:deus.{0,30}abencoe|abencoe.{0,30}deus|abencoad[ao]s?\b.{0,40}\b(?:para|pra)\s+(?:voce|vc|ti|o\s+senhor|a\s+senhora))\b/.test(t)) falhas.push('retribua a bênção');
   if (!/\babraco\b/.test(t)) falhas.push('encerre com abraço');
   return falhas;
 }
