@@ -727,6 +727,8 @@ grupo('agradeceu e depois repassou um link: ainda e encerrar (o Peco, 23/11)');
   check(cortesia.ehRepasse({ tipo: 'VIDEO', texto: 'transcricao do video', transcrito: true }), 'video com transcricao e repasse');
   const ia2 = await lib('ia.js');
   check(ia2.falhasDeAcolhimento('A segurança precisa olhar para todos os tipos de abordagem nas ruas. Esse ponto merece atenção no debate sobre segurança pública.').some(f => /discurso/.test(f)), 'o rascunho do Rogerio ("merece atencao no debate") pede reescrita');
+  check(ia2.falhasDeAcolhimento('A prevenção precisa estar no centro das decisões. Esse aprendizado é fundamental para o nosso Estado e para o Brasil.').some(f => /discurso/.test(f)), 'o rascunho da Suely (editorial) pede reescrita');
+  check(!ia2.falhasDeAcolhimento('Verdade! Prevenção é o que salva vidas, e aprender com o que aconteceu em outros lugares faz toda a diferença.').some(f => /discurso/.test(f)), 'o texto que ele aprovou passa');
 }
 
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');

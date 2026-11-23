@@ -3147,7 +3147,9 @@ export function falhasDeAcolhimento(texto) {
   }
   // O Rogerio (23/11): "Esse ponto merece atenção no debate sobre segurança pública."
   if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t) ||
-      /merece(m)?\s+(toda\s+a\s+)?atencao\s+no\s+debate|no\s+debate\s+sobre\s+\S+(\s+\S+)?\s*[.!]?$/.test(t)) {
+      /merece(m)?\s+(toda\s+a\s+)?atencao\s+no\s+debate|no\s+debate\s+sobre\s+\S+(\s+\S+)?\s*[.!]?$/.test(t) ||
+      // A Suely (23/11): "precisa estar no centro das decisões... é fundamental para o nosso Estado".
+      /no\s+centro\s+das\s+decisoes|(e|eh)\s+fundamental\s+para\s+o\s+nosso\s+(estado|pais)/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto, numa frase leve');
   }
   return falhas;

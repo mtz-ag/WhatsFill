@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.357.0 - ESTADO DE AGORA - so repasse depois da nossa de hoje encerra
+## 2026-11-23 - v3.358.0 - ESTADO DE AGORA - rascunho em tom de editorial pede reescrita
+
+Mesma rodada nas Minhas. **A Suely** (ja respondida hoje) mandou um reels sobre prevencao ("nao e
+sobre cultuar tragedias, mas aprender a se prevenir"); o rascunho saiu editorial — "A prevencao precisa
+estar no centro das decisoes... Esse aprendizado e fundamental para o nosso Estado e para o Brasil". Ele
+aprovou a minha: "Verdade! Prevencao e o que salva vidas, e aprender com o que aconteceu em outros
+lugares faz toda a diferenca." `falhasDeAcolhimento` passou a pedir reescrita para "no centro das
+decisoes" e "e fundamental para o nosso Estado", junto do "merece atencao no debate" da v3.357.
+Prova: 2 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das
+versoes 3.335 a 3.358; recarregar a extensao (a aba roda a 3.351).
+
+## 2026-11-23 - v3.357.0 - HISTORICO - so repasse depois da nossa de hoje encerra
 
 Mesma rodada nas Minhas. **O Odone** recebeu hoje a mensagem do momento e depois so repassou um video;
 a transcricao do video levou o caso para a IA ("Obrigado por enviar. 🙏") e ele resolveu sem enviar —
