@@ -1,4 +1,19 @@
-## 2026-11-23 - v3.350.0 - ESTADO DE AGORA - abster-se com pergunta pendente pede reescrita
+## 2026-11-23 - v3.351.0 - ESTADO DE AGORA - para quem nunca recebeu resposta, a IA le a fala inteira
+
+Mesma rodada pelos Novos. **O Gilberto**, da Defesa Civil de Frederico Westphalen, ofereceu os seus seis
+anos de experiencia para ajudar Tupancireta ("em especial com documentacao, relatorios para incluir no
+S2id") e mandou uma imagem — e recebeu so a mensagem do momento. A v3.349 tirou do limite de horas a
+REGRA do fluxo, mas o corte de horas da IA (`limitarContextoIA`, 09/11) continuou: a IA nao leu nada, a
+rodada registrou "nada dela dentro do limite para a IA ler" e a abstencao virou a mensagem do momento.
+Hoje `horasDoCorteDaIA()` zera o corte quando nunca respondemos a pessoa, nos tres pontos que a IA le.
+**A Andreia** ("Como nos podemos ajudar Tupancireta, voce sabe informar?") ficou aberta para ele, que
+tem o canal certo de doacao. Ledir e Jose Faleiro receberam a do momento (so cumprimento ou link de
+outro dia); quatro com a nossa mensagem como ultima foram concluidos sem envio. Prova: 3 assercoes em
+`diagnostico-minhas.test.mjs` e duas ajustadas em `contexto-ia.test.mjs`. **Nao conferido ao vivo.**
+Pendente: o push das versoes 3.335 a 3.351; para ele responder: Lucas, Patricia, Gilberto, a opiniao
+sobre prevencao, o pedido de informacoes e a Andreia.
+
+## 2026-11-23 - v3.350.0 - HISTORICO - abster-se com pergunta pendente pede reescrita
 
 Rodada pelos Novos na v3.349. **O Marcelo** (novo) escreveu "Posso ter mais informacoes sobre isso?" e
 "Quem e o Sr? Por favor."; a IA marcou "nao ha o que responder" e deixou o texto em branco, e o caso foi

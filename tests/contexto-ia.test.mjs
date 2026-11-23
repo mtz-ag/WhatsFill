@@ -10,6 +10,9 @@ assert.equal(limitarContextoIA([m(12, 'contato', 'limite')], 12, agora).length, 
 assert.equal(limitarContextoIA(lista, 1, agora).length, 0);
 assert.equal(limitarContextoIA([{texto: 'sem data'}], 12, agora).length, 1);
 const fonte = readFileSync(new URL('../src/panel/panel.js', import.meta.url), 'utf8');
-assert.equal((fonte.match(/limitarContextoIA\(\[\.\.\.dela, \.\.\.nossa\], state.auto.cfg.horasContextoPerdido\)/g) || []).length, 2, 'conversa atual e historico anterior usam o limite configurado');
-assert.equal((fonte.match(/limitarContextoIA\(delaToda, state.auto.cfg.horasContextoPerdido\)/g) || []).length, 1, 'dossie e orgaos usam o mesmo prazo');
+// 23/11/2026: o limite configurado passa por horasDoCorteDaIA(), que o zera para quem nunca recebeu
+// resposta nossa (o Gilberto, rodada dos Novos).
+assert.equal((fonte.match(/limitarContextoIA\(\[\.\.\.dela, \.\.\.nossa\], horasDoCorteDaIA\(\)\)/g) || []).length, 2, 'conversa atual e historico anterior usam o limite configurado');
+assert.ok(/function horasDoCorteDaIA\(\) \{[\s\S]{0,200}state\.auto\.cfg\.horasContextoPerdido/.test(fonte), 'o limite configurado continua sendo a base');
+assert.equal((fonte.match(/limitarContextoIA\(delaToda, horasDoCorteDaIA\(\)\)/g) || []).length, 1, 'dossie e orgaos usam o mesmo prazo');
 console.log('Contexto IA: corte, configuracao e integracao OK');

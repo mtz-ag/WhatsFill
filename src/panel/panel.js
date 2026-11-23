@@ -16963,7 +16963,7 @@ const CONTATOS_POR_PAGINA = 200;
       ordem: i,
     }));
     // 09/11/2026: sem este corte a IA citava assunto velho com a fila recente so de links.
-    return preservarFalasPendentes([...dela, ...nossa], limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido))
+    return preservarFalasPendentes([...dela, ...nossa], limitarContextoIA([...dela, ...nossa], horasDoCorteDaIA()))
       .filter((m) => m.texto.trim())
       .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0) || a.ordem - b.ordem)
       // O `at` VAI JUNTO: sem ele a IA sabe a ordem e não sabe o tempo, e foi disso que ele
@@ -17029,6 +17029,16 @@ const CONTATOS_POR_PAGINA = 200;
    * horas; a rodada decide pela conversa inteira. Sem nada dela depois da nossa última fala NO QUE A
    * IA LÊ, perguntar é pagar para ouvir "vazio".
    */
+  /**
+   * **Para quem NUNCA recebeu resposta nossa, a IA lê a fala inteira** (23/11/2026, rodada dos Novos:
+   * o Gilberto, da Defesa Civil de Frederico Westphalen, ofereceu ajuda para Tupanciretã e a IA não
+   * leu nada, porque o corte de horas tirou tudo — e a abstenção virou a mensagem do momento). O corte
+   * existe para assunto que esfriou depois de respondermos; aqui ninguém respondeu nada ainda.
+   */
+  function horasDoCorteDaIA() {
+    return state.sinais && state.sinais.jaRespondemosAntes === false ? 0 : state.auto.cfg.horasContextoPerdido;
+  }
+
   function sobrouFalaDelaParaAIA() {
     const lida = conversaParaIA();
     let ultimaNossa = -1;
@@ -17054,7 +17064,7 @@ const CONTATOS_POR_PAGINA = 200;
     const delaToda = mensagensParaIA();
     if (!delaToda.length) return { ok: false, enviado: false, motivo: 'o contato não escreveu nada' };
     // Dossie e orgaos leem so o texto dela. O mesmo prazo, senao o pedido antigo volta no rascunho.
-    const dela = limitarContextoIA(delaToda, state.auto.cfg.horasContextoPerdido);
+    const dela = limitarContextoIA(delaToda, horasDoCorteDaIA());
     if (state.session?.expired) return { ok: false, enviado: false, motivo: 'janela de 24h vencida' };
     if (!sobrouFalaDelaParaAIA() && !perguntaPendente(state.entrantes, state.nossaUltimaAt, state.padroesDeAnuncio)) {
       registrarNaRodada(state.contact?.name || 'contato', 'aviso',
@@ -17109,7 +17119,7 @@ const CONTATOS_POR_PAGINA = 200;
         .filter((m) => !ehMensagemDaPlataforma(m?.texto))
         .map((m) => ({ de: 'contato', texto: String(m?.texto || '') || iaLib.marcaDeMidia(m), at: m?.at || null }));
       const nossa = (c.nossas || []).map((m) => ({ de: 'nos', texto: String(m?.texto || ''), at: m?.at || null }));
-      return limitarContextoIA([...dela, ...nossa], state.auto.cfg.horasContextoPerdido)
+      return limitarContextoIA([...dela, ...nossa], horasDoCorteDaIA())
         .filter((m) => m.texto.trim())
         .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
     })();

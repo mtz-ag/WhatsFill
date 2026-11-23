@@ -680,6 +680,13 @@ grupo('novo que escreveu algo proprio sai do limite de horas (o Lucas e a Patric
   check(quem?.id === 'contexto-de-outro-dia', 'sem o sinal, a regra do limite continua decidindo');
 }
 
+grupo('para quem nunca recebeu resposta, a IA le a fala inteira (o Gilberto, 23/11)');
+{
+  check(/function horasDoCorteDaIA\(\) \{\s*return state\.sinais && state\.sinais\.jaRespondemosAntes === false \? 0 :/.test(painel), 'sem resposta nossa, o corte de horas da IA e zero');
+  check((painel.match(/limitarContextoIA\([^)]*horasDoCorteDaIA\(\)\)/g) || []).length === 3, 'os tres pontos que a IA le usam o corte novo');
+  check(!/limitarContextoIA\([^)]*state\.auto\.cfg\.horasContextoPerdido\)/.test(painel), 'nenhum ponto da IA usa o corte cru');
+}
+
 grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');
