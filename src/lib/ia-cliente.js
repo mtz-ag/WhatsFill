@@ -59,6 +59,7 @@ import {
   falhasDeBordao,
   falhasDeAcolhimento,
   falhasDeImpessoal,
+  falhasDeFormulaDeDenuncia,
 } from './ia.js';
 
 import { desabafoPessoal } from './cortesia.js';
@@ -360,7 +361,7 @@ export async function rascunhar({ templates, regras, gabinete, mensagens, campos
     if (!r?.ok) return { texto: '', avisos: [r?.motivo || 'a IA não respondeu'], custo: null, lidoPelaIA };
     const conferirTom = (resposta) => {
       const texto = validarRascunho(resposta.decisao, agora, {}).texto || '';
-      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasTomPost(texto, tomPost), ...falhasDeAutoria(texto, autoria), ...falhasTomJuridico(texto), ...falhasDeBordao(texto), ...falhasDeAcolhimento(texto), ...falhasDeImpessoal(texto)];
+      return [...falhasTomPublico(texto, tomPublico), ...falhasTomCortesia(texto, tomCortesia), ...falhasTomAnexo(texto, tomAnexo), ...falhasTomPost(texto, tomPost), ...falhasDeAutoria(texto, autoria), ...falhasTomJuridico(texto), ...falhasDeBordao(texto), ...falhasDeAcolhimento(texto), ...falhasDeImpessoal(texto), ...falhasDeFormulaDeDenuncia(texto, tomPost.ativo ? [] : mensagens)];
     };
     const falhasTom = conferirTom(r);
     if (falhasTom.length) {

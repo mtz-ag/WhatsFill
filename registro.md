@@ -1,4 +1,21 @@
-## 2026-11-23 - v3.335.0 - ESTADO DE AGORA - corrigir apoiador e discurso pedem reescrita
+## 2026-11-23 - v3.336.0 - ESTADO DE AGORA - boletim de comentarista e repasse, e "estamos atentos" so em denuncia local
+
+Rodada em Minhas na v3.335. **A idolesia** (apoiadora, so links e grito de apoio desde a nossa
+ultima) mandou hoje um audio que e o boletim diario de um comentarista, repassado ("no nosso
+encontro de hoje...", fecho "De Brasilia, Alexandre Garcia"). Medido: `trouxeDenuncia` nulo, mas
+`perguntaPendente` VERDADEIRO pelas perguntas retoricas DE DENTRO do boletim — o caso foi para a IA
+e a regra da fala antiga (mensagem do momento) nao valeu. A IA escreveu "Agradeco as informacoes e
+estamos atentos e acompanhando", a formula de denuncia num repasse de apoiadora; ele aprovou a
+minha sugestao ("Obrigado por compartilhar. Sem o agro o Brasil nao come mesmo! Um abraco!").
+Hoje `repasse-ia.ehBoletimDeComentarista` e exportada e `cortesia.ehRepasse` e
+`ehLegendaDeRepasse` a usam: o boletim assinado e repasse, e a pergunta dele nao conta. E
+`ia.falhasDeFormulaDeDenuncia` pede UMA reescrita quando o rascunho diz "agradeco as informacoes"
+ou "estamos atentos" e nao ha denuncia de alvo LOCAL dita por ela. Prova: grupo novo em
+`diagnostico-minhas.test.mjs`; tirando a guarda do boletim caem 5 assercoes. Hamilton (so links,
+engajado) recebeu a do momento sozinho, certo. **Nao conferido ao vivo.** Pendente: o push da
+v3.335 e desta; o Rogerio Senna precisa ser reaberto e respondido por ele.
+
+## 2026-11-23 - v3.335.0 - HISTORICO - corrigir apoiador e discurso pedem reescrita
 
 Fecho da rodada de 21/11 em Minhas. **O Peco** recebeu a mensagem do momento (escolha dele), mas o
 rascunho que a IA tinha escrito corrigia um apoiador ("sem transformar uma religiao inteira em

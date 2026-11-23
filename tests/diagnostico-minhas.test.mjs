@@ -482,4 +482,61 @@ grupo('apoiador que compartilha conteudo politico nao e corrigido (o Peco, 21/11
   check(ia.falhasDeAcolhimento('Boa tarde! Obrigado por compartilhar, um abraço!').length === 0, 'agradecer passa');
 }
 
+grupo('boletim assinado é repasse, não pergunta do contato nem denúncia local');
+{
+  const ia = await lib('ia.js');
+  const repasse = await lib('repasse-ia.js');
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const arvore = await lib('arvore.js');
+  const agora = new Date('2026-11-23T10:00:00-03:00');
+  const nossa = '2026-11-22T15:00:00-03:00';
+  const boletim = 'No nosso encontro de hoje, uma reflexão: quem ganha com o alarmismo? ' +
+    'O que acontece com o país? De Brasília, Alexandre Garcia.';
+  const audio = { de: 'contato', tipo: 'AUDIO', transcrito: true, texto: boletim, at: '2026-11-23T09:00:00-03:00' };
+  check(repasse.ehBoletimDeComentarista?.(boletim) === true, 'assinatura de boletim exportada');
+  check(cortesia.ehRepasse(audio), 'boletim é repasse mesmo sem flag de encaminhado');
+  check(!cortesia.perguntaPendente([audio], nossa), 'pergunta interna do boletim não fica pendente');
+  check(!cortesia.conversaTemPerguntaAberta([audio], nossa), 'pergunta interna não pede resposta pessoal');
+  const entrantes = [{ de: 'contato', tipo: 'TEXT', texto: 'Juntos sempre. Sem o agro não tem comida.', at: '2026-11-22T16:00:00-03:00' }, audio];
+  const sinais = { hojeSoGestoSobreFalaAntiga: hojeSoGestoSobreFalaAntiga(entrantes, nossa, agora),
+    perguntaPendente: cortesia.perguntaPendente(entrantes, nossa),
+    pedeRespostaPessoal: cortesia.conversaPedeRespostaPessoal(entrantes, nossa) || cortesia.falouAlgoProprio(entrantes, nossa),
+    podeMandarMomento: true, jaRespondemosAntes: true, respondidoHoje: false };
+  check(sug.sugerirAcao(sinais)?.tecla === '5', 'tabela aplica mensagem do momento sobre fala antiga');
+  check(arvore.decidir(sinais, arvore.fluxoPadrao(), {})?.tecla === '5', 'árvore aplica a mesma decisão');
+  for (const texto of ['O Alexandre Garcia falou do agro. O que você acha?', 'Eu sou jornalista e preciso de ajuda com uma pauta.', 'Gostei do boletim, mas quando será a reunião?', 'Ouvi a frase de Brasília, Alexandre Garcia. Quando será a reunião?']) {
+    const msg = { ...audio, texto };
+    check(!repasse.ehBoletimDeComentarista?.(texto), 'não confunde fala própria com assinatura: ' + texto);
+    check(!cortesia.ehRepasse(msg), 'fala própria continua fora dos repasses');
+  }
+  check(cortesia.perguntaPendente([...entrantes, { ...audio, texto: 'Quando será a reunião?', tipo: 'TEXT' }], nossa), 'pergunta própria depois do boletim continua pendente');
+  const f = ia.falhasDeFormulaDeDenuncia;
+  const rascunho = 'Bom dia! Agradeço as informações e estamos atentos e acompanhando o assunto. Um abraço!';
+  const local = [{ de: 'contato', texto: 'a prefeitura desviou a verba da obra' }];
+  check(!!cortesia.trouxeDenuncia(local[0].texto) && !cortesia.trouxeDenuncia(local[0].texto).contraOAdversario, 'controle é denúncia local reconhecida');
+  check((f?.(rascunho, entrantes) || []).length > 0, 'fórmula fora de denúncia pede reescrita');
+  check(f?.(rascunho, local)?.length === 0, 'denúncia local permite a fórmula');
+  check((f?.(rascunho, [{ de: 'contato', texto: 'Lula ladrão, esse governo é uma vergonha' }]) || []).length > 0, 'desabafo contra adversário não vira denúncia local');
+  check((f?.(rascunho, [{ de: 'nos', texto: local[0].texto }, audio]) || []).length > 0, 'fala nossa não habilita a fórmula');
+  check((f?.(rascunho, [{ de: 'contato', texto: local[0].texto, encaminhado: true }]) || []).length > 0, 'denúncia dentro de repasse não é atribuída ao contato');
+  check(f?.('Bom dia! Obrigado por compartilhar, um abraço!', entrantes)?.length === 0, 'agradecimento curto aprovado passa');
+  check(f?.(rascunho, [{ de: 'contato', texto: 'Lula ladrão' }, ...local])?.length === 0, 'denúncia local não some atrás do desabafo contra adversário');
+  const cliente = await lib('ia-cliente.js');
+  const runtime = chrome.runtime;
+  const pedidos = [];
+  const aprovada = 'Bom dia! Obrigado por compartilhar, um abraço!';
+  chrome.runtime = { ...runtime, sendMessage: async pedido => {
+    pedidos.push(pedido);
+    return { ok: true, decisao: { texto: pedidos.length === 1 ? rascunho : aprovada, confianca: 0.95, precisaDeRevisao: false } };
+  } };
+  try {
+    const r = await cliente.rascunhar({ mensagens: [audio], agora, campos: {}, templates: [] });
+    check(pedidos.length === 2 && r.texto === aprovada, 'cliente pede uma reescrita e devolve agradecimento aprovado');
+    check(pedidos[1]?.contato.includes('fórmula de denúncia fora de denúncia local'), 'motivo novo chega à reescrita');
+    pedidos.length = 0;
+    const denuncia = await cliente.rascunhar({ mensagens: local, agora, campos: {}, templates: [] });
+    check(pedidos.length === 1 && denuncia.texto === rascunho, 'denúncia local não gasta reescrita por essa fórmula');
+  } finally { chrome.runtime = runtime; }
+}
+
 fim();

@@ -2994,6 +2994,19 @@ export function falhasTomJuridico(texto) {
     : [];
 }
 
+/** Pede reescrita, sem criar trava de envio: apoio/repasse não pede recibo de denúncia. */
+export function falhasDeFormulaDeDenuncia(texto, mensagens = []) {
+  const t = semAcentoIA(String(texto || ''));
+  if (!/\b(?:agradeco\s+(?:as|pelas)\s+informacoes|estamos\s+atentos)\b/.test(t)) return [];
+  const denuncias = mensagens
+    .map(m => typeof m === 'string' ? { de: 'contato', texto: m } : m)
+    .filter(m => m && m.de !== 'nos' && !m.anuncio && !m.geradaPeloAnuncio && !repasseParaIA(m))
+    .map(m => trouxeDenuncia(m.texto)).filter(Boolean);
+  // Uma denúncia local continua local mesmo se outra mensagem xingou o adversário.
+  if (denuncias.some(d => !d.contraOAdversario)) return [];
+  return ['fórmula de denúncia fora de denúncia local: não diga "agradeço as informações" nem "estamos atentos"; responda ao conteúdo próprio com naturalidade ou agradeça brevemente o repasse'];
+}
+
 /**
  * **"Seguimos firmes" é bordão** (18/11/2026: *"quase toda mensagem agora tem esse seguimos
  * firmes"*). Saía do exemplo de deboche da regra 17 (ímã, de novo). A regra proíbe; esta conferência

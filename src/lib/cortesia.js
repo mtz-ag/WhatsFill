@@ -20,6 +20,7 @@
  */
 
 import { contextoCortesia } from './tom-cortesia.js';
+import { ehBoletimDeComentarista } from './repasse-ia.js';
 import { contextoAnexo } from './tom-anexo.js';
 import { contextoPostEncaminhado } from './post-encaminhado.js';
 
@@ -259,6 +260,7 @@ const LINK = /(https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(com|br|net|org|me|tv|app|i
  * recuperavel — ele ve a linha na rodada.
  */
 function ehLegendaDeRepasse(msg) {
+  if (ehBoletimDeComentarista(msg?.texto)) return true;
   /**
    * **VÍDEO ou LINK — e FIGURA não**, que é o mesmo corte que `ehRepasse` já fazia.
    *
@@ -2617,6 +2619,7 @@ export function pedeFalarComDeputado(entrantes, nossaUltimaAt) {
  * responder a ele com um formulário é responder a coisa errada.
  */
 export function ehRepasse(msg) {
+  if (ehBoletimDeComentarista(msg?.texto)) return true;
   const tipo = String(msg?.tipo || 'TEXT').toUpperCase();
   if (tipo === 'VIDEO') return true;
 

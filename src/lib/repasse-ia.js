@@ -1,6 +1,15 @@
 import { contarFrases } from './tom-cortesia.js';
 const normalizar = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+/** Assinatura de boletim compartilhada pelo fluxo e pelo rascunho. */
+export function ehBoletimDeComentarista(texto) {
+  const t = normalizar(texto).trim();
+  return /\bde brasilia,?\s+alexandre garcia[.!\s]*$/.test(t) ||
+    (/\bno nosso encontro de hoje\b/.test(t) && /\balexandre garcia[.!\s]*$/.test(t)) ||
+    (/\b(?:aqui e|eu sou|quem fala e)\s+(?:o\s+)?(?:jornalista|comentarista)\b/.test(t) &&
+      /\b(?:no nosso encontro de hoje|este e o nosso boletim|encerramos o boletim)\b/.test(t));
+}
+
 /** Autoria para o rascunho; citar um comentarista não basta para atribuir a mensagem a ele. */
 export function repasseParaIA(m) {
   if (!m || m.de === 'nos' || m.anuncio || m.geradaPeloAnuncio) return false;
@@ -10,9 +19,7 @@ export function repasseParaIA(m) {
   if (/\b(?:repasse|encaminhe|compartilhe)\s+(?:para|com|nos|em)\s+(?:os?\s+|seus?\s+|todos\s+os\s+)?grupos\b/.test(t)) return true;
   if (/^\((?:audio encaminhado|video que ela mandou)/.test(t)) return true;
   // Assinatura de boletim, não simples menção ao nome numa opinião própria.
-  return /\bde brasilia,?\s+alexandre garcia\b/.test(t) ||
-    (/\bno nosso encontro de hoje\b/.test(t) && /\balexandre garcia[.!\s]*$/.test(t)) ||
-    /\b(?:aqui e|eu sou|quem fala e)\s+(?:o\s+)?(?:jornalista|comentarista)\b/.test(t);
+  return ehBoletimDeComentarista(m.texto);
 }
 
 export function contextoDeAutoria(mensagens = []) {
