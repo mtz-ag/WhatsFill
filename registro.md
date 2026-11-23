@@ -1,4 +1,17 @@
-## 2026-11-23 - v3.354.0 - ESTADO DE AGORA - "Deus" solto nao e bencao a retribuir
+## 2026-11-23 - v3.355.0 - ESTADO DE AGORA - pedir a cidade sempre com o porque
+
+Rodada nas Minhas na v3.351. **O Marcelo** respondeu a apresentacao com o nome, "O capitao Martim deve
+ser do PL, certo?" e "Republicanos?". O dossie confirma Republicanos. Eu sugeri terminar com "E de qual
+cidade voce e?" e ele cortou: "perguntar de qual cidade sem explicar o porque fica sem contexto". Saiu
+"Isso, o Capitao Martim e do Republicanos, que esta junto com o PL na mesma frente, apoiando o Zucco.
+E, para eu salvar seu contato, de qual cidade voce e?". Hoje `falhasDeAcolhimento` pede reescrita
+quando o rascunho pede a cidade sem dizer para que. Na rodada: a Elaine ("Boa tarde, tudo bem?") recebeu
+o rascunho da IA; Solange (cidade confirmada pela IA) recebeu o agradecimento; Nara e Claudio Stefanello
+a do momento; Beatriz Silveira, Pedro Hegler (assessor) e Adeli concluidos sem envio. Prova: 4
+assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes
+3.335 a 3.355; recarregar a extensao (a aba roda a 3.351).
+
+## 2026-11-23 - v3.354.0 - HISTORICO - "Deus" solto nao e bencao a retribuir
 
 Rodada nas Minhas na v3.351. **A Beatriz Maria** (ja respondida duas vezes hoje) escreveu sobre a
 mobilizacao da igreja, "com nosso Deus a frente, juntos sempre seremos mais fortes"; a IA falhou duas

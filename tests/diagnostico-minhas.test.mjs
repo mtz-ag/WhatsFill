@@ -713,6 +713,16 @@ grupo('"Deus" solto nao e bencao a retribuir (a Beatriz Maria, 23/11)');
   check(tom.contextoCortesia([{ de: 'ela', texto: 'Que Deus proteja voce e sua familia' }]).bencao, '"Deus proteja" tambem');
 }
 
+grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');
+{
+  const ia = await lib('ia.js');
+  const f = (t) => ia.falhasDeAcolhimento(t).some(x => /para quê/.test(x));
+  check(f('Isso, ele é do Republicanos. E de qual cidade você é?'), 'cidade sem o porque pede reescrita');
+  check(!f('Isso, ele é do Republicanos. E, para eu salvar seu contato, de qual cidade você é?'), 'com o porque passa');
+  check(!f('Para eu salvar seu contato e melhorar o atendimento, me diga, por favor, de qual cidade você é.'), 'o pedido padrao da IA passa');
+  check(!f('Boa tarde! Que bom ter você aqui.'), 'sem pedir cidade, nada');
+}
+
 grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');

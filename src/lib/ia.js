@@ -3106,6 +3106,11 @@ export function falhasDeAcolhimento(texto) {
   const semSaudacao = t.replace(/^\s*(ola|oi|bom dia|boa tarde|boa noite)[!,.\s]*/, '');
   // O Cláudio e a Beatriz (23/11): "Posso ter mais informações sobre isso?" recebeu "Claro. Sobre qual
   // assunto...", e ele trocou as duas vezes por "Que bom ter você aqui."
+  // O Marcelo (23/11): "perguntar de qual cidade sem explicar o porquê fica sem contexto".
+  if (/(de\s+)?qual\s+(e\s+a\s+sua\s+)?cidade|de\s+onde\s+voce\s+e\b|onde\s+voce\s+mora/.test(t) &&
+      !/(salvar|cadastr|registr|anotar|guardar)\w*\s+(o\s+)?(seu\s+)?(contato|cadastro|dados)|para\s+(eu\s+)?(te\s+)?(atender|salvar|cadastrar)/.test(t)) {
+    falhas.push('ao pedir a cidade, diga para quê ("para eu salvar seu contato, de qual cidade você é?")');
+  }
   if (/^\s*claro\s*[.!,]/.test(semSaudacao)) {
     falhas.push('não abra com "Claro.": acolha quem chegou ("Que bom ter você aqui.") e siga');
   }
