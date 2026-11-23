@@ -623,6 +623,12 @@ grupo('retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao ped
   const lucia = 'Bom dia! Sua admiração por ele é muito clara, e eu respeito esse sentimento. Que a verdade prevaleça e que o Brasil encontre dias melhores.';
   check(ia.falhasDeAcolhimento(lucia).some(f => /de fora/.test(f)), 'comentar o sentimento dela de fora pede reescrita (a Lucia)');
   check(!ia.falhasDeAcolhimento('Bom dia! É muito triste mesmo ver tanta injustiça com ele. Que Deus proteja o nosso presidente e a família dele.').some(f => /de fora/.test(f)), 'o texto que ele aprovou passa');
+  // A Simone (23/11): agradeceu o trabalho, nao abencoou.
+  const tomS = await lib('tom-cortesia.js');
+  const ctxS = tomS.contextoCortesia([{ de: 'nos', texto: 'Oi' }, { de: 'ela', texto: 'Uma boa noite e bom descanso e gratidao por tudo que tu e tua equipe estao fazendo' }]);
+  const aprovado = 'Bom dia! Muito obrigado pelas palavras, elas dão força para continuar o trabalho.';
+  check(tomS.falhasTomCortesia(aprovado, ctxS).length === 0, `"obrigado pelas palavras" passa sem a palavra carinho: ${tomS.falhasTomCortesia(aprovado, ctxS)}`);
+  check(tomS.falhasTomCortesia('Bom dia! Que Deus abençoe você também. Agradeço de coração pelo carinho.', ctxS).includes('não retribua bênção que ela não deu'), 'retribuir bencao que ela nao deu pede reescrita');
 }
 
 grupo('parabens tem de dizer pelo que e (o Pedro, 23/11)');

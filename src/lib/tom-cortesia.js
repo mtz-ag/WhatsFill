@@ -45,7 +45,11 @@ export function falhasTomCortesia(texto, contexto) {
   if (TEMA.test(t)) falhas.push('retomou tema incidental da cortesia');
   if (/\?/.test(t)) falhas.push('não faça pergunta na cortesia');
   if (contarFrases(texto) > 3) falhas.push('máximo de 3 frases');
-  if (!/\b(?:obrigado|agradeco)\b/.test(t) || !/\bcarinho\b/.test(t)) falhas.push('agradeça o carinho em primeira pessoa');
+  // "carinho" era obrigatório e virou o mesmo "obrigado pelo carinho" em toda resposta (a Simone,
+  // 23/11/2026: ele aprovou "Muito obrigado pelas palavras..."). Agradecer basta; o objeto varia.
+  if (!/\b(?:obrigado|obrigada|agradeco|grato|grata)\b/.test(t)) falhas.push('agradeça em primeira pessoa');
+  // Retribuir ("você também") só o que ela desejou: a Simone agradeceu, não abençoou.
+  if (!contexto.bencao && /\b(?:abencoe|abencoad[ao])\b.{0,40}\btambem\b/.test(t)) falhas.push('não retribua bênção que ela não deu');
   // "Abençoada segunda-feira para você também" também retribui (o Kayan, 23/11/2026: a IA reprovou
   // duas vezes, e esse foi o texto que ele aprovou).
   if (contexto.bencao && !/\b(?:deus.{0,30}abencoe|abencoe.{0,30}deus|abencoad[ao]s?\b.{0,40}\b(?:para|pra)\s+(?:voce|vc|ti|o\s+senhor|a\s+senhora))\b/.test(t)) falhas.push('retribua a bênção');

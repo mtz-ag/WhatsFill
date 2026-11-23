@@ -1,4 +1,14 @@
-## 2026-11-23 - v3.347.0 - ESTADO DE AGORA - nao comentar o sentimento dela de fora
+## 2026-11-23 - v3.348.0 - ESTADO DE AGORA - cortesia nao exige "carinho" nem retribui bencao que nao veio
+
+Mesma rodada. **A Simone** agradeceu o trabalho pelo povo gaucho; o rascunho saiu "Que Deus abencoe voce
+tambem. Agradeco de coracao pelo carinho" — retribuindo uma bencao que ela nao deu. Ele aprovou "Muito
+obrigado pelas palavras, elas dao forca para continuar o trabalho...", que `falhasTomCortesia` reprovaria
+por nao ter a palavra "carinho" — o mesmo "obrigado pelo carinho" forcado em toda resposta, como o abraco.
+Hoje agradecer basta (o objeto varia), e "abencoe... voce tambem" sem bencao dela pede reescrita.
+Prova: 2 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das
+versoes 3.335 a 3.348; o Rogerio Senna, o Nilson e a Suely para ele; a rodada parou na Simone.
+
+## 2026-11-23 - v3.347.0 - HISTORICO - nao comentar o sentimento dela de fora
 
 Mesma rodada. **A Lucia** (apoiadora) mandou audios lamentando a injustica com o Bolsonaro; o rascunho
 saiu "Sua admiracao por ele e muito clara, e eu respeito esse sentimento" — de fora, como quem nao esta
