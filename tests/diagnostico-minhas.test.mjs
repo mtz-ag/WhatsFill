@@ -695,6 +695,15 @@ grupo('quem chega pedindo informacoes nao recebe "Claro." (Claudio e Beatriz, 23
   check(!ia.falhasDeAcolhimento('Boa tarde! Claramente o tema é importante.').some(f => /Claro/.test(f)), '"Claramente" nao e "Claro."');
 }
 
+grupo('"presidente do PL Restinga Seca" diz a cidade (a Carmen, 23/11)');
+{
+  const ex = await lib('extract.js');
+  const r = await ex.extract(['Olá! Posso ter mais informações sobre isso?', 'Maria Teste presidente do PL Restinga Seca']);
+  check(/restinga s[eê]ca/i.test(r.cidade?.value || ''), `a cidade sai da frase do cargo: ${JSON.stringify(r.cidade)}`);
+  const pl = await ex.extract(['O PL do aborto precisa ser barrado em Brasilia']);
+  check(!/aborto/i.test(pl.cidade?.value || ''), 'projeto de lei continua fora');
+}
+
 grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');

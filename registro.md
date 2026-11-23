@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.352.0 - ESTADO DE AGORA - quem chega pedindo informacoes nao recebe "Claro."
+## 2026-11-23 - v3.353.0 - ESTADO DE AGORA - "presidente do PL Restinga Seca" diz a cidade
+
+Rodada pelos Novos na v3.351. **A Carmen** escreveu "presidente do PL Restinga Seca", e o rascunho
+perguntou de qual cidade ela era: a pista do partido (12/11) exigia preposicao antes da cidade. Hoje
+"presidente do <partido> <cidade>" e pista so EXATA (o cargo e o que a torna pista; "o PL do aborto"
+continua fora). Ele aprovou "Boa tarde! Que bom ter voce aqui, e um abraco a todo o PL de Restinga
+Seca. Sobre qual assunto voce quer saber mais?". O Ivo de Oliveira Flores (ja atendido antes) recebeu
+a do momento pelo limite. Prova: 2 assercoes em `diagnostico-minhas.test.mjs`; sem a pista nova cai 1.
+**Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.353; para ele responder: Lucas,
+Patricia, Gilberto, a opiniao sobre prevencao, o pedido de informacoes e a Andreia.
+
+## 2026-11-23 - v3.352.0 - HISTORICO - quem chega pedindo informacoes nao recebe "Claro."
 
 Rodada pelos Novos na v3.351. **A Beatriz** (nova) so mandou "Ola! Posso ter mais informacoes sobre
 isso?" (o texto do botao do anuncio), como o Claudio na v3.349; os dois rascunhos abriram com "Claro.

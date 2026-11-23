@@ -643,7 +643,14 @@ const SIGLAS_DE_CIDADE = { rg: 'rio grande' };
  */
 const PISTA_DO_PARTIDO =
   /\b(republicanos|pl|pp|mdb|psdb|podemos|uni[ãa]o brasil|pdt|ptb|psd|psb|solidariedade|avante|cidadania|patriota|diret[óo]rio(?:\s+municipal)?(?:\s+d[oa])?)\s+(de|do|da)\s+/gi;
-const PISTAS_SO_EXATAS = new Set([PISTA_DO_PARTIDO]);
+/**
+ * **"Presidente do PL Restinga Seca"** (a Carmen, 23/11/2026): sem preposição antes da cidade, e o
+ * rascunho perguntou de qual cidade ela é. O cargo no diretório é o que a torna pista — por isso exige
+ * "presidente" antes do partido, e continua só EXATA.
+ */
+const PISTA_DO_PRESIDENTE_DO_PARTIDO =
+  /\bpresident[ea]\s+(?:d[oa]\s+)?(republicanos|pl|pp|mdb|psdb|podemos|uni[ãa]o brasil|pdt|ptb|psd|psb|solidariedade|avante|cidadania|patriota)\s+(?:(?:de|do|da|em)\s+)?/gi;
+const PISTAS_SO_EXATAS = new Set([PISTA_DO_PARTIDO, PISTA_DO_PRESIDENTE_DO_PARTIDO]);
 
 const PISTAS_DE_CIDADE = [
   /\bmoro\s+(em|no|na|nos|nas)\s+/gi,
@@ -675,6 +682,7 @@ const PISTAS_DE_CIDADE = [
   /\bem\s+/gi, // "material impresso em Pelotas" — preposição de lugar, e a mais comum
   /\/\s*/g, // a resposta ao formulário: "Maria / Santo Ângelo"
   PISTA_DO_PARTIDO,
+  PISTA_DO_PRESIDENTE_DO_PARTIDO,
 ];
 
 /**
