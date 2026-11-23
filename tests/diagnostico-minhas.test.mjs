@@ -704,6 +704,15 @@ grupo('"presidente do PL Restinga Seca" diz a cidade (a Carmen, 23/11)');
   check(!/aborto/i.test(pl.cidade?.value || ''), 'projeto de lei continua fora');
 }
 
+grupo('"Deus" solto nao e bencao a retribuir (a Beatriz Maria, 23/11)');
+{
+  const tom = await lib('tom-cortesia.js');
+  const solto = tom.contextoCortesia([{ de: 'nos', texto: 'Oi' }, { de: 'ela', texto: 'onde tiver alguem em dificuldade la estaremos nos, com nosso Deus a frente, juntos seremos mais fortes, obrigada' }]);
+  check(!solto.bencao, '"com nosso Deus a frente" nao exige retribuir bencao');
+  check(tom.contextoCortesia([{ de: 'ela', texto: 'Deus te abencoe, obrigada' }]).bencao, '"Deus te abencoe" continua sendo bencao');
+  check(tom.contextoCortesia([{ de: 'ela', texto: 'Que Deus proteja voce e sua familia' }]).bencao, '"Deus proteja" tambem');
+}
+
 grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');

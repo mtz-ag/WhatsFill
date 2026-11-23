@@ -1,4 +1,16 @@
-## 2026-11-23 - v3.353.0 - ESTADO DE AGORA - "presidente do PL Restinga Seca" diz a cidade
+## 2026-11-23 - v3.354.0 - ESTADO DE AGORA - "Deus" solto nao e bencao a retribuir
+
+Rodada nas Minhas na v3.351. **A Beatriz Maria** (ja respondida duas vezes hoje) escreveu sobre a
+mobilizacao da igreja, "com nosso Deus a frente, juntos sempre seremos mais fortes"; a IA falhou duas
+vezes em "retribua a bencao", porque `contextoCortesia` marcava bencao por qualquer "Deus" no texto. Ele
+aprovou "Que bonito o trabalho da igreja! Juntos somos mais fortes mesmo." — sem bencao nenhuma. Hoje
+bencao e abencoar ou desejar Deus a alguem ("Deus te abencoe", "Deus proteja"). A Ilva se despediu e
+foi concluida sem envio. Prova: 3 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao
+vivo.** Pendente: o push das versoes 3.335 a 3.354; recarregar a extensao (a aba roda a 3.351); para
+ele responder: Lucas, Patricia, Gilberto, a opiniao sobre prevencao, o pedido de informacoes, a Andreia
+e o Jose Carlos (convite para o evento de Canoas).
+
+## 2026-11-23 - v3.353.0 - HISTORICO - "presidente do PL Restinga Seca" diz a cidade
 
 Rodada pelos Novos na v3.351. **A Carmen** escreveu "presidente do PL Restinga Seca", e o rascunho
 perguntou de qual cidade ela era: a pista do partido (12/11) exigia preposicao antes da cidade. Hoje

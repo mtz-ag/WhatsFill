@@ -29,7 +29,10 @@ export function contextoCortesia(mensagens = []) {
   const carinho = /\b(?:abenco\w*|deus|bencaos?|carinho|te desejo|ti deseja|tudo de bom|bom dia|boa tarde|boa noite|obrigad[oa]|agradeco|gratidao)\b/.test(t);
   // Relato concreto não vira cortesia só por começar com bom dia.
   const relato = /\b(?:morreu|morreram|morte|acidente|tragedia|caiu|invadiu|alagou|desabou|sem luz|sem agua)\b/.test(t);
-  return { ativo: carinho && !demanda && !relato, demanda, texto, bencao: /\b(?:abenco\w*|deus|bencaos?)\b/.test(t) };
+  // "Deus" solto não é bênção (a Beatriz Maria, 23/11/2026: "com nosso Deus à frente" fez a IA reprovar
+  // duas vezes por não "retribuir a bênção"). Bênção é abençoar, ou Deus desejado a alguém.
+  const bencao = /\b(?:abenco\w*|bencaos?)\b/.test(t) || /\bdeus\s+(?:te|lhe|vos|o|a|os|as|nos)?\s*(?:abencoe|proteja|guarde|ilumine|ajude)\b/.test(t);
+  return { ativo: carinho && !demanda && !relato, demanda, texto, bencao };
 }
 
 export const TOM_CORTESIA = 'CORTESIA AFETUOSA: a intenção desta rajada é saudação, bênção ou carinho, mesmo com tema público citado de passagem. Responda na primeira pessoa do candidato: retribua a bênção e agradeça o carinho; o abraço no fim é opcional, e não se repete se a nossa última já fechou com ele. No máximo 3 frases, sem pergunta. Não comente nem parafraseie temas incidentais (clima, soluções, estado, governo, enchente). Não use o nome do contato, equipe, urgência/prioridade, notas internas ou promessa de levar ao deputado. Saudação somente pelo horário real. Nunca devolva beijo, bjs ou beijão. Perguntas e pedidos reais devem receber resposta ao conteúdo, não este encerramento.';
