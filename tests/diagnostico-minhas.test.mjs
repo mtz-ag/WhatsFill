@@ -642,4 +642,15 @@ grupo('"igualmente" nao vira palpite de cidade (a Maria Ivone, 23/11)');
   check(!r.cidade, 'a resposta "Igualmente" nao gera cidade');
 }
 
+grupo('gesto solidario contado nao recebe a mensagem do momento (a Suely, 23/11)');
+{
+  const nossa = '2026-11-21T15:26:00-03:00';
+  const ela = (texto) => ({ de: 'ela', tipo: 'TEXT', texto, at: '2026-11-21T16:03:00-03:00' });
+  check(!!cortesia.contouGestoSolidario([ela('Passamos nos BOMBEIROS da nossa cidade e fizemos a nossa doaçao. É o mínimo, diante de tanto prejuízo')], nossa), 'doacao aos bombeiros e gesto');
+  check(!!cortesia.contouGestoSolidario([ela('Levamos mantimentos para os desabrigados hoje')], nossa), 'levar mantimentos e gesto');
+  check(!cortesia.contouGestoSolidario([ela('Precisamos de doacao para a nossa familia')], nossa), 'pedir doacao nao e gesto');
+  check(!cortesia.contouGestoSolidario([ela('Os bombeiros fizeram um otimo trabalho')], nossa), 'elogiar os bombeiros nao e gesto dela');
+  check(sug.abstencaoNaoCabe({ contouGestoSolidario: true }) !== null, 'a abstencao da IA nao cabe');
+}
+
 fim();

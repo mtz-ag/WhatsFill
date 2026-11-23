@@ -46,7 +46,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia, contouGestoSolidario } from '../lib/cortesia.js';
 import { SENTINEL } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -11716,6 +11716,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
          */
         reacaoDeTristeza: reacaoDeTristeza(state.entrantes, state.nossaUltimaAt),
         soAgradeceOuElogia: soAgradeceOuElogia(state.entrantes, state.nossaUltimaAt),
+        contouGestoSolidario: contouGestoSolidario(state.entrantes, state.nossaUltimaAt),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),
@@ -17194,7 +17195,8 @@ const CONTATOS_POR_PAGINA = 200;
          */
         cidadeNoTexto: state.cidadeInformada?.confidence === 'exata',
         /** Agradecimento ou elogio (05/11/2026): a IA escreve um obrigado curto em vez de abster-se. */
-        soAgradeceOuElogia: !!state.sinais?.soAgradeceOuElogia,
+        // Gesto solidário contado (a Suely, 23/11): a IA escreve o obrigado, como no elogio.
+        soAgradeceOuElogia: !!(state.sinais?.soAgradeceOuElogia || state.sinais?.contouGestoSolidario),
         /**
          * **A chapa, para a trava de cargo e número** — print da Nara (08/09/2026).
          *

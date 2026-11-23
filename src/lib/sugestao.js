@@ -214,6 +214,8 @@ export const rascunhoSemCadastro = (c) =>
 export function abstencaoNaoCabe(c) {
   if (!c) return null;
   if (c.soAgradeceOuElogia) return { motivo: 'ela só agradeceu ou elogiou — a mensagem do dia aqui responde ao lado' };
+  // A Suely (23/11/2026): contou que doou aos bombeiros; o texto do dia em cima disso responde ao lado.
+  if (c.contouGestoSolidario) return { motivo: 'ela contou um gesto de solidariedade — aqui cabe agradecer, não o texto do dia' };
   if (c.reacaoDeTristeza) return { motivo: 'ela respondeu com um emoji de tristeza — aqui cabe acolher, não o texto do dia' };
   if (c.cortesiaDeFechamento) return { motivo: 'ela só reagiu depois da nossa resposta — o fluxo conclui sem enviar' };
   return null;

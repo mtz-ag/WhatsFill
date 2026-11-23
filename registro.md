@@ -1,4 +1,17 @@
-## 2026-11-23 - v3.343.0 - ESTADO DE AGORA - "igualmente" nao vira palpite de cidade
+## 2026-11-23 - v3.344.0 - ESTADO DE AGORA - gesto solidario contado pede obrigado, nao o texto do dia
+
+Mesma rodada. **A Suely** respondeu a nossa mensagem sobre Tupancireta: "Passamos nos BOMBEIROS de
+Santo Antonio da Patrulha e fizemos a nossa doacao. E o minimo...". A IA disse que nao havia o que
+responder, e a regra de 24/09 mandou a mensagem do momento e concluiu — ja saiu, e agradecer o gesto
+dela fica com ele. Hoje `cortesia.contouGestoSolidario` (primeira pessoa + doacao, mantimento, agua,
+bombeiros, abrigo, Defesa Civil) barra a abstencao em `sugestao.abstencaoNaoCabe` e pede a IA o
+obrigado, como no elogio. **O Ivo** pediu para "reverter" os impostos da escritura de 24 hectares; a IA
+falhou na reescrita e ele aprovou a minha resposta, sem prometer nada. A extensao foi recarregada no meio
+da rodada e a aba ficou orfa (dei F5). Prova: 5 assercoes em `diagnostico-minhas.test.mjs`. **Nao
+conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.344; o Rogerio Senna, o Nilson e a Suely
+para ele.
+
+## 2026-11-23 - v3.343.0 - HISTORICO - "igualmente" nao vira palpite de cidade
 
 Mesma rodada. A Maria Ivone respondeu "igualmente", o modo generoso do parser o ofereceu como
 cidade, e a IA gastou uma conferencia paga para recusar. `cities.naoPodeSerNomeDeLugar` ganhou

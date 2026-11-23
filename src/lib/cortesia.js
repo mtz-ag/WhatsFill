@@ -929,6 +929,23 @@ const SUCESSO_DE_EXITO =
 const PEDIDO_NO_AGRADECIMENTO =
   /(^|[^\p{L}])(preciso|precisava|quero|queria|gostaria|pode\s+me|podem\s+me|me\s+manda|me\s+mande|me\s+ajud\p{L}*|me\s+liga|cad[êe]|quando|como\s+fa[çc]o|onde)([^\p{L}]|$)/iu;
 
+/**
+ * **Ela contou um gesto de solidariedade: doou, ajudou, levou mantimentos** (a Suely, 23/11/2026):
+ * *"Passamos nos BOMBEIROS de Santo Antônio da Patrulha e fizemos a nossa doação. É o mínimo, diante
+ * de tanto prejuízo..."* — resposta à nossa mensagem sobre o temporal. A IA disse que não havia o que
+ * responder e saiu a mensagem do momento por cima. Gesto contado pede obrigado, nunca o texto do dia.
+ *
+ * Primeira pessoa (fiz, fizemos, doei, levamos...) + o objeto do gesto (doação, mantimento, roupa,
+ * água, bombeiros, abrigo, Defesa Civil). Nunca envia nem conclui: só impede a abstenção.
+ */
+const GESTO_SOLIDARIO = /(^|[^\p{L}])(fiz|fizemos|doei|doamos|ajudei|ajudamos|levei|levamos|mandei|mandamos|entreguei|entregamos|contribu[íi]|contribu[íi]mos|arrecadei|arrecadamos|passamos|passei)([^\p{L}]|$)[^.!?\n]{0,80}(doa[çc][ãa]o|doa[çc][õo]es|donativos?|mantimentos?|alimentos?|cestas?|roupas?|cobertores?|[áa]gua|bombeiros?|defesa\s+civil|abrigos?|desabrigad\p{L}*)/iu;
+
+export function contouGestoSolidario(entrantes, nossaUltimaAt) {
+  const dela = desdeNossaUltima(entrantes, nossaUltimaAt)
+    .filter((m) => m?.de !== 'nos' && !m?.sistema && !m?.geradaPeloAnuncio && !ehRepasse(m));
+  return dela.some((m) => GESTO_SOLIDARIO.test(String(m?.texto || ''))) || null;
+}
+
 export function soAgradeceOuElogia(entrantes, nossaUltimaAt) {
   /**
    * **O `de !== 'nos'` não é zelo: sem ele a nossa própria mensagem conta.** Peguei isto medindo —
