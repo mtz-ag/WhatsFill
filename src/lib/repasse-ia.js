@@ -30,7 +30,11 @@ export function contextoDeAutoria(mensagens = []) {
   const repasses = pendentes.filter(repasseParaIA);
   const proprias = pendentes.filter(m => !repasseParaIA(m) && !m.semConteudo && String(m.texto || '').trim());
   const texto = proprias.map(m => m.texto).join('\n');
-  const t = normalizar(texto);
+  // Chamar o candidato de "deputado" é vocativo, não assunto político (o Vilmar, 23/11: "meu amigo
+  // deputado CAPITÃO Martins deputado Estadual" num agradecimento virou "falta posição").
+  const t = normalizar(texto)
+    .replace(/\b(?:(?:meu|nosso|querido|caro)\s+)?(?:amigo\s+)?deputad[oa]\s+(?:estadual\s+)?(?=capit|martin)/g, ' ')
+    .replace(/\b(capit\w*\s+martin\w*)\s+deputad[oa](?:\s+estadual)?\b/g, '$1');
   const politico = /\b(?:voto aberto|transparencia|senado|camara|direita|esquerda|deputad\w*|politic\w*|governo)\b/.test(t);
   const pergunta = /\?|\b(?:quero saber|gostaria|queria saber|me explique|me diga|qual|quais)\b/.test(t);
   return { proprias, repasses, texto, politico: politico && !pergunta,

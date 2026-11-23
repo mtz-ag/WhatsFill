@@ -1,4 +1,18 @@
-## 2026-11-23 - v3.336.0 - ESTADO DE AGORA - boletim de comentarista e repasse, e "estamos atentos" so em denuncia local
+## 2026-11-23 - v3.337.0 - ESTADO DE AGORA - pergunta dentro de video repassado nao segura a fala antiga
+
+Rodada em Minhas na v3.336 (a aba esteve minimizada e o primeiro comeco deu "Failed to fetch";
+recarreguei e recomecei). Tania e Joseh receberam a mensagem do momento sozinhos, pelas regras dele.
+**O Vilmar** agradeceu e parabenizou pela secretaria em 21/11 (sem pergunta) e depois so mandou
+videos religiosos repassados, inclusive hoje — pela regra da fala antiga, mensagem do momento. Foi
+para a IA porque `antigaPedeResposta` juntava tambem a TRANSCRICAO dos videos, e um deles tinha "?".
+Hoje so conta o que ela escreveu (o "????" dela continua segurando, como no caso de 21/11). A IA ainda
+falhou duas vezes ("falta posicao em primeira pessoa"): `contextoDeAutoria` lia "meu amigo deputado
+Capitao Martins" como texto politico; o vocativo ao candidato agora sai antes da conta. Ele escolheu
+a mensagem do momento para o Vilmar e ela saiu. Prova: 4 assercoes novas em
+`diagnostico-minhas.test.mjs`; desfazendo cada conserto cai a sua. **Nao conferido ao vivo.**
+Pendente: o push das versoes 3.335, 3.336 e 3.337; o Rogerio Senna precisa ser reaberto por ele.
+
+## 2026-11-23 - v3.336.0 - HISTORICO - boletim de comentarista e repasse, e "estamos atentos" so em denuncia local
 
 Rodada em Minhas na v3.335. **A idolesia** (apoiadora, so links e grito de apoio desde a nossa
 ultima) mandou hoje um audio que e o boletim diario de um comentarista, repassado ("no nosso

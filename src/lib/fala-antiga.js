@@ -15,11 +15,18 @@ import { ehPostEncaminhado } from './post-encaminhado.js';
 /** Post repassado que não tem as duas marcas de `ehPostEncaminhado`: longo e com hashtag. */
 const HASHTAG = /(^|\s)#\p{L}{3,}/u;
 
+/** Material de outra pessoa: o texto (ou a transcrição) dele não é fala dela. */
+function ehMaterialRepassado(m) {
+  if (!m) return false;
+  const texto = String(m.texto || '');
+  if (ehRepasse(m) || repasseParaIA(m) || ehPostEncaminhado(m)) return true;
+  return texto.trim().length >= 200 && HASHTAG.test(texto);
+}
+
 function ehGestoOuRepasse(m) {
   if (!m) return true;
   const texto = String(m.texto || '');
-  if (ehSoReacao(m) || ehRepasse(m) || repasseParaIA(m) || ehPostEncaminhado(m)) return true;
-  if (texto.trim().length >= 200 && HASHTAG.test(texto)) return true;
+  if (ehSoReacao(m) || ehMaterialRepassado(m)) return true;
   // Sem nenhuma letra (só símbolo, emoji ou caractere quebrado): não há fala dela ali.
   return !/\p{L}/u.test(texto) && String(m.tipo || 'TEXT').toUpperCase() === 'TEXT';
 }
@@ -34,7 +41,9 @@ export function hojeSoGestoSobreFalaAntiga(entrantes, nossaUltimaAt, agora = new
   const deHoje = pendentes.filter(ehDeHoje);
   const antigasProprias = pendentes.filter(m => !ehDeHoje(m) && !ehGestoOuRepasse(m));
   if (!deHoje.length || !antigasProprias.length) return false;
-  if (antigaPedeResposta(pendentes.filter(m => !ehDeHoje(m)))) return false;
+  // A pergunta tem de ser DELA: a transcrição de um vídeo repassado com "?" dentro (o Vilmar,
+  // 23/11) segurava o caso com a IA. "????" sozinho continua contando (o Rogerio, 21/11).
+  if (antigaPedeResposta(pendentes.filter(m => !ehDeHoje(m) && !ehMaterialRepassado(m)))) return false;
   return deHoje.every(ehGestoOuRepasse);
 }
 

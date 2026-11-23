@@ -539,4 +539,25 @@ grupo('boletim assinado é repasse, não pergunta do contato nem denúncia local
   } finally { chrome.runtime = runtime; }
 }
 
+grupo('video repassado com "?" nao segura a fala antiga, e chamar de deputado nao e politica (o Vilmar, 23/11)');
+{
+  const { hojeSoGestoSobreFalaAntiga } = await lib('fala-antiga.js');
+  const repasse = await lib('repasse-ia.js');
+  const agora = new Date('2026-11-23T09:50:00-03:00');
+  const nossa = '2026-11-21T12:50:00-03:00';
+  const lista = [
+    { de: 'ela', tipo: 'TEXT', at: '2026-11-21T13:43:00-03:00', texto: 'Obrigado igualmente amem meu amigo deputado Capitao Martins deputado Estadual parabens pela secretaria, voce merece, estamos juntos' },
+    { de: 'ela', tipo: 'TEXT', at: '2026-11-21T15:49:00-03:00', texto: '🙏' },
+    { de: 'ela', tipo: 'VIDEO', transcrito: true, at: '2026-11-22T10:46:00-03:00', texto: 'Voce ja parou para pensar no que Deus preparou para a sua vida? Ele firma os teus pes.' },
+    { de: 'ela', tipo: 'VIDEO', transcrito: true, at: '2026-11-23T09:48:00-03:00', texto: 'Bom dia, que Deus abencoe a sua segunda-feira.' },
+  ];
+  check(hojeSoGestoSobreFalaAntiga(lista, nossa, agora) === true, 'a "?" de dentro do video repassado nao e pergunta dela');
+  const pergunta = [...lista.slice(0, 2), { de: 'ela', tipo: 'TEXT', at: '2026-11-22T10:00:00-03:00', texto: '????' }, lista[3]];
+  check(hojeSoGestoSobreFalaAntiga(pergunta, nossa, agora) === false, '"????" escrito por ela continua segurando o caso');
+  const vocativo = repasse.contextoDeAutoria([{ de: 'nos', texto: 'Boa tarde!' }, lista[0]]);
+  check(vocativo.politico === false, 'agradecimento que chama o candidato de deputado nao e compartilhamento politico');
+  const politico = repasse.contextoDeAutoria([{ de: 'nos', texto: 'Boa tarde!' }, { de: 'ela', texto: 'Os deputados precisam aprovar o voto aberto no Senado' }]);
+  check(politico.politico === true, 'falar dos deputados continua sendo politico');
+}
+
 fim();
