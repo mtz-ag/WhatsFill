@@ -687,6 +687,14 @@ grupo('para quem nunca recebeu resposta, a IA le a fala inteira (o Gilberto, 23/
   check(!/limitarContextoIA\([^)]*state\.auto\.cfg\.horasContextoPerdido\)/.test(painel), 'nenhum ponto da IA usa o corte cru');
 }
 
+grupo('quem chega pedindo informacoes nao recebe "Claro." (Claudio e Beatriz, 23/11)');
+{
+  const ia = await lib('ia.js');
+  check(ia.falhasDeAcolhimento('Boa tarde! Claro. Sobre qual assunto você gostaria de saber mais?').some(f => /Claro/.test(f)), '"Claro." depois da saudacao pede reescrita');
+  check(!ia.falhasDeAcolhimento('Boa tarde! Que bom ter você aqui. Sobre qual assunto você quer saber mais?').some(f => /Claro/.test(f)), 'o texto que ele aprovou passa');
+  check(!ia.falhasDeAcolhimento('Boa tarde! Claramente o tema é importante.').some(f => /Claro/.test(f)), '"Claramente" nao e "Claro."');
+}
+
 grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');

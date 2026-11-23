@@ -3104,6 +3104,11 @@ export function falhasDeAcolhimento(texto) {
     falhas.push('não fale em "revolta" (nem "entendo sua revolta", nem "dá revolta"): mostre solidariedade com o que aconteceu, sem rotular o que ela sente');
   }
   const semSaudacao = t.replace(/^\s*(ola|oi|bom dia|boa tarde|boa noite)[!,.\s]*/, '');
+  // O Cláudio e a Beatriz (23/11): "Posso ter mais informações sobre isso?" recebeu "Claro. Sobre qual
+  // assunto...", e ele trocou as duas vezes por "Que bom ter você aqui."
+  if (/^\s*claro\s*[.!,]/.test(semSaudacao)) {
+    falhas.push('não abra com "Claro.": acolha quem chegou ("Que bom ter você aqui.") e siga');
+  }
   if (/^\s*(eu\s+)?(entendi|entendo|compreendo|entendemos)\b/.test(semSaudacao)) {
     falhas.push('não abra com "entendo" ou "eu entendo": comece direto pelo que importa para ela');
   }

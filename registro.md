@@ -1,4 +1,14 @@
-## 2026-11-23 - v3.351.0 - ESTADO DE AGORA - para quem nunca recebeu resposta, a IA le a fala inteira
+## 2026-11-23 - v3.352.0 - ESTADO DE AGORA - quem chega pedindo informacoes nao recebe "Claro."
+
+Rodada pelos Novos na v3.351. **A Beatriz** (nova) so mandou "Ola! Posso ter mais informacoes sobre
+isso?" (o texto do botao do anuncio), como o Claudio na v3.349; os dois rascunhos abriram com "Claro.
+Sobre qual assunto..." e ele trocou as duas vezes por "Que bom ter voce aqui." Hoje "Claro." logo depois
+da saudacao pede reescrita em `falhasDeAcolhimento`. Prova: 3 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.352;
+para ele responder: Lucas, Patricia, Gilberto, a opiniao sobre prevencao, o pedido de informacoes e a
+Andreia.
+
+## 2026-11-23 - v3.351.0 - HISTORICO - para quem nunca recebeu resposta, a IA le a fala inteira
 
 Mesma rodada pelos Novos. **O Gilberto**, da Defesa Civil de Frederico Westphalen, ofereceu os seus seis
 anos de experiencia para ajudar Tupancireta ("em especial com documentacao, relatorios para incluir no
