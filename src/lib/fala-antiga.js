@@ -37,7 +37,8 @@ function ehGestoOuRepasse(m) {
  * do momento. Conta como gesto o texto que, tirando links, cumprimentos, bênçãos e palavras de
  * ligação, não deixa letra nenhuma — "Bom dia, isso não pode terminar em pizza" continua sendo fala.
  */
-const SAUDACAO_OU_BENCAO = /\b(?:bom\s+(?:dia|domingo|sabado|fim\s+de\s+semana)|boa\s+(?:tarde|noite|semana|sexta|segunda)|otima\s+(?:semana|segunda|sexta)|feliz\s+(?:domingo|segunda|semana)|(?:semana|dia|noite|tarde)\s+abencoad[ao]|na\s+paz\s+de\s+(?:jesus|deus|cristo)|deus\s+(?:te\s+|vos\s+|nos\s+)?abencoe\w*|fi(?:que|ca)\s+com\s+deus|amem|gratidao|abencoad[ao]s?)\b/g;
+// "-feira" faz parte do dia (a Iracema, 23/11: "Bom dia, boa segunda-feira!" sobrava "feira").
+const SAUDACAO_OU_BENCAO = /\b(?:bom\s+(?:dia|domingo|sabado|fim\s+de\s+semana)|(?:boa|otima|feliz|abencoad[ao])\s+(?:tarde|noite|semana|(?:segunda|terca|quarta|quinta|sexta)(?:[\s-]*feira)?)|feliz\s+domingo|(?:semana|dia|noite|tarde)\s+abencoad[ao]|na\s+paz\s+de\s+(?:jesus|deus|cristo)|deus\s+(?:te\s+|vos\s+|nos\s+)?abencoe\w*|fi(?:que|ca)\s+com\s+deus|amem|gratidao|abencoad[ao]s?)\b/g;
 const PALAVRAS_DE_LIGACAO = /\b(?:e|a|o|as|os|um|uma|na|no|de|da|do|com|para|pra|voce|vc|voces|todos|todas|muito|muita|que|tambem|sempre)\b/g;
 
 function soSaudacaoOuBencao(texto) {

@@ -588,6 +588,9 @@ grupo('hoje so link com "boa semana na paz de Jesus" sobre fala antiga: mensagem
   check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('https://x.com/a Bom dia, isso nao pode terminar em pizza')], nossa, agora) === false, 'cumprimento com opiniao continua sendo fala');
   check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('Bom dia, preciso falar com voces')], nossa, agora) === false, 'cumprimento com pedido continua sendo fala');
   check(hojeSoGestoSobreFalaAntiga([{ de: 'ela', tipo: 'TEXT', at: '2026-11-22T05:07:00-03:00', texto: 'Bom dia' }, hoje('https://x.com/a')], nossa, agora) === true, 'fala antiga so de cumprimento continua contando como antes');
+  // A Iracema (23/11): figura com "Bom dia, boa segunda-feira!".
+  check(hojeSoGestoSobreFalaAntiga([...antigas, { ...hoje('Bom dia, boa segunda-feira!'), tipo: 'IMAGE' }], nossa, agora) === true, 'boa segunda-feira (com -feira) e cumprimento');
+  check(hojeSoGestoSobreFalaAntiga([...antigas, hoje('Abencoada terca feira a todos')], nossa, agora) === true, 'abencoada terca feira e cumprimento');
 }
 
 grupo('pergunta retorica sobre terceiros nao segura a fala antiga; pergunta para nos segura (a Fatima, 23/11)');

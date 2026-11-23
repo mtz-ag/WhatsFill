@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.345.0 - ESTADO DE AGORA - o abraco no fim nao vai em toda mensagem
+## 2026-11-23 - v3.346.0 - ESTADO DE AGORA - "boa segunda-feira" e cumprimento inteiro
+
+Rodada em Minhas na v3.345. **A Iracema** respondeu em 21/11 a nossa sobre Tupancireta e hoje so
+mandou a figura "Bom dia, boa segunda-feira!". Foi para o rascunho de cortesia; ele escolheu a mensagem
+do momento. O cumprimento da v3.339 aceitava "boa segunda" mas deixava sobrar "-feira", que contava como
+fala. Hoje os dias da semana aceitam "-feira" e "abencoada terca feira" tambem e cumprimento. **O
+Valdoir** mandou um reels "para o senhor ver"; recebeu "Obrigado por mandar! Vou dar uma olhada no
+video." (o rascunho repetia o abraco da nossa ultima — coberto pela v3.345). Prova: 2 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.346;
+o Rogerio Senna, o Nilson e a Suely para ele.
+
+## 2026-11-23 - v3.345.0 - HISTORICO - o abraco no fim nao vai em toda mensagem
 
 Mesma rodada. Pedido dele: "botar em todas mensagens um grande abraco no final esta se tornando em
 repeticao de mensagens". O abraco era EXIGIDO: quatro conferencias de tom (cortesia, autoria/repasse,
