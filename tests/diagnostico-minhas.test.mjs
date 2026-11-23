@@ -680,6 +680,18 @@ grupo('novo que escreveu algo proprio sai do limite de horas (o Lucas e a Patric
   check(quem?.id === 'contexto-de-outro-dia', 'sem o sinal, a regra do limite continua decidindo');
 }
 
+grupo('abster-se com pergunta pendente pede reescrita (o Marcelo, 23/11)');
+{
+  const ia = await lib('ia.js');
+  const f = ia.falhasDeAbstencaoComPergunta;
+  const msgs = [{ de: 'ela', tipo: 'TEXT', texto: 'Olá! Posso ter mais informações sobre isso?' }, { de: 'ela', tipo: 'TEXT', texto: 'Quem é o Sr? Por favor.' }];
+  check(f({ texto: '', naoHaOQueResponder: true }, msgs).length > 0, 'pergunta pendente + abstencao pede reescrita');
+  check(f(JSON.stringify({ texto: '', naoHaOQueResponder: true }), msgs).length > 0, 'a decisao em texto (JSON) tambem');
+  check(f({ texto: 'Boa tarde!', naoHaOQueResponder: false }, msgs).length === 0, 'com texto, nada');
+  check(f({ texto: '', naoHaOQueResponder: true }, [{ de: 'ela', tipo: 'TEXT', texto: 'kkkk' }]).length === 0, 'sem pergunta, a abstencao vale');
+  check(f({ texto: '', naoHaOQueResponder: true }, [{ de: 'ela', texto: 'Quem é o Sr?' }, { de: 'nos', texto: 'Somos a equipe.' }, { de: 'ela', texto: 'ok' }]).length === 0, 'pergunta ja respondida nao conta');
+}
+
 grupo('o abraco no fim nao vai em toda mensagem (23/11)');
 {
   const ia = await lib('ia.js');

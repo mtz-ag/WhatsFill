@@ -1,4 +1,17 @@
-## 2026-11-23 - v3.349.0 - ESTADO DE AGORA - novo que escreveu algo proprio sai do limite de horas
+## 2026-11-23 - v3.350.0 - ESTADO DE AGORA - abster-se com pergunta pendente pede reescrita
+
+Rodada pelos Novos na v3.349. **O Marcelo** (novo) escreveu "Posso ter mais informacoes sobre isso?" e
+"Quem e o Sr? Por favor."; a IA marcou "nao ha o que responder" e deixou o texto em branco, e o caso foi
+para ele sem rascunho. Ele aprovou a minha: o Capitao Martim e deputado estadual, quem fala e a equipe,
+sobre o que quer saber, e o pedido de nome e cidade. Hoje `ia.falhasDeAbstencaoComPergunta` entra na
+conferencia do rascunho: abstencao com texto vazio e pergunta dela (com letra, fora de repasse) desde a
+nossa ultima fala pede UMA reescrita. A Elaine recebeu a mensagem do momento pelo limite (so gesto).
+**O "Comecar pelos Novos" abre uma confirmacao do navegador**, e com ela aberta a aba nao responde a
+extensao do Claude: quem aperta OK e ele. Prova: 5 assercoes em `diagnostico-minhas.test.mjs`. **Nao
+conferido ao vivo.** Pendente: o push das versoes 3.335 a 3.350; os quatro Novos da v3.349 (Lucas,
+Patricia, a opiniao sobre prevencao, o pedido de informacoes) para ele responder.
+
+## 2026-11-23 - v3.349.0 - HISTORICO - novo que escreveu algo proprio sai do limite de horas
 
 Primeira rodada pelos NOVOS, na v3.348. A regra do limite (`contexto-de-outro-dia`: passou de 16h desde
 a fala dela -> so a mensagem do momento) mandou a mensagem do momento a 11 contatos novos — a maioria so

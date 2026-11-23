@@ -3033,6 +3033,24 @@ export function falhasDeAbracoRepetido(texto, mensagens = []) {
   return ['a nossa última mensagem já fechou com abraço: termine de outro jeito, sem repetir o abraço'];
 }
 
+/**
+ * **Abster-se com pergunta pendente pede reescrita** (o Marcelo, 23/11/2026): *"Quem é o Sr? Por
+ * favor."* e a IA marcou "não há o que responder", com o texto em branco — o caso ia para ele sem
+ * rascunho nenhum. Pergunta dela (com letra, fora de repasse) desde a nossa última fala: responda.
+ */
+export function falhasDeAbstencaoComPergunta(decisao, mensagens = []) {
+  let d = decisao;
+  if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { return []; } }
+  if (!d || d.naoHaOQueResponder !== true || String(d.texto || '').trim()) return [];
+  const lista = mensagens.map(m => typeof m === 'string' ? { de: 'contato', texto: m } : m).filter(Boolean);
+  let corte = -1;
+  lista.forEach((m, i) => { if (m.de === 'nos') corte = i; });
+  const pergunta = lista.slice(corte + 1)
+    .filter(m => m.de !== 'nos' && !m.anuncio && !m.geradaPeloAnuncio && !repasseParaIA(m))
+    .some(m => { const t = String(m.texto || '').replace(/https?:\/\/\S+/g, ' '); return t.includes('?') && /\p{L}/u.test(t); });
+  return pergunta ? ['ela fez uma pergunta direta: responda a pergunta (não marque "não há o que responder")'] : [];
+}
+
 export function falhasDeParabensGenerico(texto, mensagens = []) {
   const t = semAcentoIA(String(texto || '')).toLowerCase();
   if (!/\bparabens\b/.test(t)) return [];
