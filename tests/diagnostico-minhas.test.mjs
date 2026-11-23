@@ -618,6 +618,11 @@ grupo('retribuir a bencao sem "Deus abencoe" passa, e resposta de reparticao ped
   const rep = 'Não sei exatamente a que situação você se refere. Me diga qual medida ou assunto você está mencionando, para eu entender melhor e responder com responsabilidade.';
   check(ia.falhasDeAcolhimento(rep).some(f => /reparti/.test(f)), 'resposta de reparticao pede reescrita');
   check(!ia.falhasDeAcolhimento('Estou acompanhando, sim! Me conta do que trata o video?').some(f => /reparti/.test(f)), 'pergunta leve passa');
+  const rep2 = 'Estou atento ao que vem sendo discutido, mas não quero falar sobre algo específico sem saber a que você se refere. Qual medida ou situação você quer comentar?';
+  check(ia.falhasDeAcolhimento(rep2).some(f => /reparti/.test(f)), 'a segunda redacao do Nilson tambem pede reescrita');
+  const lucia = 'Bom dia! Sua admiração por ele é muito clara, e eu respeito esse sentimento. Que a verdade prevaleça e que o Brasil encontre dias melhores.';
+  check(ia.falhasDeAcolhimento(lucia).some(f => /de fora/.test(f)), 'comentar o sentimento dela de fora pede reescrita (a Lucia)');
+  check(!ia.falhasDeAcolhimento('Bom dia! É muito triste mesmo ver tanta injustiça com ele. Que Deus proteja o nosso presidente e a família dele.').some(f => /de fora/.test(f)), 'o texto que ele aprovou passa');
 }
 
 grupo('parabens tem de dizer pelo que e (o Pedro, 23/11)');

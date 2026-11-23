@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.346.0 - ESTADO DE AGORA - "boa segunda-feira" e cumprimento inteiro
+## 2026-11-23 - v3.347.0 - ESTADO DE AGORA - nao comentar o sentimento dela de fora
+
+Mesma rodada. **A Lucia** (apoiadora) mandou audios lamentando a injustica com o Bolsonaro; o rascunho
+saiu "Sua admiracao por ele e muito clara, e eu respeito esse sentimento" — de fora, como quem nao esta
+do mesmo lado. Ele aprovou a minha: "E muito triste mesmo ver tanta injustica com ele. Que Deus proteja
+o nosso presidente e a familia dele." `falhasDeAcolhimento` pede reescrita para esse comentario de fora.
+**O Nilson** voltou com o rascunho em outra redacao ("sem saber a que voce se refere... qual medida ou
+situacao voce quer comentar?"), que escapou da conferencia da v3.341; ela foi alargada. Ele pulou o
+Nilson de novo. Prova: 3 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.**
+Pendente: o push das versoes 3.335 a 3.347; o Rogerio Senna, o Nilson e a Suely para ele.
+
+## 2026-11-23 - v3.346.0 - HISTORICO - "boa segunda-feira" e cumprimento inteiro
 
 Rodada em Minhas na v3.345. **A Iracema** respondeu em 21/11 a nossa sobre Tupancireta e hoje so
 mandou a figura "Bom dia, boa segunda-feira!". Foi para o rascunho de cortesia; ele escolheu a mensagem

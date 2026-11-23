@@ -3107,7 +3107,14 @@ export function falhasDeAcolhimento(texto) {
   }
   // O Nilson (23/11): "Não sei exatamente a que situação você se refere. Me diga qual medida ou
   // assunto... para eu entender melhor e responder com responsabilidade" — seco e de repartição.
-  if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+responsabilidade/.test(t)) {
+  // A Lucia (23/11): "Sua admiração por ele é muito clara, e eu respeito esse sentimento" — comenta o
+  // sentimento dela de fora, como quem não está do mesmo lado. Apoiadora pede que se sinta junto.
+  if (/(respeito|entendo|compreendo|acolho)\s+(esse|este|o\s+seu|seu)\s+sentimento|sua\s+(admiracao|indignacao|tristeza|preocupacao|revolta)\s+(por\s+\S+\s+)?(e|eh)\s+(muito\s+)?(clara|compreensivel|legitima|valida)/.test(t)) {
+    falhas.push('não comente o sentimento dela de fora ("respeito esse sentimento", "sua admiração é muito clara"): fale junto com ela, do mesmo lado');
+  }
+  // E o Nilson de novo, com outra redação: "não quero falar sobre algo específico sem saber a que você se
+  // refere. Qual medida ou situação você quer comentar?"
+  if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+responsabilidade|sem\s+saber\s+a\s+que\s+voce\s+se\s+refere|qual\s+(medida|situacao)\s+ou\s+\S+\s+voce\s+(quer|esta)/.test(t)) {
     falhas.push('não responda como repartição ("não sei exatamente a que você se refere", "responder com responsabilidade"): pergunte de forma leve do que se trata, como numa conversa');
   }
   if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t)) {
