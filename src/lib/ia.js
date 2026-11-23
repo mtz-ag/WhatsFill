@@ -3044,7 +3044,12 @@ export function falhasDeAcolhimento(texto) {
   if (/(o\s+mais\s+importante|o\s+importante)\s+(e|eh)\s+(manter|ter|respeitar|cultivar)\b/.test(t)) {
     falhas.push('não dê lição ("o mais importante é manter o respeito"): concorde com o sentido dela numa frase leve');
   }
-  if (/precisa(m)?\s+ser\s+tratad[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade)/.test(t)) {
+  // Correção de apoiador (o Peco, 21/11): "sem transformar uma religião inteira em ameaça",
+  // "sem generalizar". A regra 17 já proíbe; esta conferência pede a reescrita.
+  if (/(^|[^a-z])sem\s+(transformar|generalizar|demonizar|rotular)\b/.test(t)) {
+    falhas.push('não corrija quem está do nosso lado ("sem generalizar", "sem transformar... em ameaça"): agradeça e siga o que ela disse');
+  }
+  if (/precisa(m)?\s+ser\s+(tratad|debatid|discutid|conduzid|analisad)[oa]s?\s+com\s+(seriedade|responsabilidade|prioridade|cuidado|equilibrio)/.test(t)) {
     falhas.push('tire a frase de discurso ("precisa ser tratado com seriedade"): diga a ela algo concreto ou feche com um abraço');
   }
   return falhas;

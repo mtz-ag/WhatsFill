@@ -472,4 +472,14 @@ grupo('a rodada so escreve no campo com a tela na conversa que ela abriu (o Peco
   check(painel.includes("rascunho?.motivo === MOTIVO_TELA_EM_OUTRA) {\n          return { nome, resultado: 'pulado'"), 'e a rodada pula o contato em vez de perguntar sobre a tela errada');
 }
 
+
+grupo('apoiador que compartilha conteudo politico nao e corrigido (o Peco, 21/11)');
+{
+  const ia = await lib('ia.js');
+  const f = ia.falhasDeAcolhimento('Boa tarde! Questões de imigração, integração e segurança precisam ser debatidas com responsabilidade, sem transformar uma religião inteira em ameaça. Um abraço.');
+  check(f.some((x) => /não corrija/.test(x)), '"sem transformar... em ameaca" pede reescrita');
+  check(f.some((x) => /discurso/.test(x)), '"precisam ser debatidas com responsabilidade" pede reescrita');
+  check(ia.falhasDeAcolhimento('Boa tarde! Obrigado por compartilhar, um abraço!').length === 0, 'agradecer passa');
+}
+
 fim();

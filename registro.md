@@ -1,4 +1,16 @@
-## 2026-11-21 - v3.334.0 - ESTADO DE AGORA - a rodada so escreve com a tela na conversa certa
+## 2026-11-23 - v3.335.0 - ESTADO DE AGORA - corrigir apoiador e discurso pedem reescrita
+
+Fecho da rodada de 21/11 em Minhas. **O Peco** recebeu a mensagem do momento (escolha dele), mas o
+rascunho que a IA tinha escrito corrigia um apoiador ("sem transformar uma religiao inteira em
+ameaca") — a regra 17 ja proibe, e o texto saiu assim mesmo. `falhasDeAcolhimento` agora pede a
+reescrita quando o rascunho diz "sem transformar / generalizar / demonizar / rotular", e a frase de
+discurso ("precisa ser debatido / discutido / conduzido com cuidado / equilibrio") passou a valer
+alem de "tratado com seriedade". A rodada parou com a Bernadette Breton e o rascunho no campo
+(o tempo de 10 min venceu, nada saiu). Prova: assercoes novas em `diagnostico-minhas.test.mjs`.
+**Nao conferido ao vivo.** Pendente, nas maos dele: o Rogerio Senna precisa ser reaberto e
+respondido; o contato de Sao Vendelino ficou em_atendimento.
+
+## 2026-11-21 - v3.334.0 - HISTORICO - a rodada so escreve com a tela na conversa certa
 
 Quarta rodada em Minhas no dia, na v3.333. **Defeito grave achado, sem dano:** a aba congelou 60s,
 a tela ficou no contato de Sao Vendelino e a rodada escreveu o rascunho do **Peco Grazziotin** no
