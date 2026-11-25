@@ -1,4 +1,14 @@
-## 2026-11-25 - v3.368.0 - ESTADO DE AGORA - "olhai isso" com link e link compartilhado
+## 2026-11-25 - v3.369.0 - ESTADO DE AGORA - fila vazia no fim da rodada e "acabou", nao "confira o filtro"
+
+A rodada das Minhas terminou com "6 enviado(s), 0 pulado(s), 12 concluido(s) sem enviar. A fila de
+"Meus" veio VAZIA — confira o filtro da fila na plataforma". A fila esvaziou porque a rodada atendeu
+todo mundo; o aviso do filtro (05/11) e para quando ninguem foi aberto. Hoje `percorrerFila` conta os
+contatos processados e, havendo algum, o veredito diz "A fila acabou: atendi N contato(s) e nao sobrou
+ninguem". Na rodada: jairoc, Bernadette e Rogerio Senna receberam as respostas aprovadas por ele (ver a
+3.366 a 3.368); o resto foi concluido pelas regras. Prova: 2 assercoes em `diagnostico-minhas.test.mjs`.
+**Nao conferido ao vivo.** Pendente: o push da 3.364 a 3.369; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.368.0 - HISTORICO - "olhai isso" com link e link compartilhado
 
 Rodada nas Minhas. **O Rogerio Senna** mandou de madrugada um link com "Olhai isso capitao" e "Talvez vc
 pode fazer algo"; o rascunho ignorou o link e perguntou "Para eu entender direito e te responder com

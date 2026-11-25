@@ -7961,6 +7961,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // Quantos itens a lista tinha da última vez que olhamos. Serve para o veredito saber se a
     // rodada percorreu a fila inteira ou parou no meio dela — ver o `restaram` lá embaixo.
     let totalDaLista = 0;
+    // Quantos contatos esta rodada abriu e processou — separa "a fila acabou" de "a fila veio vazia".
+    let atendidosNaRodada = 0;
 
     while (enviados < limite && !state.auto.parar) {
       // Diálogo do Material é MODAL: com ele aberto, o clique no item da fila não chega ao item
@@ -7998,7 +8000,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       }
 
       if (!aberto.ok) {
-        interrompida = aberto.reason;
+        // A fila vazia depois de a rodada atender gente é o fim NORMAL (25/11/2026: "6 enviados, 12
+        // concluídos... a fila veio VAZIA — confira o filtro"). O aviso do filtro fica para quando
+        // ninguém foi aberto, que é o caso que ele existe para pegar (05/11).
+        interrompida = atendidosNaRodada > 0 && /veio VAZIA/.test(String(aberto.reason || ''))
+          ? `A fila acabou: atendi ${atendidosNaRodada} contato(s) e não sobrou ninguém.`
+          : aberto.reason;
         break;
       }
       // Aba pedida não encontrada: parar. Seguir seria percorrer a fila errada.
@@ -8031,6 +8038,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       // `processarNovo` nao tem como distinguir "voce trocou de conversa" de "a plataforma
       // ainda nao desenhou", e as duas pedem desfechos opostos.
       const r = await processar(aberto.sessionId, { contatosTratados, aberto });
+      atendidosNaRodada++;
       registrarNaRodada(r.nome, r.resultado, r.motivo);
 
       /**

@@ -750,6 +750,12 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('a fila vazia depois de atender gente e "acabou", nao "confira o filtro" (25/11)');
+{
+  check(/atendidosNaRodada > 0 && \/veio VAZIA\/\.test\(/.test(painel), 'o veredito separa fila que acabou de fila que veio vazia');
+  check(/const r = await processar\(aberto\.sessionId, \{ contatosTratados, aberto \}\);\s*atendidosNaRodada\+\+;/.test(painel), 'cada contato processado conta');
+}
+
 grupo('"olhai isso" com link e o caso do link compartilhado (o Rogerio, 25/11)');
 {
   const iaM = await lib('ia.js');
