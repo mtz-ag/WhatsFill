@@ -739,6 +739,17 @@ grupo('a nossa mensagem devolvida por ela e eco, nao fala dela (o Giovani, 25/11
   check(cortesia.ehRepasse({ tipo: 'TEXT', texto: 'Bom dia! Que esta quarta-feira seja de paz', encaminhado: true }), 'marcada, conta como repasse');
 }
 
+grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/11)');
+{
+  const arvore = await lib('arvore.js');
+  const base = { cortesiaParaRascunho: { motivo: 'cortesia' }, podeMandarMomento: true, jaRespondemosAntes: true };
+  const d6 = { id: 'x', tecla: '6' };
+  check(sug.rascunhoDeCortesia({ ...base, cortesiaDeOutroDia: true }, d6)?.tecla === '5', 'cortesia de ontem vira mensagem do momento');
+  check(sug.rascunhoDeCortesia({ ...base, cortesiaDeOutroDia: true, momentoJaEnviado: true }, d6)?.tecla === '3', 'com a do momento ja enviada, conclui');
+  check(sug.rascunhoDeCortesia({ ...base, cortesiaDeOutroDia: false }, d6)?.ia === true, 'cortesia de hoje continua com o rascunho');
+  check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
+}
+
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');

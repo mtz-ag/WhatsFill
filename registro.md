@@ -1,4 +1,15 @@
-## 2026-11-25 - v3.359.0 - ESTADO DE AGORA - a nossa mensagem devolvida por ela e eco, nao fala dela
+## 2026-11-25 - v3.360.0 - ESTADO DE AGORA - cortesia de ontem vai a mensagem do momento
+
+Rodada nas Minhas na v3.358. **O Jose Clodis** so tinha mandado um "Boa noite... uma excelente noite"
+ontem a noite, depois da nossa; hoje o rascunho de cortesia respondia o cumprimento de ontem. Ele
+escolheu a mensagem do momento (regra dele de 19/11: virou o dia, e o texto do dia). Hoje
+`sugestao.rascunhoDeCortesia` devolve tecla 5 (ou 3, ja enviada a do momento) quando nada do que ela
+escreveu desde a nossa ultima e de hoje — o sinal `cortesiaDeOutroDia` vem do painel. Vale nos dois
+motores, sem importar o quadro. Prova: 4 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido
+ao vivo.** Pendente: o push das versoes 3.349 a 3.360; a Lucia Moreira (formula de denuncia nao
+isolada, ver a v3.359).
+
+## 2026-11-25 - v3.359.0 - HISTORICO - a nossa mensagem devolvida por ela e eco, nao fala dela
 
 Rodada nas Minhas na v3.358. **O Giovani** recebeu a mensagem do momento e mandou o MESMO texto de
 volta (com o nosso link do Instagram), depois so "P"; o rascunho agradeceu "o carinho" e retribuiu a

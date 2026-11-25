@@ -1598,6 +1598,20 @@ export function rascunhoDeCortesia(c, decisao) {
       c.semInteresse || c.cortesiaDeFechamento || c.conteudoPedido || c.anuncioSemResposta) return null;
   if (decisao && (!['1', '4', '5', '6', 'i', '3'].includes(decisao.tecla) ||
       /sem-interesse|etiqueta-so-conclui|ultima-e-nossa/.test(decisao.id || ''))) return null;
+  /**
+   * **Cortesia de ONTEM: virou o dia, vai a mensagem do momento** (o José Clodis, 25/11/2026: "Boa
+   * noite amigo Capitão Martins" às 21:44 de ontem, e hoje o rascunho respondia "Bom dia! Agradeço a
+   * sua gentileza"). A regra dele de 19/11: hoje é outro dia, é mensagem do momento.
+   */
+  if (c.cortesiaDeOutroDia) {
+    return {
+      id: 'cortesia-de-outro-dia',
+      tecla: c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '3',
+      resposta: null,
+      ia: false,
+      motivo: 'a cortesia dela é de outro dia e hoje ela não escreveu — vai a mensagem do momento',
+    };
+  }
   return { id: 'cortesia-rascunho', tecla: null, resposta: null, ia: true, motivo: c.cortesiaParaRascunho.motivo };
 }
 

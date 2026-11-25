@@ -11583,6 +11583,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         // importar o quadro. **Só sem anúncio reconhecido esperando resposta:** se ela clicou num
         // anúncio cadastrado, o modelo DELE é o que ela pediu, e o recibo responde.
         cortesiaParaRascunho: cortesiaParaRascunho(state.entrantes, state.nossaUltimaAt),
+        // Cortesia de outro dia (25/11/2026, o José Clodis): nada dela hoje desde a nossa última.
+        cortesiaDeOutroDia: (() => {
+          const pendentes = desdeNossaUltima(state.entrantes, state.nossaUltimaAt).filter((m) => m?.at);
+          const hoje = new Date().toDateString();
+          return pendentes.length > 0 && !pendentes.some((m) => new Date(m.at).toDateString() === hoje);
+        })(),
         // LINK + texto que puxa a nossa opinião (12/11/2026): agradece e diz que vai olhar, sem a IA.
         linkComOpiniao: linkComOpiniao(state.entrantes, state.nossaUltimaAt),
         // POST ENCAMINHADO (12/11/2026, a Suely): o tamanho é do autor do post, não dela.
