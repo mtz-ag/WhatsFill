@@ -750,6 +750,25 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('cortesia com doenca contada: nem abstencao nem texto do dia (a Simone, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  const frase = 'Se não fosse a demência severa da minha mãezona e o meu lupus ativo já estaria aí';
+  check(!!cortesia.falouDeSaude(frase), 'lupus e demencia da mae contam como saude');
+  check(!!cortesia.falouDeSaude('minha mãe tem alzheimer'), 'alzheimer da mae conta');
+  check(!cortesia.falouDeSaude('isso é uma demência desse governo'), 'demencia como xingamento nao conta');
+  check(!cortesia.falouDeSaude('Só gratidão e desejamos força e fé'), 'cortesia sem doenca nao conta');
+  const base = { cortesiaParaRascunho: { motivo: 'cortesia' }, podeMandarMomento: true, cortesiaDeOutroDia: true };
+  check(sug.rascunhoDeCortesia({ ...base, saudeNaRajada: true }, { id: 'x', tecla: '6' })?.ia === true, 'com doenca contada, a cortesia de ontem continua com a IA');
+  check(!!sug.abstencaoNaoCabe({ saudeNaRajada: true }), 'a abstencao nao cabe com doenca contada');
+  const contato = iaM.montarContatoRascunho({ mensagens: [
+    { de: 'nos', texto: 'Que Deus abençoe cada pessoa envolvida.' },
+    { de: 'contato', texto: 'Só gratidão' }, { de: 'contato', texto: frase },
+  ], agora: new Date() });
+  check(/problema de SAÚDE/.test(contato), 'o pedido manda nao se abster e desejar saude');
+  check(/saudeNaRajada: desdeNossaUltima/.test(painel), 'o painel calcula o sinal');
+}
+
 grupo('"por seguranca" a quem so perguntou onde ele mora (a Vanda, 25/11)');
 {
   const iaM = await lib('ia.js');

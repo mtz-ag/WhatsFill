@@ -46,7 +46,7 @@ import { PADRAO_DE_ATENDIMENTO } from '../lib/atendimento.js';
 import { MSG_PADRAO } from '../lib/padrao-msg.js';
 import { recolherExplicacoes } from './detalhes.js';
 import { criarGuardaDeRolagem, TECLAS_QUE_ROLAM } from './rolagem.js';
-import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia, contouGestoSolidario } from '../lib/cortesia.js';
+import { ehSoReacao, ehRepasse, ultimaEhSoReacao, conversaPedeRespostaPessoal, conversaTemPerguntaAberta, soExpressaApoio, rajadaEhSoRepasse, pedeAlgoIndefinido, pedeAjudaFinanceira, confirmaPresenca, ultimaEhDespedida, semInteresse, respostasApos, pedeEmprego, pedeLigacao, pedeFalarComDeputado, naoPodeFalarAgora, reclamaSemResposta, rajadaDeAnuncios, ehMensagemDaPlataforma, rajadaFinal, desdeNossaUltima, deOutroDia, contextoPerdido, perguntaPendente, informouEndereco, pedeMaterial, pedeMaterialForaDoAnuncio, pedeMaterialEscrito, falouAlgoProprio, pedeRoupa, pareceTextoProntoDeAnuncio, marcarLoteEncaminhado, disseQueEDeOutroEstado, denunciaOuCorrente, desabafoPessoal, cortesiaDeFechamento, reacaoDeTristeza, soAgradeceOuElogia, contouGestoSolidario, falouDeSaude } from '../lib/cortesia.js';
 import { SENTINEL } from '../lib/contract.js';
 import { looksLikePlaceholder, nomeVeioDoPerfil, nomeSemSentido, nomeDivergeDoInformado } from '../lib/vars.js';
 import { ehCampoDeMensagem } from '../lib/dom-mob.js';
@@ -11745,6 +11745,8 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
         reacaoDeTristeza: reacaoDeTristeza(state.entrantes, state.nossaUltimaAt),
         soAgradeceOuElogia: soAgradeceOuElogia(state.entrantes, state.nossaUltimaAt),
         contouGestoSolidario: contouGestoSolidario(state.entrantes, state.nossaUltimaAt),
+        // Saúde contada desde a nossa última (a Simone, 25/11/2026): nem abstenção nem texto do dia.
+        saudeNaRajada: desdeNossaUltima(state.entrantes, state.nossaUltimaAt).some((m) => !m?.geradaPeloAnuncio && !!falouDeSaude(m?.texto)),
         // Pediu algo sem dizer o quê: material de campanha em cima disso é o pior caso do
         // projeto (print da Mari, 31/08). Perguntar é a única resposta segura.
         pedeAlgoIndefinido: pedeAlgoIndefinido(state.entrantes, state.nossaUltimaAt),

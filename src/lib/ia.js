@@ -3527,6 +3527,8 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
   const falamosHoje = ultimaNossa >= 0 && mesmoDia(lista[ultimaNossa].at, agora);
 
   const temCliqueDeAnuncio = lista.some((m) => m.anuncio);
+  /** Saúde contada DEPOIS da nossa última (a Simone, 25/11/2026): ela não admite abstenção. */
+  const saudeAgora = lista.some((m, i) => m.de !== 'nos' && i > ultimaNossa && !m.anuncio && falouDeSaude(m.texto));
   const temAudioOuvido = lista.some((m) => m.transcrito);
   const identidadeIncerta = lista.some((m) => m.de !== 'nos' &&
     /(?:usando|com) (?:o )?(?:telefone|celular) (?:do|da|de)|(?:telefone|celular) do meu marido/i.test(m.texto || ''));
@@ -3887,6 +3889,12 @@ export function montarContatoRascunho({ mensagens = [], campos = {}, agora, pedi
       (desabafo
         ? 'Num DESABAFO isto não vale: ela sempre tem o que ouvir. NÃO marque naoHaOQueResponder — ' +
           'acolha o que há de novo no sentimento dela, sem repetir a nossa última fala.'
+        // A Simone (25/11/2026): "Só gratidão... Se não fosse a demência da minha mãe e o meu lúpus já
+        // estaria aí". A IA se absteve; ele mandou um obrigado com saúde para ela e cuidado para a mãe.
+        : saudeAgora
+        ? 'Ela contou um problema de SAÚDE dela ou da família: NÃO marque naoHaOQueResponder. ' +
+          'Escreva uma ou duas linhas: agradeça o carinho, se houver, e deseje saúde ao que ela ' +
+          'contou, sem pergunta, sem conselho e sem formulário.'
         /**
          * **AGRADECIMENTO E ELOGIO também não admitem abstenção** (05/11/2026, três prints). A IA
          * marcava `naoHaOQueResponder` em *"Muito obrigada por zelar pela nossa segurança!"* e o

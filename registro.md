@@ -1,4 +1,17 @@
-## 2026-11-25 - v3.361.0 - ESTADO DE AGORA - "e voce mora onde?" nao e pedido de contato
+## 2026-11-25 - v3.362.0 - ESTADO DE AGORA - cortesia com doenca contada nao recebe o texto do dia
+
+Rodada nas Minhas. **A Simone** respondeu ontem a nossa com "So gratidao... forca e fe", "Jesus ilumine
+vcs", "Se nao fosse a demencia severa da minha maezona e o meu lupus ativo ja estaria ai", "Oremos". A IA
+se absteve e a caixa ficou sem desfecho; pela v3.360 sairia a mensagem do momento. Ele mandou: "Bom dia,
+Simone! Obrigado pela forca e pelas oracoes. Desejo muita saude para voce e cuidado para sua mae." Hoje
+`falouDeSaude` reconhece doenca cronica pelo nome (lupus, Alzheimer, Parkinson...) e a doenca dita antes
+do parente ("a demencia da minha mae"); o sinal `saudeNaRajada` barra a abstencao
+(`abstencaoNaoCabe`) e a mensagem do momento da cortesia de outro dia, e o pedido a IA manda desejar
+saude em uma ou duas linhas. Na mesma rodada a Vanda recebeu a resposta da v3.361. Prova: 8 assercoes
+em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das versoes 3.349 a
+3.362; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.361.0 - HISTORICO - "e voce mora onde?" nao e pedido de contato
 
 Rodada nas Minhas. **A Vanda** deu a cidade (Bento Goncalves) e devolveu, por gentileza, "E vc mora
 aonde?"; o rascunho respondeu "Por seguranca, nao informamos a localizacao pessoal do Capitao Martim" —

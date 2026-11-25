@@ -216,6 +216,8 @@ export function abstencaoNaoCabe(c) {
   if (c.soAgradeceOuElogia) return { motivo: 'ela só agradeceu ou elogiou — a mensagem do dia aqui responde ao lado' };
   // A Suely (23/11/2026): contou que doou aos bombeiros; o texto do dia em cima disso responde ao lado.
   if (c.contouGestoSolidario) return { motivo: 'ela contou um gesto de solidariedade — aqui cabe agradecer, não o texto do dia' };
+  // A Simone (25/11/2026): contou a doença dela e da mãe; o texto do dia em cima disso responde ao lado.
+  if (c.saudeNaRajada) return { motivo: 'ela contou um problema de saúde — aqui cabe acolher, não o texto do dia' };
   if (c.reacaoDeTristeza) return { motivo: 'ela respondeu com um emoji de tristeza — aqui cabe acolher, não o texto do dia' };
   if (c.cortesiaDeFechamento) return { motivo: 'ela só reagiu depois da nossa resposta — o fluxo conclui sem enviar' };
   return null;
@@ -1603,7 +1605,7 @@ export function rascunhoDeCortesia(c, decisao) {
    * noite amigo Capitão Martins" às 21:44 de ontem, e hoje o rascunho respondia "Bom dia! Agradeço a
    * sua gentileza"). A regra dele de 19/11: hoje é outro dia, é mensagem do momento.
    */
-  if (c.cortesiaDeOutroDia) {
+  if (c.cortesiaDeOutroDia && !c.saudeNaRajada) {
     return {
       id: 'cortesia-de-outro-dia',
       tecla: c.podeMandarMomento && !c.momentoJaEnviado ? '5' : '3',

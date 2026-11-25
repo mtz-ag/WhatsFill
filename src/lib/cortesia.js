@@ -3604,10 +3604,20 @@ const SAUDE_DELA = [
    * insulina, HGT e hemodiálise só se escrevem por causa de uma doença.
    */
   /(^|[^\p{L}])(diabete|diabetes|diabetic[oa]|glicose|glicemia|insulina|hgt|hemodi[áa]lise)([^\p{L}]|$)/iu,
+  /**
+   * **Doença crônica pelo nome** (a Simone, 25/11/2026: *"o meu lupus ativo"*). Lúpus, Alzheimer,
+   * Parkinson, esclerose múltipla, fibromialgia e epilepsia não aparecem em fala política. "Demência"
+   * fica de fora daqui (*"isso é uma demência"* é xingamento) e entra só ligada à família, abaixo.
+   */
+  /(^|[^\p{L}])(l[úu]pus|alzheimer|parkinson|esclerose\s+m[úu]ltipla|fibromialgia|epilepsia)([^\p{L}]|$)/iu,
 ];
 
 const SAUDE_DA_FAMILIA =
   /(^|[^\p{L}])(meu|minha|nosso|nossa)\s+(m[ãa]e|pai|filh[oa]|filhinh[oa]|esposa|marido|mulher|companheir[ao]|irm[ãa]o?|av[óo]|v[óo]|neto|neta|sogr[ao]|tio|tia|sobrinh[oa])\s+[^.!?]{0,40}?(doente|adoentad|internad|no\s+hospital|na\s+uti|c[âa]ncer|cirurgia|avc|infarto|quimioterapia|tratamento|acamad|paralisia|autist|s[íi]ndrome|deficien|rem[ée]dio|diabet|derrame|transplante|faleceu|luta\s+contra)/iu;
+
+/** A doença antes do parente (a Simone, 25/11/2026): *"a demência severa da minha mãezona"*. */
+const DOENCA_DO_PARENTE =
+  /(^|[^\p{L}])(dem[êe]ncia|alzheimer|parkinson|l[úu]pus|c[âa]ncer|avc|derrame)[^.!?]{0,30}?(d[aoe])\s+(meu|minha|nosso|nossa)\s+(m[ãa]e|pai|filh[oa]|esposa|marido|irm[ãa]o?|av[óo]|v[óo]|sogr[ao])/iu;
 
 /**
  * **A guarda contra a fala política é a PRÓPRIA especificidade dos padrões**, e não uma lista de
@@ -3621,7 +3631,7 @@ export function falouDeSaude(texto) {
   if (!t) return null;
   const dela = SAUDE_DELA.some((re) => re.test(t)) || MAL_ESTAR.some((re) => re.test(t));
   if (dela) return { motivo: 'contou um problema de saúde dela' };
-  if (SAUDE_DA_FAMILIA.test(t)) return { motivo: 'contou um problema de saúde na família' };
+  if (SAUDE_DA_FAMILIA.test(t) || DOENCA_DO_PARENTE.test(t)) return { motivo: 'contou um problema de saúde na família' };
   return null;
 }
 
