@@ -750,6 +750,18 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('"olhai isso" com link e o caso do link compartilhado (o Rogerio, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  const ent = [
+    { de: 'contato', texto: 'https://www.instagram.com/reel/abc/?x=1', at: '2026-11-25T03:16:00Z' },
+    { de: 'contato', texto: 'Olhai isso capitão', at: '2026-11-25T03:17:00Z' },
+    { de: 'contato', texto: 'Talvez vc pode fazer algo', at: '2026-11-25T03:19:00Z' },
+  ];
+  check(!!cortesia.linkComOpiniao(ent, '2026-11-24T19:13:00Z'), '"olhai isso" com um link puxa a resposta do link compartilhado');
+  check(iaM.falhasDeAcolhimento('Boa tarde! Para eu entender direito e te responder com sinceridade: em que você precisa de ajuda?').length >= 1, '"responder com sinceridade" pede reescrita');
+}
+
 grupo('"essa preocupacao e compreensivel" avalia de fora (a Bernadette, 25/11)');
 {
   const iaM = await lib('ia.js');

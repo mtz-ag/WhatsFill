@@ -3174,9 +3174,10 @@ export function falhasDeAcolhimento(texto) {
   if (/(respeito|entendo|compreendo|acolho)\s+(esse|este|o\s+seu|seu)\s+sentimento|(sua|essa|esta)\s+(admiracao|indignacao|tristeza|preocupacao|revolta|reacao)\s+(por\s+\S+\s+)?(e|eh)\s+(muito\s+|bem\s+)?(clara|compreensivel|legitima|valida|natural)/.test(t)) {
     falhas.push('não comente o sentimento dela de fora ("respeito esse sentimento", "sua admiração é muito clara"): fale junto com ela, do mesmo lado');
   }
+  // O Rogerio (25/11): "Para eu entender direito e te responder com sinceridade: em que você precisa?"
   // E o Nilson de novo, com outra redação: "não quero falar sobre algo específico sem saber a que você se
   // refere. Qual medida ou situação você quer comentar?"
-  if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+responsabilidade|sem\s+saber\s+a\s+que\s+voce\s+se\s+refere|qual\s+(medida|situacao)\s+ou\s+\S+\s+voce\s+(quer|esta)/.test(t)) {
+  if (/nao\s+sei\s+exatamente\s+(a\s+que|qual|do\s+que)|(responder|tratar|falar)\s+com\s+(responsabilidade|sinceridade)|para\s+eu\s+entender\s+(direito|melhor)\s+e\s+(te\s+)?responder|sem\s+saber\s+a\s+que\s+voce\s+se\s+refere|qual\s+(medida|situacao)\s+ou\s+\S+\s+voce\s+(quer|esta)/.test(t)) {
     falhas.push('não responda como repartição ("não sei exatamente a que você se refere", "responder com responsabilidade"): pergunte de forma leve do que se trata, como numa conversa');
   }
   // O Rogerio (23/11): "Esse ponto merece atenção no debate sobre segurança pública."

@@ -1,4 +1,15 @@
-## 2026-11-25 - v3.367.0 - ESTADO DE AGORA - "essa preocupacao e compreensivel" avalia de fora
+## 2026-11-25 - v3.368.0 - ESTADO DE AGORA - "olhai isso" com link e link compartilhado
+
+Rodada nas Minhas. **O Rogerio Senna** mandou de madrugada um link com "Olhai isso capitao" e "Talvez vc
+pode fazer algo"; o rascunho ignorou o link e perguntou "Para eu entender direito e te responder com
+sinceridade: em que voce precisa de ajuda?". Ele mandou "Boa tarde! Vou dar uma olhada no que voce
+mandou." Hoje "olhai/oia isso" entra nas formas de puxar opiniao, e o caso cai na resposta pronta do
+link compartilhado ("Obrigado por compartilhar, darei uma olhada"); "responder com sinceridade" e "para
+eu entender direito e te responder" pedem reescrita como tom de reparticao. Prova: 2 assercoes em
+`diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push da 3.364 a 3.368; a Lucia
+Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.367.0 - HISTORICO - "essa preocupacao e compreensivel" avalia de fora
 
 Rodada nas Minhas. **A Bernadette** respondeu a mensagem do momento com "A minha grande preocupacao e
 sempre com o nosso AMADO Capitao, PRESIDENTE BOLSONARO"; o rascunho abriu com "Essa preocupacao e
