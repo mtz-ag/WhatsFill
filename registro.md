@@ -1,4 +1,15 @@
-## 2026-11-23 - v3.358.0 - ESTADO DE AGORA - rascunho em tom de editorial pede reescrita
+## 2026-11-25 - v3.359.0 - ESTADO DE AGORA - a nossa mensagem devolvida por ela e eco, nao fala dela
+
+Rodada nas Minhas na v3.358. **O Giovani** recebeu a mensagem do momento e mandou o MESMO texto de
+volta (com o nosso link do Instagram), depois so "P"; o rascunho agradeceu "o carinho" e retribuiu a
+bencao, que eram nossos. Ele resolveu sem enviar. Hoje `prepararEntrantes` recebe as nossas mensagens e
+marca como repasse (`encaminhado`) a fala dela que, reduzida as letras e sem link, e igual a uma nossa.
+Fica pendente da rodada de 23/11: a Lucia Moreira recebeu um rascunho com "agradeco... estamos atentos"
+que a conferencia da v3.336 deveria ter barrado; fora da pagina, com o texto dos audios, ela barra — a
+causa esta no contexto real e nao foi isolada. Prova: 4 assercoes em `diagnostico-minhas.test.mjs`.
+**Nao conferido ao vivo.** Pendente: o push das versoes 3.349 a 3.359.
+
+## 2026-11-23 - v3.358.0 - HISTORICO - rascunho em tom de editorial pede reescrita
 
 Mesma rodada nas Minhas. **A Suely** (ja respondida hoje) mandou um reels sobre prevencao ("nao e
 sobre cultuar tragedias, mas aprender a se prevenir"); o rascunho saiu editorial — "A prevencao precisa

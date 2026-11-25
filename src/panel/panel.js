@@ -636,6 +636,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
+        nossas: conversa.nossas || [],
       });
       state.nossaUltimaEnviadaAt = conversa.nossaUltimaAt || null;
       state.nossaUltimaAt = await nossaUltimaComConclusao(state.pageState.sessionId, conversa.nossaUltimaAt);
@@ -851,6 +852,7 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
       state.entrantes = prepararEntrantes(conversa.entrantes, {
         veioDeAnuncio: !!(state.session?.utm?.source || state.session?.utm?.referralUrl),
         anuncios: await carregarAnuncios(perfilAtivo()),
+        nossas: conversa.nossas || [],
       });
       state.nossaUltimaEnviadaAt = conversa.nossaUltimaAt || null;
       state.nossaUltimaAt = await nossaUltimaComConclusao(sessionId, conversa.nossaUltimaAt);
@@ -19901,8 +19903,21 @@ function pareceCliqueDeAnuncio(texto) {
   return ABERTURA_DE_ANUNCIO.test(t);
 }
 
-function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [] } = {}) {
+/** Texto reduzido às letras, para reconhecer a nossa própria mensagem devolvida por ela. */
+function soAsLetras(texto) {
+  // Sem acento e sem nada que não seja letra: "[^a-z]" já tira as marcas que o NFD separa.
+  return String(texto || '').replace(/https?:\/\/\S+|www\.\S+/g, ' ').normalize('NFD')
+    .toLowerCase().replace(/[^a-z]+/g, '');
+}
+
+function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [], nossas = [] } = {}) {
   let primeiraDela = true;
+  /**
+   * **A nossa mensagem devolvida por ela é eco, não fala dela** (o Giovani, 25/11/2026): ele recebeu a
+   * mensagem do momento e mandou o MESMO texto de volta, e o rascunho agradeceu o "carinho" e retribuiu
+   * a bênção — que eram nossos. Igual a uma nossa (só as letras, sem link), conta como repasse.
+   */
+  const ecos = new Set((nossas || []).map((n) => soAsLetras(n?.texto)).filter((s) => s.length >= 30));
   /**
    * **O lote de áudio encaminhado é marcado AQUI**, junto do ruído da plataforma e do texto
    * gerado pelo anúncio: um lugar só, antes de qualquer regra ver. Ver
@@ -19914,6 +19929,7 @@ function prepararEntrantes(entrantes, { veioDeAnuncio = false, anuncios = [] } =
       ? { ...m, texto: '', transcrito: false, sistema: true }
       : { ...m };
     const temTexto = !marcada.sistema && String(marcada.texto || '').trim();
+    if (temTexto && ecos.has(soAsLetras(marcada.texto))) marcada.encaminhado = true;
     /**
      * **Só marca a primeira se ela tiver cara de texto pronto** — print do Rodrigo (10/09/2026): o
      * anúncio CONVERSE CONOSCO não traz texto, a primeira mensagem era o pedido DELE, e a marca o

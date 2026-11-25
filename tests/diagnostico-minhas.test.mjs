@@ -731,6 +731,14 @@ grupo('agradeceu e depois repassou um link: ainda e encerrar (o Peco, 23/11)');
   check(!ia2.falhasDeAcolhimento('Verdade! Prevenção é o que salva vidas, e aprender com o que aconteceu em outros lugares faz toda a diferença.').some(f => /discurso/.test(f)), 'o texto que ele aprovou passa');
 }
 
+grupo('a nossa mensagem devolvida por ela e eco, nao fala dela (o Giovani, 25/11)');
+{
+  check(/function prepararEntrantes\(entrantes, \{ veioDeAnuncio = false, anuncios = \[\], nossas = \[\] \} = \{\}\)/.test(painel), 'prepararEntrantes recebe as nossas');
+  check(/if \(temTexto && ecos\.has\(soAsLetras\(marcada\.texto\)\)\) marcada\.encaminhado = true;/.test(painel), 'eco da nossa vira repasse');
+  check((painel.match(/nossas: conversa\.nossas \|\| \[\],/g) || []).length === 2, 'os dois pontos que preparam as mensagens passam as nossas');
+  check(cortesia.ehRepasse({ tipo: 'TEXT', texto: 'Bom dia! Que esta quarta-feira seja de paz', encaminhado: true }), 'marcada, conta como repasse');
+}
+
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');
