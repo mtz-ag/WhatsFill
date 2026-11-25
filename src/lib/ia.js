@@ -2853,7 +2853,16 @@ export function semRepetirONosso(texto, nossaUltima) {
     return !nossas.some((c) => palavras.filter((w) => c.has(w)).length / palavras.length >= 0.8);
   });
   if (ficam.length === frases.length) return null;
-  const novo = ficam.join(' ').trim();
+  let novo = ficam.join(' ').trim();
+  /**
+   * **Cortada a abertura, o "também" da frase seguinte fica sem antecedente** (o Cleomar, 25/11/2026:
+   * o rascunho saiu "Agradeço também por lembrar que..."). Se a primeira frase foi tirada, o "também"
+   * no começo do que sobrou sai junto.
+   */
+  if (ficam[0] !== frases[0]) {
+    novo = novo.replace(/^(\p{L}+\s+)?tamb[ée]m,?\s+/iu, (_, antes) => antes || '');
+    novo = novo.charAt(0).toUpperCase() + novo.slice(1);
+  }
   return novo.length >= 40 ? novo : null;
 }
 

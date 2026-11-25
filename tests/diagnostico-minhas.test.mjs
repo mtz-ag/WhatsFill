@@ -750,6 +750,19 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('cortada a abertura repetida, o "tambem" sai junto (o Cleomar, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  const nossa = 'Bom dia! Que esta quarta-feira seja de paz, saúde e proteção. Que Deus abençoe você e sua família!';
+  const rasc = 'Que Deus abençoe você e sua família. Agradeço também por lembrar que a ajuda precisa ser distribuída de forma justa.';
+  const r = iaM.semRepetirONosso(rasc, nossa);
+  check(r === 'Agradeço por lembrar que a ajuda precisa ser distribuída de forma justa.', 'sobra "Agradeço por lembrar..." (veio: ' + r + ')');
+  const r2 = iaM.semRepetirONosso('Que Deus abençoe você e sua família. Também agradeço pela lembrança das famílias atingidas.', nossa);
+  check(r2 === 'Agradeço pela lembrança das famílias atingidas.', '"Também agradeço" vira "Agradeço" (veio: ' + r2 + ')');
+  const r3 = iaM.semRepetirONosso('Muito obrigado pela mensagem carinhosa. Que Deus abençoe você e sua família. Também desejo força.', nossa);
+  check(/^Muito obrigado/.test(r3 || '') && /Também desejo força/.test(r3 || ''), 'com a abertura mantida, o "tambem" fica');
+}
+
 grupo('cortesia com doenca contada: nem abstencao nem texto do dia (a Simone, 25/11)');
 {
   const iaM = await lib('ia.js');

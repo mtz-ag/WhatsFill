@@ -1,4 +1,15 @@
-## 2026-11-25 - v3.362.0 - ESTADO DE AGORA - cortesia com doenca contada nao recebe o texto do dia
+## 2026-11-25 - v3.363.0 - ESTADO DE AGORA - cortada a abertura repetida, o "tambem" sai junto
+
+Rodada nas Minhas. **O Cleomar** (a mae tirada dos escombros em Tupancireta, ele operado) mandou um
+audio agradecendo e abencoando; o rascunho saiu "Agradeco tambem por lembrar que a ajuda precisa ser
+distribuida de forma justa...", comecando pela metade. `semRepetirONosso` tinha tirado a frase de
+abertura (igual a nossa "Que Deus abencoe voce e sua familia") e o "tambem" da seguinte ficou sem
+antecedente. Hoje, tirada a primeira frase, o "tambem" no comeco do que sobra sai junto. Saiu a minha,
+aprovada por ele: "Muito obrigado pelas palavras e pela bencao! Que Deus abencoe voce e sua familia
+tambem, e forca na sua recuperacao." Prova: 3 assercoes em `diagnostico-minhas.test.mjs`. **Nao
+conferido ao vivo.** Pendente: o push das versoes 3.349 a 3.363; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.362.0 - HISTORICO - cortesia com doenca contada nao recebe o texto do dia
 
 Rodada nas Minhas. **A Simone** respondeu ontem a nossa com "So gratidao... forca e fe", "Jesus ilumine
 vcs", "Se nao fosse a demencia severa da minha maezona e o meu lupus ativo ja estaria ai", "Oremos". A IA
