@@ -1,4 +1,16 @@
-## 2026-11-25 - v3.360.0 - ESTADO DE AGORA - cortesia de ontem vai a mensagem do momento
+## 2026-11-25 - v3.361.0 - ESTADO DE AGORA - "e voce mora onde?" nao e pedido de contato
+
+Rodada nas Minhas. **A Vanda** deu a cidade (Bento Goncalves) e devolveu, por gentileza, "E vc mora
+aonde?"; o rascunho respondeu "Por seguranca, nao informamos a localizacao pessoal do Capitao Martim" —
+a regra 8 (telefone pessoal) puxada pela proximidade. Saiu a minha, aprovada por ele: "Bom dia!
+Obrigado, anotei Bento Goncalves. O Capitao Martim e de Porto Alegre, mas vive rodando o estado
+inteiro." Hoje a regra 8 diz que e SO para quem pede telefone, WhatsApp ou encontro, e
+`falhasDeSegurancaSemPedido` pede uma reescrita quando o rascunho recusa "por seguranca" sem nada dela
+pedindo contato. A origem do candidato nao foi escrita no prompt (ele serve aos dois candidatos).
+Prova: 5 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push das
+versoes 3.349 a 3.361; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.360.0 - HISTORICO - cortesia de ontem vai a mensagem do momento
 
 Rodada nas Minhas na v3.358. **O Jose Clodis** so tinha mandado um "Boa noite... uma excelente noite"
 ontem a noite, depois da nossa; hoje o rascunho de cortesia respondia o cumprimento de ontem. Ele

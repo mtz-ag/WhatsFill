@@ -1731,6 +1731,9 @@ export function montarSistemaRascunho({ templates = [], regras = '', gabinete = 
           '   O que você pode oferecer com verdade é a regra 21: ela conta o assunto aqui e você passa',
           `   para o responsável pela agenda ${ELE_E.de}. NUNCA diga que vai passar o recado PARA ELE nem que ele vai ler.`,
         ]),
+    '   A regra 8 é SÓ para quem pede telefone, WhatsApp ou encontro. "E você mora onde?" ou "de onde',
+    '   ele é?" é conversa, devolvida por gentileza: responda com leveza que ele roda o estado inteiro',
+    '   (a cidade de origem dele só se estiver no dossiê), sem "por segurança" e sem recusa.',
     /**
      * **A regra 9 é a FRONTEIRA da regra 8, e nasceu de ela ter sido cruzada** — print de
      * 09/09/2026. A contato escreveu *"Posso falar com algum representante?"* e recebeu a regra 8
@@ -3066,6 +3069,27 @@ export function falhasDeParabensGenerico(texto, mensagens = []) {
   if (!palavras.length) return [];
   if (palavras.some(p => t.includes(p))) return [];
   return ['parabéns genérico: diga pelo que é o parabéns, citando o que ela contou (não "essa conquista tão especial")'];
+}
+
+/**
+ * **"Por segurança" a quem não pediu contato nenhum** (25/11/2026, a Vanda). Ela deu a cidade e
+ * devolveu, por gentileza, *"E vc mora aonde?"*; o rascunho respondeu *"Por segurança, não informamos
+ * a localização pessoal do Capitão Martim"* — a regra 8 (telefone pessoal) puxada pela proximidade.
+ * Perguntar de onde ele é é conversa, e a resposta é pública: nascido em Porto Alegre, roda o estado.
+ * Só pede reescrita quando nada dela desde a nossa última pede telefone, WhatsApp, contato ou
+ * encontro — aí a recusa por segurança é a regra 8 cumprida.
+ */
+export function falhasDeSegurancaSemPedido(texto, mensagens = []) {
+  const t = semAcentoIA(String(texto || '')).toLowerCase();
+  if (!/\b(por|de)\s+(motivo\s+de\s+)?seguranca\b|\bpor\s+questao\s+de\s+seguranca\b/.test(t)) return [];
+  const lista = mensagens.map(m => typeof m === 'string' ? { de: 'contato', texto: m } : m).filter(Boolean);
+  let corte = -1;
+  lista.forEach((m, i) => { if (m.de === 'nos') corte = i; });
+  const dela = lista.slice(corte + 1).filter(m => m.de !== 'nos')
+    .map(m => semAcentoIA(String(m.texto || '')).toLowerCase()).join(' ');
+  if (!dela.trim()) return [];
+  if (/telefone|celular|whats|zap|\bnumero\b|contato|falar com|conversar com|encontr|reuniao|visita|\bendereco\b|gabinete|pessoalmente/.test(dela)) return [];
+  return ['"por segurança" sem pedido de contato: se ela perguntou de onde ele é ou onde mora, responda com leveza que ele roda o estado (a origem dele só se estiver no dossiê), sem recusa'];
 }
 
 /**

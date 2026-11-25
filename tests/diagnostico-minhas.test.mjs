@@ -750,6 +750,24 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('"por seguranca" a quem so perguntou onde ele mora (a Vanda, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  const conversa = [
+    { de: 'nos', texto: 'Bom dia! Para eu salvar seu contato, me diga de qual cidade voce e.' },
+    { de: 'contato', texto: 'Bento Gonçalves,E vc mora aonde?' },
+  ];
+  const ruim = 'Bom dia! Por segurança, não informamos a localização pessoal do Capitão Martim.';
+  check(iaM.falhasDeSegurancaSemPedido(ruim, conversa).length === 1, 'recusa por seguranca sem pedido de contato pede reescrita');
+  check(iaM.falhasDeSegurancaSemPedido('Bom dia! Obrigado, anotei Bento Gonçalves. Ele roda o estado inteiro.', conversa).length === 0, 'a resposta leve passa');
+  const pediuZap = [{ de: 'contato', texto: 'me passa o whats dele?' }];
+  check(iaM.falhasDeSegurancaSemPedido('Por segurança, o WhatsApp pessoal dele não é repassado.', pediuZap).length === 0, 'quem pediu o whats continua recebendo a regra 8');
+  const prompt = iaM.montarSistemaRascunho ? iaM.montarSistemaRascunho({}) : '';
+  check(!prompt || /"E você mora onde\?"/.test(prompt), 'o prompt separa "mora onde" da regra 8');
+  const cli = await (await import('node:fs/promises')).readFile(new URL('../src/lib/ia-cliente.js', import.meta.url), 'utf8');
+  check(/falhasDeSegurancaSemPedido\(texto, mensagens\)/.test(cli), 'a conferencia de tom chama a falha');
+}
+
 grupo('pedir a cidade sempre com o porque (o Marcelo, 23/11)');
 {
   const ia = await lib('ia.js');
