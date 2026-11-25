@@ -750,6 +750,17 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('"roubou a eleicao" e desabafo contra o adversario, sem a formula (o jairoc, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  const frase = 'O Cara roubou A Eleição,e Ninguém Faz Nada,que Brasil';
+  check(cortesia.trouxeDenuncia(frase)?.contraOAdversario === true, '"roubou a eleicao" sem nome e contra o adversario');
+  check(cortesia.trouxeDenuncia('fraudaram a eleição da prefeitura daqui, quero denunciar')?.contraOAdversario === false, 'com alvo local e pedido, continua denuncia');
+  check(cortesia.trouxeDenuncia('o vereador roubou a verba da escola')?.contraOAdversario === false, 'roubo de verba local continua denuncia');
+  const conversa = [{ de: 'nos', texto: 'Oi! Boa tarde!' }, { de: 'contato', texto: frase }];
+  check(iaM.falhasDeFormulaDeDenuncia('Agradeço pelas informações. Estamos atentos e acompanhando esse assunto.', conversa).length === 1, 'a formula pede reescrita');
+}
+
 grupo('todo page.X que o painel chama existe no page.js (25/11: ehRecusaPorConversaSumida faltava)');
 {
   const fs = await import('node:fs/promises');

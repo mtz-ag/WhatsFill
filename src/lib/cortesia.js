@@ -3778,8 +3778,16 @@ const PEDE_PROVIDENCIA =
  * acusação contra o NOSSO lado nunca entra aqui — essa é hostilidade, e quem a trata é
  * `semInteresse`.
  */
+/**
+ * **"Roubou a eleição" aponta o adversário sem dizer o nome** (o jairoc, 25/11/2026: *"O cara roubou a
+ * eleição, e ninguém faz nada, que Brasil"* recebeu "Agradeço pelas informações. Estamos atentos"). É a
+ * fala nacional contra o lado de lá, a mesma classe da regra 17.
+ */
+const ELEICAO_ROUBADA =
+  /(^|[^\p{L}])((roub|fraud)\w*\s+(a\s+|as\s+|essa\s+|nossa\s+)?eleic|eleic\w*\s+(foi\s+|foram\s+)?(roubad|fraudad))/iu;
+
 function contraOAdversario(t) {
-  if (!ADVERSARIO.test(t)) return false;
+  if (!ADVERSARIO.test(t) && !ELEICAO_ROUBADA.test(t)) return false;
   if (new RegExp(`(^|[^\\p{L}])${NOSSO_PARTIDO}([^\\p{L}]|$)`, 'iu').test(t)) return false;
   if (alvoLocal(t)) return false;
   if (PEDE_PROVIDENCIA.test(t)) return false;

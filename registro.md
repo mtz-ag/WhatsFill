@@ -1,4 +1,15 @@
-## 2026-11-25 - v3.365.0 - ESTADO DE AGORA - figura solta no meio dos repasses tambem encerra
+## 2026-11-25 - v3.366.0 - ESTADO DE AGORA - "roubou a eleicao" e desabafo contra o adversario
+
+Rodada nas Minhas. **O jairoc** recebeu a mensagem do momento as 15:17 e respondeu "O cara roubou a
+eleicao, e ninguem faz nada, que Brasil"; o rascunho saiu "Agradeco pelas informacoes. Estamos atentos e
+acompanhando esse assunto" — a formula da denuncia local, porque sem o nome do adversario
+`contraOAdversario` dava falso. Hoje "roubou/fraudou a eleicao" e "eleicao roubada" contam como o
+adversario; com alvo local ou pedido de providencia continua denuncia. Saiu a minha, aprovada por ele:
+"Muita gente sente essa mesma indignacao. Nao vamos desistir do Brasil, e o trabalho aqui no Rio Grande
+continua!" Prova: 4 assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o
+push da 3.364 a 3.366; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.365.0 - HISTORICO - figura solta no meio dos repasses tambem encerra
 
 Rodada nas Minhas na 3.364: Simone, Milton, Deoclecio, Evani, Beatriz Maria, Nelso e Teresinha foram
 concluidos sem enviar e o jairoc recebeu a mensagem do momento, todos pelas regras. **O Odone** recebeu
