@@ -3170,7 +3170,8 @@ export function falhasDeAcolhimento(texto) {
   // assunto... para eu entender melhor e responder com responsabilidade" — seco e de repartição.
   // A Lucia (23/11): "Sua admiração por ele é muito clara, e eu respeito esse sentimento" — comenta o
   // sentimento dela de fora, como quem não está do mesmo lado. Apoiadora pede que se sinta junto.
-  if (/(respeito|entendo|compreendo|acolho)\s+(esse|este|o\s+seu|seu)\s+sentimento|sua\s+(admiracao|indignacao|tristeza|preocupacao|revolta)\s+(por\s+\S+\s+)?(e|eh)\s+(muito\s+)?(clara|compreensivel|legitima|valida)/.test(t)) {
+  // A Bernadette (25/11): "Essa preocupação é compreensível" — a mesma avaliação, com "essa".
+  if (/(respeito|entendo|compreendo|acolho)\s+(esse|este|o\s+seu|seu)\s+sentimento|(sua|essa|esta)\s+(admiracao|indignacao|tristeza|preocupacao|revolta|reacao)\s+(por\s+\S+\s+)?(e|eh)\s+(muito\s+|bem\s+)?(clara|compreensivel|legitima|valida|natural)/.test(t)) {
     falhas.push('não comente o sentimento dela de fora ("respeito esse sentimento", "sua admiração é muito clara"): fale junto com ela, do mesmo lado');
   }
   // E o Nilson de novo, com outra redação: "não quero falar sobre algo específico sem saber a que você se

@@ -1,4 +1,14 @@
-## 2026-11-25 - v3.366.0 - ESTADO DE AGORA - "roubou a eleicao" e desabafo contra o adversario
+## 2026-11-25 - v3.367.0 - ESTADO DE AGORA - "essa preocupacao e compreensivel" avalia de fora
+
+Rodada nas Minhas. **A Bernadette** respondeu a mensagem do momento com "A minha grande preocupacao e
+sempre com o nosso AMADO Capitao, PRESIDENTE BOLSONARO"; o rascunho abriu com "Essa preocupacao e
+compreensivel" — avaliacao de fora, de reparticao. A conferencia ja barrava "sua preocupacao e
+compreensivel"; hoje barra tambem com "essa"/"esta" e "natural". Saiu a minha, aprovada por ele: "A
+nossa tambem, Bernadette! Que Deus de forca ao Bolsonaro e a familia dele neste momento." Prova: 2
+assercoes em `diagnostico-minhas.test.mjs`. **Nao conferido ao vivo.** Pendente: o push da 3.364 a
+3.367; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.366.0 - HISTORICO - "roubou a eleicao" e desabafo contra o adversario
 
 Rodada nas Minhas. **O jairoc** recebeu a mensagem do momento as 15:17 e respondeu "O cara roubou a
 eleicao, e ninguem faz nada, que Brasil"; o rascunho saiu "Agradeco pelas informacoes. Estamos atentos e

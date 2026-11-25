@@ -750,6 +750,13 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('"essa preocupacao e compreensivel" avalia de fora (a Bernadette, 25/11)');
+{
+  const iaM = await lib('ia.js');
+  check(iaM.falhasDeAcolhimento('Essa preocupação é compreensível. O Presidente Bolsonaro tem o carinho de muita gente.').length >= 1, 'pede reescrita');
+  check(iaM.falhasDeAcolhimento('A nossa também! Que Deus dê força ao Bolsonaro e à família dele neste momento.').length === 0, 'a resposta do mesmo lado passa');
+}
+
 grupo('"roubou a eleicao" e desabafo contra o adversario, sem a formula (o jairoc, 25/11)');
 {
   const iaM = await lib('ia.js');
