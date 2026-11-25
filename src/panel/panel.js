@@ -3860,7 +3860,12 @@ export function createPanel({ mode = 'window', initialWidth = 380, onResize, onT
     // E se depois da nossa de hoje ela SÓ repassou (o Odone, 23/11: um vídeo depois da mensagem do
     // momento), também é encerrar — a regra dele de 16/10: só repasse conclui.
     const pendentesHoje = desdeNossaUltima(state.entrantes, state.nossaUltimaAt).filter((m) => String(m?.texto || '').trim() || m?.tipo);
-    if (pendentesHoje.length && pendentesHoje.every((m) => ehRepasse(m))) return true;
+    // Uma figura solta no meio dos repasses também é gesto, não fala (o Odone, 25/11/2026: uma imagem
+    // sem texto e três vídeos depois da mensagem do momento iam para a IA). Ao menos um repasse de
+    // verdade, e o 😢 continua fora: ali cabe acolher.
+    if (pendentesHoje.length && pendentesHoje.some((m) => ehRepasse(m)) &&
+        pendentesHoje.every((m) => ehRepasse(m) || ehSoReacao(m)) &&
+        !reacaoDeTristeza(state.entrantes, state.nossaUltimaAt)) return true;
     if (semRepasse.length !== (state.entrantes || []).length &&
         (ultimaEhDespedida(semRepasse) || cortesiaDeFechamento(semRepasse, state.nossaUltimaAt, {
           janelaHoras: Number(state.auto.cfg.horasContextoPerdido) > 0 ? Number(state.auto.cfg.horasContextoPerdido) : 48,

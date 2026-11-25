@@ -1,4 +1,16 @@
-## 2026-11-25 - v3.364.0 - ESTADO DE AGORA - o page.js nao reexportava ehRecusaPorConversaSumida
+## 2026-11-25 - v3.365.0 - ESTADO DE AGORA - figura solta no meio dos repasses tambem encerra
+
+Rodada nas Minhas na 3.364: Simone, Milton, Deoclecio, Evani, Beatriz Maria, Nelso e Teresinha foram
+concluidos sem enviar e o jairoc recebeu a mensagem do momento, todos pelas regras. **O Odone** recebeu
+a mensagem do momento as 11:07 e depois mandou uma imagem sem texto, tres videos e dois links; foi para
+a IA ("Obrigado por compartilhar!"). A regra de 16/10 (so repasse conclui) nao pegou porque `ehRepasse`
+nao conta figura solta (pode ser foto de exame). Hoje `encerrouAConversa` aceita figura solta junto dos
+repasses, exigindo ao menos um repasse de verdade e deixando o emoji de tristeza de fora. Ele
+acrescentou a etiqueta Engajado ao Odone (engajado recebe uma mensagem por dia e depois e concluido);
+eu resolvi o atendimento dele. Prova: a assercao de `diagnostico-minhas.test.mjs` foi trocada.
+**Nao conferido ao vivo.** Pendente: o push da 3.364 e da 3.365; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.364.0 - HISTORICO - o page.js nao reexportava ehRecusaPorConversaSumida
 
 Ao comecar a rodada das Minhas na 3.363, a aba estava orfa (a extensao foi recarregada depois do F5) e
 o console mostrou um defeito de verdade: `page.ehRecusaPorConversaSumida is not a function`. O painel
