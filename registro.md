@@ -1,4 +1,14 @@
-## 2026-11-25 - v3.363.0 - ESTADO DE AGORA - cortada a abertura repetida, o "tambem" sai junto
+## 2026-11-25 - v3.364.0 - ESTADO DE AGORA - o page.js nao reexportava ehRecusaPorConversaSumida
+
+Ao comecar a rodada das Minhas na 3.363, a aba estava orfa (a extensao foi recarregada depois do F5) e
+o console mostrou um defeito de verdade: `page.ehRecusaPorConversaSumida is not a function`. O painel
+chama isso desde a v3.276 (09/11) no `catch` de `processarRespondido`, e o `page.js` nunca reexportou a
+funcao do `page-mob.js` — toda excecao que caia ali virava TypeError. Hoje o reexporte existe, e um
+teste compara todo `page.X` que o painel chama com o que o `page.js` exporta (tirando o reexporte, cai
+1 assercao). **Nao conferido ao vivo.** Pendente: o push da 3.364; recarregar a extensao E SO ENTAO dar
+F5 na aba; a Lucia Moreira (ver a v3.359).
+
+## 2026-11-25 - v3.363.0 - HISTORICO - cortada a abertura repetida, o "tambem" sai junto
 
 Rodada nas Minhas. **O Cleomar** (a mae tirada dos escombros em Tupancireta, ele operado) mandou um
 audio agradecendo e abencoando; o rascunho saiu "Agradeco tambem por lembrar que a ajuda precisa ser

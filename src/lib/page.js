@@ -113,6 +113,12 @@ export const getState = NA_PLATAFORMA_NOVA
  * marca, entao ela responde `false` e nada muda.
  */
 export const ehRecusaPorSinalFraco = mobPage.ehRecusaPorSinalFraco;
+/**
+ * **A conversa sumiu na hora de resolver** (09/11/2026). O painel chamava isto desde a v3.276 e o
+ * reexporte faltava: toda exceção que caía no `catch` de `processarRespondido` virava TypeError
+ * (achado na rodada de 25/11/2026). Na plataforma velha a marca não existe e a resposta é `false`.
+ */
+export const ehRecusaPorConversaSumida = mobPage.ehRecusaPorConversaSumida;
 
 export const setComposerText = NA_PLATAFORMA_NOVA
   ? mobPage.setComposerText

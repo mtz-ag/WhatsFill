@@ -750,6 +750,18 @@ grupo('cortesia de ontem: mensagem do momento, nao rascunho (o Jose Clodis, 25/1
   check(/cortesiaDeOutroDia: \(\(\) => \{/.test(painel), 'o painel calcula o sinal');
 }
 
+grupo('todo page.X que o painel chama existe no page.js (25/11: ehRecusaPorConversaSumida faltava)');
+{
+  const fs = await import('node:fs/promises');
+  const pg = await fs.readFile(new URL('../src/lib/page.js', import.meta.url), 'utf8');
+  const usados = new Set([...painel.replace(/\bpage\.js\b/g, '').matchAll(/\bpage\.([A-Za-z_]\w*)/g)].map((m) => m[1]));
+  const exportados = new Set([...pg.matchAll(/export\s+(?:async\s+)?(?:const|let|function)\s+([A-Za-z_]\w*)/g)].map((m) => m[1]));
+  const faltam = [...usados].filter((u) => !exportados.has(u));
+  check(faltam.length === 0, 'nenhum page.X sem export (faltam: ' + faltam.join(', ') + ')');
+  const pageMod = await lib('page.js').catch(() => null);
+  check(!pageMod || typeof pageMod.ehRecusaPorConversaSumida === 'function', 'ehRecusaPorConversaSumida e funcao no page.js');
+}
+
 grupo('cortada a abertura repetida, o "tambem" sai junto (o Cleomar, 25/11)');
 {
   const iaM = await lib('ia.js');
